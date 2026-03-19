@@ -1,0 +1,39 @@
+experiment_name: linux-hybrid-test
+seed: 1337
+backend: hybrid
+model:
+  name: resnet20
+  num_classes: 10
+  in_channels: 3
+  image_size: [3, 32, 32]
+  checkpoint_path: assets/cifar10-resnet20-0.pkl
+data:
+  name: cifar10
+  root: assets/cifar-10-batches-py
+  split: test
+  subset_size: 512
+  batch_size: 64
+  num_workers: 0
+  num_classes: 10
+  normalize_mean: [0.4914, 0.4822, 0.4465]
+  normalize_std: [0.2470, 0.2435, 0.2616]
+grid:
+  alpha_min: -1.0
+  alpha_max: 1.0
+  beta_min: -1.0
+  beta_max: 1.0
+  resolution: 17
+runtime:
+  device: cuda
+  precision: fp32
+  num_batches: null
+  output_root: outputs
+  output_formats: [csv]
+resources:
+  cpu_workers: 4
+decomposition:
+  calibration_points: 4
+  cpu_chunk_size: 4
+  fixed_gpu_chunk_size: 30
+  gpu_chunk_size_max: 50
+  cpu_threads_per_worker: 2

@@ -1,0 +1,42 @@
+experiment_name: hybrid-vs-gpu-resnet-equivalent
+seed: 1337
+backend: gpu
+model:
+  name: resnet20
+  num_classes: 10
+  in_channels: 3
+  image_size: [3, 32, 32]
+  checkpoint_path: assets/cifar10-resnet20-0.pkl
+data:
+  name: cifar10
+  root: assets/cifar-10-batches-py
+  split: test
+  subset_size: 512
+  batch_size: 64
+  cpu_batch_size: 58
+  gpu_batch_size: 68
+  num_workers: 0
+  num_classes: 10
+  normalize_mean: [0.4914, 0.4822, 0.4465]
+  normalize_std: [0.2470, 0.2435, 0.2616]
+grid:
+  alpha_min: -1.0
+  alpha_max: 1.0
+  beta_min: -1.0
+  beta_max: 1.0
+  resolution: 17
+runtime:
+  device: auto
+  precision: fp32
+  num_batches: null
+  output_root: outputs
+  output_formats: [csv]
+  gpu_slowdown_factor: 1.0
+cases:
+  - backend: gpu
+    resources.cpu_workers: 0
+  - backend: hybrid
+    resources.cpu_workers: 1
+decomposition:
+  fixed_gpu_chunk_size: 280
+  gpu_chunk_size_max: 280
