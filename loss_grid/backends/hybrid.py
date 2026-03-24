@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 import multiprocessing as mp
+import os
 import signal
 import time
 from typing import Dict, List, Sequence, Tuple
@@ -14,6 +15,20 @@ from loss_grid.grid import GridPoint
 from loss_grid.instrumentation import StageBreakdown
 from loss_grid.kernel import build_execution_context
 from loss_grid.profiling import get_profiler
+
+
+def _empty_stage_breakdown_dict() -> Dict[str, float]:
+    return asdict(StageBreakdown())
+
+
+def _apply_worker_nice(config_dict: Dict) -> None:
+    nice_delta = int(config_dict.get("runtime", {}).get("cpu_worker_nice", 0))
+    if nice_delta <= 0:
+        return
+    try:
+        os.nice(nice_delta)
+    except OSError:
+        pass
 
 
 def _claim_chunk(
@@ -49,20 +64,16 @@ def _evaluate_chunk(
     direction_a_device = context.direction_a_cpu.to(context.device)
     direction_b_device = context.direction_b_cpu.to(context.device)
     profiler.section_end("chunk_data_transfer")
-    
-    records = []
+
     profiler.section_start("chunk_point_evaluation")
-    for point in points:
-        loss_value = executor._evaluate_point_on_device(
-            context=context,
-            alpha=point.alpha,
-            beta=point.beta,
-            base_vector_device=base_vector_device,
-            direction_a_device=direction_a_device,
-            direction_b_device=direction_b_device,
-            stage_breakdown=stage_breakdown,
-        )
-        records.append((point.row, point.col, loss_value))
+    records = executor._evaluate_points_on_device(
+        context=context,
+        points=points,
+        base_vector_device=base_vector_device,
+        direction_a_device=direction_a_device,
+        direction_b_device=direction_b_device,
+        stage_breakdown=stage_breakdown,
+    )
     profiler.section_end("chunk_point_evaluation")
     return records
 
@@ -76,6 +87,7 @@ def _cpu_worker_loop(
     worker_id: int,
 ) -> None:
     signal.signal(signal.SIGINT, signal.SIG_IGN)
+    _apply_worker_nice(config_dict)
     setup_start = time.perf_counter()
     torch.set_num_threads(
         max(1, int(config_dict["decomposition"]["cpu_threads_per_worker"]))
@@ -105,24 +117,26 @@ def _cpu_worker_loop(
         )
         claim_elapsed = time.perf_counter() - claim_start
         total_lock_wait_s += claim_elapsed
-        
+
         if start >= end:
             break
         if first_claim_offset_s is None:
             first_claim_offset_s = time.perf_counter() - wall_start
         chunk = points[start:end]
-        
+
         eval_start = time.perf_counter()
         local_records.extend(_evaluate_chunk(executor, context, chunk, stage_breakdown))
         eval_elapsed = time.perf_counter() - eval_start
         total_eval_s += eval_elapsed
-        
+
         claimed_points += len(chunk)
         chunk_count += 1
 
     total_wall_s = time.perf_counter() - wall_start
-    idle_pct = ((total_wall_s - total_eval_s) / total_wall_s * 100) if total_wall_s > 0 else 0
-    
+    idle_pct = (
+        ((total_wall_s - total_eval_s) / total_wall_s * 100) if total_wall_s > 0 else 0
+    )
+
     print(
         f"[cpu_worker_{worker_id}] wall={total_wall_s:.4f}s "
         f"eval={total_eval_s:.4f}s "
@@ -152,6 +166,7 @@ def _cpu_worker_static_loop(
     worker_id: int,
 ) -> None:
     signal.signal(signal.SIGINT, signal.SIG_IGN)
+    _apply_worker_nice(config_dict)
     setup_start = time.perf_counter()
     torch.set_num_threads(
         max(1, int(config_dict["decomposition"]["cpu_threads_per_worker"]))
@@ -189,6 +204,7 @@ class HybridLossGridExecutor(BaseLossGridExecutor):
         context, surface = self._common_setup(config)
         output_dir = self._output_dir(config)
         cpu_workers = max(0, config.resources.cpu_workers)
+        cpu_worker_mode = str(config.runtime.cpu_worker_mode).lower()
         points = self._partition(config, context.points, rank=0, workers=1)
 
         if cpu_workers == 0:
@@ -210,13 +226,13 @@ class HybridLossGridExecutor(BaseLossGridExecutor):
                 )
             eval_elapsed = time.perf_counter() - eval_start
             total_runtime = time.perf_counter() - total_start
-            
+
             print(
                 f"[gpu_only] wall={total_runtime:.4f}s "
                 f"eval={eval_elapsed:.4f}s "
                 f"points={len(points)}"
             )
-            
+
             stage_breakdown.finalize(total_runtime)
             result = self._finalize_result(
                 config=config,
@@ -255,7 +271,7 @@ class HybridLossGridExecutor(BaseLossGridExecutor):
             total_start = time.perf_counter()
             profiler = get_profiler()
             profiler.snapshot("cpu_only_mode_start")
-            
+
             if cpu_schedule == "static":
                 worker_count = cpu_workers + 1
                 partitions = [
@@ -448,36 +464,56 @@ class HybridLossGridExecutor(BaseLossGridExecutor):
         cpu_worker_first_claim_offset_s = {}
 
         remaining_points = points[calibration_count:]
-        helper_policy = self._estimate_helper_policy(
-            scheduler_info, len(remaining_points)
-        )
+        if cpu_worker_mode == "dummy_load":
+            helper_policy = {
+                "enable_cpu_helpers": bool(remaining_points) and cpu_workers > 0,
+                "estimated_helper_overhead_s": 0.0,
+                "estimated_gpu_remaining_s": 0.0,
+                "estimated_hybrid_remaining_s": 0.0,
+                "estimated_saved_s": 0.0,
+            }
+        else:
+            helper_policy = self._estimate_helper_policy(
+                scheduler_info, len(remaining_points)
+            )
         total_start = time.perf_counter()
         if remaining_points and helper_policy["enable_cpu_helpers"]:
             ctx = mp.get_context("spawn")
-            next_index = ctx.Value("i", 0)
-            lock = ctx.Lock()
             result_queue = ctx.Queue()
             workers = []
-
             config_dict = config.to_dict()
             spawn_start = time.perf_counter()
             profiler = get_profiler()
             profiler.snapshot("hybrid_spawn_start")
-            
-            for worker_id in range(cpu_workers):
-                process = ctx.Process(
-                    target=_cpu_worker_loop,
-                    args=(
-                        config_dict,
-                        remaining_points,
-                        next_index,
-                        lock,
-                        result_queue,
-                        worker_id,
-                    ),
-                )
-                process.start()
-                workers.append(process)
+
+            if cpu_worker_mode == "dummy_load":
+                stop_event = ctx.Event()
+                for worker_id in range(cpu_workers):
+                    process = ctx.Process(
+                        target=_dummy_cpu_load_loop,
+                        args=(config_dict, result_queue, worker_id, stop_event),
+                    )
+                    process.start()
+                    workers.append(process)
+                next_index = ctx.Value("i", 0)
+                lock = ctx.Lock()
+            else:
+                next_index = ctx.Value("i", 0)
+                lock = ctx.Lock()
+                for worker_id in range(cpu_workers):
+                    process = ctx.Process(
+                        target=_cpu_worker_loop,
+                        args=(
+                            config_dict,
+                            remaining_points,
+                            next_index,
+                            lock,
+                            result_queue,
+                            worker_id,
+                        ),
+                    )
+                    process.start()
+                    workers.append(process)
             worker_spawn_wall_s = time.perf_counter() - spawn_start
             profiler.snapshot("hybrid_spawn_complete")
 
@@ -495,6 +531,8 @@ class HybridLossGridExecutor(BaseLossGridExecutor):
                 )
                 gpu_phase_wall_s = time.perf_counter() - gpu_phase_start
                 profiler.snapshot("gpu_phase_complete")
+                if cpu_worker_mode == "dummy_load":
+                    stop_event.set()
                 profiler.section_start("gpu_result_assembly")
                 for row, col, value in gpu_records:
                     surface[row, col] = value
@@ -540,6 +578,8 @@ class HybridLossGridExecutor(BaseLossGridExecutor):
                 result_collect_wall_s = time.perf_counter() - result_collect_start
                 profiler.snapshot("cpu_result_collect_complete")
             except KeyboardInterrupt:
+                if cpu_worker_mode == "dummy_load":
+                    stop_event.set()
                 for process in workers:
                     if process.is_alive():
                         process.terminate()
@@ -608,8 +648,13 @@ class HybridLossGridExecutor(BaseLossGridExecutor):
             is_root=True,
         )
         result.runtime_log["hybrid_scheduler"] = {
-            "mode": "hybrid_hetero",
+            "mode": (
+                "hybrid_dummy_load"
+                if cpu_worker_mode == "dummy_load"
+                else "hybrid_hetero"
+            ),
             "cpu_workers": cpu_workers,
+            "cpu_worker_mode": cpu_worker_mode,
             "cpu_chunk_size": cpu_chunk_size,
             "gpu_chunk_size": gpu_chunk_size,
             "gpu_calibration_points": scheduler_info["gpu_calibration_points"],
@@ -652,16 +697,20 @@ class HybridLossGridExecutor(BaseLossGridExecutor):
         surface = self._make_surface(config.grid.resolution)
         stage_breakdown = StageBreakdown()
         calibration_points = max(1, config.decomposition.calibration_points)
+        cpu_worker_mode = str(config.runtime.cpu_worker_mode).lower()
 
         gpu_context = build_execution_context(
             config, device_override=config.runtime.device, capture_env_info=False
         )
-        cpu_context = build_execution_context(
-            config, device_override="cpu", capture_env_info=False
-        )
 
         gpu_sample = list(points[:calibration_points])
-        cpu_sample = list(points[calibration_points : calibration_points * 2])
+        cpu_sample: List[GridPoint] = []
+        cpu_context = None
+        if cpu_worker_mode != "dummy_load":
+            cpu_context = build_execution_context(
+                config, device_override="cpu", capture_env_info=False
+            )
+            cpu_sample = list(points[calibration_points : calibration_points * 2])
 
         calibration_wall_start = time.perf_counter()
         gpu_stage = StageBreakdown()
@@ -670,9 +719,10 @@ class HybridLossGridExecutor(BaseLossGridExecutor):
             surface[row, col] = value
 
         cpu_stage = StageBreakdown()
-        cpu_records = _evaluate_chunk(self, cpu_context, cpu_sample, cpu_stage)
-        for row, col, value in cpu_records:
-            surface[row, col] = value
+        if cpu_context is not None and cpu_sample:
+            cpu_records = _evaluate_chunk(self, cpu_context, cpu_sample, cpu_stage)
+            for row, col, value in cpu_records:
+                surface[row, col] = value
 
         stage_breakdown.perturbation_s += (
             gpu_stage.perturbation_s + cpu_stage.perturbation_s
@@ -816,24 +866,34 @@ class HybridLossGridExecutor(BaseLossGridExecutor):
             profiler.section_end("gpu_queue_claim")
             claim_elapsed = time.perf_counter() - claim_start
             total_lock_wait_s += claim_elapsed
-            
+
             if start >= end:
                 break
             chunk = points[start:end]
-            
+
             eval_start = time.perf_counter()
             profiler.section_start(f"gpu_chunk_eval")
-            local_records.extend(_evaluate_chunk(self, context, chunk, stage_breakdown))
+            records = _evaluate_chunk(
+                self,
+                context,
+                chunk,
+                stage_breakdown,
+            )
+            local_records.extend(records)
             profiler.section_end(f"gpu_chunk_eval")
             eval_elapsed = time.perf_counter() - eval_start
             total_eval_s += eval_elapsed
-            
+
             claimed_points += len(chunk)
             chunk_count += 1
 
         total_wall_s = time.perf_counter() - wall_start
-        idle_pct = ((total_wall_s - total_eval_s) / total_wall_s * 100) if total_wall_s > 0 else 0
-        
+        idle_pct = (
+            ((total_wall_s - total_eval_s) / total_wall_s * 100)
+            if total_wall_s > 0
+            else 0
+        )
+
         print(
             f"[gpu_worker] wall={total_wall_s:.4f}s "
             f"eval={total_eval_s:.4f}s "

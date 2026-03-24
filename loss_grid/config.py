@@ -49,6 +49,11 @@ class RuntimeConfig:
     device: str = "auto"
     precision: str = "fp32"
     num_batches: Optional[int] = 4
+    preload_gpu_batches: bool = False
+    compile_gpu_chunk_eval: bool = False
+    compile_gpu_chunk_size: int = 4
+    cpu_worker_mode: str = "pytorch"
+    cpu_worker_nice: int = 0
     gpu_slowdown_factor: float = 1.0
     output_root: str = "outputs"
     output_formats: List[str] = field(default_factory=lambda: ["csv"])

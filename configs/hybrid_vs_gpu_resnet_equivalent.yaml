@@ -33,8 +33,8 @@ runtime:
   output_formats: [csv]
   gpu_slowdown_factor: 1.0
 cases:
-  - backend: gpu
-    resources.cpu_workers: 0
+  # - backend: gpu
+  #   resources.cpu_workers: 0
   - backend: hybrid
     resources.cpu_workers: 1
 decomposition:

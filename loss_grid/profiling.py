@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 from collections import defaultdict
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -213,8 +213,107 @@ class Profiler:
                 print(f"  {', '.join(parts)}")
 
 
+class TorchProfileManager:
+    """One-shot torch.profiler capture for a representative evaluation."""
+
+    def __init__(self) -> None:
+        self.enabled = False
+        self.output_dir: Optional[Path] = None
+        self.captured = False
+        self.active = False
+        self.artifacts: Dict[str, str] = {}
+        self.target: str = "evaluate_loss"
+
+    def configure(
+        self,
+        enabled: bool,
+        output_dir: Optional[str],
+        target: str = "evaluate_loss",
+    ) -> None:
+        self.enabled = enabled
+        self.output_dir = Path(output_dir) if output_dir else None
+        self.captured = False
+        self.active = False
+        self.artifacts = {}
+        self.target = target
+
+    def disable(self) -> None:
+        self.configure(False, None)
+
+    def should_capture(self, device: Optional["torch.device"]) -> bool:
+        if not self.enabled or self.captured or self.active:
+            return False
+        if not TORCH_AVAILABLE or not hasattr(torch, "profiler"):
+            return False
+        if device is None:
+            return False
+        return device.type in {"cpu", "cuda", "mps"}
+
+    @contextmanager
+    def maybe_profile(self, label: str, device: Optional["torch.device"]):
+        if label != self.target:
+            yield None
+            return
+        if not self.should_capture(device):
+            yield None
+            return
+
+        output_dir = self.output_dir or Path("outputs")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        trace_path = output_dir / f"torch-profile-{label}.json"
+        summary_path = output_dir / f"torch-profile-{label}-key-averages.txt"
+        activities = [torch.profiler.ProfilerActivity.CPU]
+        if device is not None and device.type == "cuda":
+            activities.append(torch.profiler.ProfilerActivity.CUDA)
+
+        self.active = True
+        try:
+            _synchronize_device(device)
+            with torch.profiler.profile(
+                activities=activities,
+                record_shapes=True,
+                profile_memory=True,
+                with_stack=False,
+            ) as prof:
+                yield prof
+            _synchronize_device(device)
+
+            try:
+                prof.export_chrome_trace(str(trace_path))
+                self.artifacts["trace"] = str(trace_path)
+            except Exception as error:
+                self.artifacts["trace_error"] = str(error)
+
+            try:
+                sort_by = "cuda_time_total" if device is not None and device.type == "cuda" else "cpu_time_total"
+                summary_path.write_text(
+                    prof.key_averages().table(sort_by=sort_by, row_limit=80),
+                    encoding="utf-8",
+                )
+                self.artifacts["table"] = str(summary_path)
+            except Exception as error:
+                self.artifacts["table_error"] = str(error)
+
+            self.captured = True
+        finally:
+            self.active = False
+
+
+def _synchronize_device(device: Optional["torch.device"]) -> None:
+    if not TORCH_AVAILABLE or device is None:
+        return
+    try:
+        if device.type == "cuda":
+            torch.cuda.synchronize(device)
+        elif device.type == "mps" and hasattr(torch, "mps") and hasattr(torch.mps, "synchronize"):
+            torch.mps.synchronize()
+    except Exception:
+        pass
+
+
 # Global instance for convenience
 _global_profiler: Optional[Profiler] = None
+_torch_profile_manager: Optional[TorchProfileManager] = None
 
 
 def get_profiler() -> Profiler:
@@ -237,3 +336,20 @@ def disable_profiling() -> None:
     global _global_profiler
     if _global_profiler is not None:
         _global_profiler.enabled = False
+
+
+def get_torch_profile_manager() -> TorchProfileManager:
+    global _torch_profile_manager
+    if _torch_profile_manager is None:
+        _torch_profile_manager = TorchProfileManager()
+    return _torch_profile_manager
+
+
+def configure_torch_profile(
+    enabled: bool,
+    output_dir: Optional[str],
+    target: str = "evaluate_loss",
+) -> TorchProfileManager:
+    manager = get_torch_profile_manager()
+    manager.configure(enabled=enabled, output_dir=output_dir, target=target)
+    return manager

@@ -1,21 +1,18 @@
-experiment_name: hybrid-vs-gpu-mobile-net-equivalent
+experiment_name: profiling-vanilla
 seed: 1337
-backend: gpu
+backend: vanilla
 model:
-  name: mobilenet_v3_small
+  name: resnet20
   num_classes: 10
   in_channels: 3
   image_size: [3, 32, 32]
-  checkpoint_path: null
-  pretrained: true
+  checkpoint_path: assets/cifar10-resnet20-0.pkl
 data:
   name: cifar10
   root: assets/cifar-10-batches-py
   split: test
-  subset_size: 512
-  batch_size: 1
-  cpu_batch_size: 1
-  gpu_batch_size: 68
+  subset_size: 1024
+  batch_size: 64
   num_workers: 0
   num_classes: 10
   normalize_mean: [0.4914, 0.4822, 0.4465]
@@ -32,12 +29,14 @@ runtime:
   num_batches: null
   output_root: outputs
   output_formats: [csv]
-  gpu_slowdown_factor: 1.0
-cases:
-  # - backend: gpu
-  #   resources.cpu_workers: 0
-  - backend: hybrid
-    resources.cpu_workers: 0
+  preload_gpu_batches: false
+  compile_gpu_chunk_eval: false
+  compile_gpu_chunk_size: 4
+resources:
+  cpu_workers: 0
 decomposition:
-  fixed_gpu_chunk_size: 285
-  gpu_chunk_size_max: 285
+  calibration_points: 1
+  cpu_chunk_size: 4
+  fixed_gpu_chunk_size: 10
+  gpu_chunk_size_max: 20
+  cpu_threads_per_worker: 2

@@ -1,4 +1,4 @@
-experiment_name: linux-hybrid-test
+experiment_name: profiling-test-workers0
 seed: 1337
 backend: hybrid
 model:
@@ -11,7 +11,7 @@ data:
   name: cifar10
   root: assets/cifar-10-batches-py
   split: test
-  subset_size: 512
+  subset_size: 1024
   batch_size: 64
   num_workers: 0
   num_classes: 10
@@ -24,16 +24,24 @@ grid:
   beta_max: 1.0
   resolution: 17
 runtime:
-  device: cuda
+  device: auto
   precision: fp32
   num_batches: null
   output_root: outputs
   output_formats: [csv]
+  use_jit: true
+  torch_profile: false
+  preload_gpu_batches: true
+  coalesce_preloaded_batches: false
+  compile_gpu_chunk_eval: true
+  compile_gpu_chunk_size: 4
+  vectorized_gpu_chunk_eval: false
+  use_functional_model: false
 resources:
-  cpu_workers: 4
+  cpu_workers: 0
 decomposition:
-  calibration_points: 4
+  calibration_points: 1
   cpu_chunk_size: 4
-  fixed_gpu_chunk_size: 30
-  gpu_chunk_size_max: 50
+  fixed_gpu_chunk_size: 10
+  gpu_chunk_size_max: 20
   cpu_threads_per_worker: 2
