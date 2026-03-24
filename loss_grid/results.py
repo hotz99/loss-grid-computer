@@ -31,12 +31,8 @@ class ExperimentResult:
         return {
             "device": self.device,
             "throughput_points_per_s": self.metrics.get("throughput_points_per_s"),
-            "perturbation_s": self.stage_breakdown.perturbation_s,
             "transfer_s": self.stage_breakdown.transfer_s,
-            "forward_s": self.stage_breakdown.forward_s,
-            "gpu_kernel_s": self.stage_breakdown.gpu_kernel_s,
             "total_s": self.stage_breakdown.total_s,
-            "overlap_efficiency": self.stage_breakdown.overlap_efficiency,
         }
 
 

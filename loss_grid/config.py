@@ -49,6 +49,11 @@ class RuntimeConfig:
     device: str = "auto"
     precision: str = "fp32"
     num_batches: Optional[int] = 4
+    preload_gpu_batches: bool = False
+    preload_max_batches: Optional[int] = None
+    compile_gpu_chunk_eval: bool = False
+    compile_gpu_chunk_size: Optional[int] = 4
+    cpu_worker_nice: int = 0
     gpu_slowdown_factor: float = 1.0
     output_root: str = "outputs"
     output_formats: List[str] = field(default_factory=lambda: ["csv"])
@@ -71,7 +76,7 @@ class DecompositionConfig:
     cpu_chunk_size: int = 1
     gpu_chunk_size_max: int = 8
     fixed_gpu_chunk_size: Optional[int] = None
-    calibration_points: int = 1
+    gpu_initial_ratio: float = 0.5
     cpu_threads_per_worker: int = 1
 
 

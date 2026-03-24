@@ -1,6 +1,6 @@
-experiment_name: linux-hybrid-test
+experiment_name: profiling-vanilla
 seed: 1337
-backend: hybrid
+backend: vanilla
 model:
   name: resnet20
   num_classes: 10
@@ -24,16 +24,19 @@ grid:
   beta_max: 1.0
   resolution: 17
 runtime:
-  device: cuda
+  device: auto
   precision: fp32
   num_batches: null
   output_root: outputs
   output_formats: [csv]
+  preload_gpu_batches: false
+  compile_gpu_chunk_eval: false
+  compile_gpu_chunk_size: 4
 resources:
-  cpu_workers: 4
+  cpu_workers: 0
 decomposition:
-  calibration_points: 4
+  gpu_initial_ratio: 1.0
   cpu_chunk_size: 4
-  fixed_gpu_chunk_size: 30
-  gpu_chunk_size_max: 50
+  fixed_gpu_chunk_size: 10
+  gpu_chunk_size_max: 20
   cpu_threads_per_worker: 2

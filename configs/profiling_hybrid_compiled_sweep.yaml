@@ -1,0 +1,80 @@
+experiment_name: profiling-hybrid-compiled-sweep
+seed: 1337
+backend: hybrid
+model:
+  name: resnet20
+  num_classes: 10
+  in_channels: 3
+  image_size: [3, 32, 32]
+  checkpoint_path: assets/cifar10-resnet20-0.pkl
+data:
+  name: cifar10
+  root: assets/cifar-10-batches-py
+  split: test
+  subset_size: 1024
+  batch_size: 64
+  cpu_batch_size: 4
+  num_workers: 0
+  num_classes: 10
+  normalize_mean: [0.4914, 0.4822, 0.4465]
+  normalize_std: [0.2470, 0.2435, 0.2616]
+grid:
+  alpha_min: -1.0
+  alpha_max: 1.0
+  beta_min: -1.0
+  beta_max: 1.0
+  resolution: 16
+runtime:
+  device: auto
+  precision: fp32
+  num_batches: null
+  output_root: outputs
+  output_formats: [csv]
+  preload_gpu_batches: true
+  compile_gpu_chunk_eval: true
+  compile_gpu_chunk_size: null
+resources:
+  cpu_workers: 6
+decomposition:
+  gpu_initial_ratio: 0.7
+  cpu_chunk_size: 1
+  fixed_gpu_chunk_size: null
+  gpu_chunk_size_max: 256
+  cpu_threads_per_worker: 1
+cases:
+  - resources.cpu_workers: 4
+    data.cpu_batch_size: 4
+    decomposition.cpu_chunk_size: 1
+    decomposition.gpu_initial_ratio: 0.86
+  # - resources.cpu_workers: 6
+  #   data.cpu_batch_size: 4
+  #   decomposition.cpu_chunk_size: 8
+  #   decomposition.gpu_initial_ratio: 0.7
+  # - resources.cpu_workers: 6
+  #   data.cpu_batch_size: 4
+  #   decomposition.cpu_chunk_size: 8
+  #   decomposition.gpu_initial_ratio: 0.9
+  # - resources.cpu_workers: 7
+  #   data.cpu_batch_size: 4
+  #   decomposition.cpu_chunk_size: 8
+  #   decomposition.gpu_initial_ratio: 0.5
+  # - resources.cpu_workers: 7
+  #   data.cpu_batch_size: 4
+  #   decomposition.cpu_chunk_size: 8
+  #   decomposition.gpu_initial_ratio: 0.7
+  # - resources.cpu_workers: 7
+  #   data.cpu_batch_size: 4
+  #   decomposition.cpu_chunk_size: 8
+  #   decomposition.gpu_initial_ratio: 0.9
+  # - resources.cpu_workers: 8
+  #   data.cpu_batch_size: 2
+  #   decomposition.cpu_chunk_size: 8
+  #   decomposition.gpu_initial_ratio: 0.5
+  # - resources.cpu_workers: 8
+  #   data.cpu_batch_size: 2
+  #   decomposition.cpu_chunk_size: 8
+  #   decomposition.gpu_initial_ratio: 0.7
+  # - resources.cpu_workers: 8
+  #   data.cpu_batch_size: 2
+  #   decomposition.cpu_chunk_size: 8
+  #   decomposition.gpu_initial_ratio: 0.9

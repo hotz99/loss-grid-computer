@@ -19,19 +19,24 @@ class GpuLossGridExecutor(BaseLossGridExecutor):
         direction_b_device = context.direction_b_cpu.to(context.device)
 
         total_start = time.perf_counter()
-        for point in points:
-            surface[point.row, point.col] = self._evaluate_point_on_device(
-                context=context,
-                alpha=point.alpha,
-                beta=point.beta,
-                base_vector_device=base_vector_device,
-                direction_a_device=direction_a_device,
-                direction_b_device=direction_b_device,
-                stage_breakdown=stage_breakdown,
-            )
+        for row, col, loss_value in self._evaluate_points_on_device(
+            context=context,
+            points=points,
+            base_vector_device=base_vector_device,
+            direction_a_device=direction_a_device,
+            direction_b_device=direction_b_device,
+            stage_breakdown=stage_breakdown,
+        ):
+            surface[row, col] = loss_value
         total_runtime = time.perf_counter() - total_start
+
+        print(
+            f"[gpu_only] wall={total_runtime:.4f}s "
+            f"points={len(points)}"
+        )
+
         stage_breakdown.finalize(total_runtime)
-        return self._finalize_result(
+        result = self._finalize_result(
             config=config,
             surface=surface,
             stage_breakdown=stage_breakdown,
@@ -42,3 +47,8 @@ class GpuLossGridExecutor(BaseLossGridExecutor):
             output_dir=output_dir,
             is_root=True,
         )
+        result.runtime_log["single_gpu"] = {
+            "gpu_worker_wall_s": total_runtime,
+            "gpu_points_processed": len(points),
+        }
+        return result

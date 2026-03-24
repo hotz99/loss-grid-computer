@@ -1,4 +1,4 @@
-experiment_name: profiling-large-scale
+experiment_name: profiling-hybrid-cpu-only-sweep
 seed: 1337
 backend: hybrid
 model:
@@ -13,8 +13,10 @@ data:
   split: test
   subset_size: 1024
   batch_size: 64
+  cpu_batch_size: 64
+  gpu_batch_size: 64
   num_workers: 0
-  num_classes: 10
+  num_classes: 6
   normalize_mean: [0.4914, 0.4822, 0.4465]
   normalize_std: [0.2470, 0.2435, 0.2616]
 grid:
@@ -22,17 +24,25 @@ grid:
   alpha_max: 1.0
   beta_min: -1.0
   beta_max: 1.0
-  resolution: 17
+  resolution: 8
 runtime:
-  device: auto
+  device: cpu
   precision: fp32
   num_batches: null
   output_root: outputs
   output_formats: [csv]
+  preload_gpu_batches: false
+  compile_gpu_chunk_eval: false
 resources:
-  cpu_workers: 2
+  cpu_workers: 1
 decomposition:
-  calibration_points: 8
-  cpu_chunk_size: 8
-  gpu_chunk_size_max: 50
-  cpu_threads_per_worker: 2
+  cpu_schedule: dynamic
+  cpu_chunk_size: 1
+  cpu_threads_per_worker: 1
+  gpu_initial_ratio: 0.0
+  fixed_gpu_chunk_size: null
+  gpu_chunk_size_max: 1
+sweep:
+  resources.cpu_workers: [8]
+  data.cpu_batch_size: [1, 2, 4, 6, 8, 12, 16]
+  decomposition.cpu_chunk_size: [2] #, 2, 4, 8]
