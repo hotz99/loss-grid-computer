@@ -52,7 +52,7 @@ echo ""
 echo "Running experiment..."
 export TMPDIR=/tmp
 source venv/bin/activate
-python3 run_experiment.py run --config "$CONFIG_FILE" 2>&1 | tee "$OUTPUT_DIR/experiment.log"
+python3 -m src.runner run --config "$CONFIG_FILE" 2>&1 | tee "$OUTPUT_DIR/experiment.log"
 
 # Stop powermetrics
 echo ""

@@ -5,15 +5,7 @@ from typing import Callable, Optional
 import torch
 import torch.nn.functional as F
 
-
-def build_parameter_vector(
-    base_vector: torch.Tensor,
-    direction_a: torch.Tensor,
-    direction_b: torch.Tensor,
-    alpha: torch.Tensor,
-    beta: torch.Tensor,
-) -> torch.Tensor:
-    return base_vector + (alpha * direction_a) + (beta * direction_b)
+from src.directions import build_parameter_vector
 
 
 def split_parameter_vector(
@@ -95,7 +87,6 @@ def _basic_block(
     bn2_bias_idx: int,
     bn2_stats_idx: int,
     stride: int,
-    use_skip: bool,
     downsample_conv_idx: Optional[int] = None,
     downsample_bn_weight_idx: Optional[int] = None,
     downsample_bn_bias_idx: Optional[int] = None,
@@ -120,23 +111,22 @@ def _basic_block(
         bn_stats[bn2_stats_idx + 1],
     )
 
-    if use_skip:
-        if downsample_conv_idx is not None:
-            residual = F.conv2d(
-                inputs,
-                params[downsample_conv_idx],
-                bias=None,
-                stride=stride,
-                padding=0,
-            )
-            residual = _bn_eval(
-                residual,
-                params[downsample_bn_weight_idx],
-                params[downsample_bn_bias_idx],
-                bn_stats[downsample_bn_stats_idx],
-                bn_stats[downsample_bn_stats_idx + 1],
-            )
-        outputs = outputs + residual
+    if downsample_conv_idx is not None:
+        residual = F.conv2d(
+            inputs,
+            params[downsample_conv_idx],
+            bias=None,
+            stride=stride,
+            padding=0,
+        )
+        residual = _bn_eval(
+            residual,
+            params[downsample_bn_weight_idx],
+            params[downsample_bn_bias_idx],
+            bn_stats[downsample_bn_stats_idx],
+            bn_stats[downsample_bn_stats_idx + 1],
+        )
+    outputs = outputs + residual
 
     return F.relu(outputs, inplace=False)
 
@@ -145,21 +135,14 @@ def resnet20_forward_from_params(
     inputs: torch.Tensor,
     params: tuple[torch.Tensor, ...],
     bn_stats: tuple[torch.Tensor, ...],
-    use_skip: bool,
 ) -> torch.Tensor:
     outputs = F.conv2d(inputs, params[0], bias=None, stride=1, padding=1)
     outputs = _bn_eval(outputs, params[1], params[2], bn_stats[0], bn_stats[1])
     outputs = F.relu(outputs, inplace=False)
 
-    outputs = _basic_block(
-        outputs, params, bn_stats, 3, 4, 5, 2, 6, 7, 8, 4, 1, use_skip
-    )
-    outputs = _basic_block(
-        outputs, params, bn_stats, 9, 10, 11, 6, 12, 13, 14, 8, 1, use_skip
-    )
-    outputs = _basic_block(
-        outputs, params, bn_stats, 15, 16, 17, 10, 18, 19, 20, 12, 1, use_skip
-    )
+    outputs = _basic_block(outputs, params, bn_stats, 3, 4, 5, 2, 6, 7, 8, 4, 1)
+    outputs = _basic_block(outputs, params, bn_stats, 9, 10, 11, 6, 12, 13, 14, 8, 1)
+    outputs = _basic_block(outputs, params, bn_stats, 15, 16, 17, 10, 18, 19, 20, 12, 1)
 
     outputs = _basic_block(
         outputs,
@@ -174,18 +157,13 @@ def resnet20_forward_from_params(
         26,
         16,
         2,
-        use_skip,
         27,
         28,
         29,
         18,
     )
-    outputs = _basic_block(
-        outputs, params, bn_stats, 30, 31, 32, 20, 33, 34, 35, 22, 1, use_skip
-    )
-    outputs = _basic_block(
-        outputs, params, bn_stats, 36, 37, 38, 24, 39, 40, 41, 26, 1, use_skip
-    )
+    outputs = _basic_block(outputs, params, bn_stats, 30, 31, 32, 20, 33, 34, 35, 22, 1)
+    outputs = _basic_block(outputs, params, bn_stats, 36, 37, 38, 24, 39, 40, 41, 26, 1)
 
     outputs = _basic_block(
         outputs,
@@ -200,18 +178,13 @@ def resnet20_forward_from_params(
         47,
         30,
         2,
-        use_skip,
         48,
         49,
         50,
         32,
     )
-    outputs = _basic_block(
-        outputs, params, bn_stats, 51, 52, 53, 34, 54, 55, 56, 36, 1, use_skip
-    )
-    outputs = _basic_block(
-        outputs, params, bn_stats, 57, 58, 59, 38, 60, 61, 62, 40, 1, use_skip
-    )
+    outputs = _basic_block(outputs, params, bn_stats, 51, 52, 53, 34, 54, 55, 56, 36, 1)
+    outputs = _basic_block(outputs, params, bn_stats, 57, 58, 59, 38, 60, 61, 62, 40, 1)
 
     outputs = F.adaptive_avg_pool2d(outputs, (1, 1))
     outputs = torch.flatten(outputs, 1)
@@ -220,7 +193,6 @@ def resnet20_forward_from_params(
 
 def build_resnet20_compiled_chunk_evaluator(
     model_name: str,
-    use_skip: bool,
     base_vector: torch.Tensor,
     direction_a: torch.Tensor,
     direction_b: torch.Tensor,
@@ -232,14 +204,12 @@ def build_resnet20_compiled_chunk_evaluator(
     chunk_size: int,
     device: torch.device,
 ) -> Optional[Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor]]:
-    if device.type == "cpu" or model_name.lower() not in {
-        "resnet20",
-        "resnet20_no_skip",
-    }:
+    if device.type == "cpu" or model_name.lower() != "resnet20":
         return None
 
     bn_stats = build_resnet20_bn_stats(buffers)
     fixed_chunk_size = max(1, int(chunk_size))
+
     def eval_chunk(
         inputs: torch.Tensor,
         targets: torch.Tensor,
@@ -265,59 +235,29 @@ def build_resnet20_compiled_chunk_evaluator(
                 inputs=inputs,
                 params=params,
                 bn_stats=bn_stats,
-                use_skip=use_skip,
             )
-            losses.append(F.cross_entropy(logits, targets))
+            losses.append(F.cross_entropy(logits, targets, reduction="mean"))
         return torch.stack(losses)
 
-    def _verify_candidate(
-        candidate: Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor],
-        reference: Callable[[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor],
-    ) -> tuple[bool, str]:
-        sample_perturbations = torch.zeros(
-            (fixed_chunk_size, 2),
-            device=device,
-            dtype=base_vector.dtype,
-        )
-        if fixed_chunk_size >= 2:
-            sample_perturbations[1, 0] = 0.5
-            sample_perturbations[1, 1] = -0.25
-        if fixed_chunk_size >= 3:
-            sample_perturbations[2, 0] = 0.3
-            sample_perturbations[2, 1] = 0.7
-        if fixed_chunk_size >= 4:
-            sample_perturbations[3, 0] = -0.4
-            sample_perturbations[3, 1] = -0.6
-
-        with torch.inference_mode():
-            expected = reference(example_inputs, example_targets, sample_perturbations)
-            actual = candidate(example_inputs, example_targets, sample_perturbations)
-
-        if not torch.isfinite(actual).all():
-            return False, "nonfinite_outputs"
-        if not torch.allclose(expected, actual, atol=1e-4, rtol=1e-4):
-            max_diff = float((expected - actual).abs().max().detach().cpu())
-            return False, f"verification_mismatch max_diff={max_diff:.6e}"
-        return True, "ok"
-
     try:
-        enable_fullgraph = False
-        compiled = torch.compile(eval_chunk, fullgraph=enable_fullgraph, dynamic=False)
-        verified, reason = _verify_candidate(compiled, eval_chunk)
-        if not verified:
-            print(
-                f"[compile_chunk] disabled model={model_name} device={device.type} "
-                f"reason={reason} fallback=eager_chunk"
-            )
-            return eval_chunk
-        print(
-            f"[compile_chunk] enabled model={model_name} device={device.type} "
-            f"chunk_size={fixed_chunk_size} fullgraph={enable_fullgraph}"
+        compiled = torch.compile(
+            eval_chunk,
+            fullgraph=False,
+            dynamic=False,
+        )
+        compiled(
+            example_inputs,
+            example_targets,
+            torch.zeros(
+                (fixed_chunk_size, 2),
+                device=device,
+                dtype=base_vector.dtype,
+            ),
         )
         return compiled
     except Exception as error:
         print(
-            f"[compile_chunk] disabled model={model_name} device={device.type} "
-            f"reason={error} fallback=eager_chunk"
+            f"[compile_chunk] disabled model={model_name} "
+            f"device={device.type} reason={error}"
         )
-        return eval_chunk
+        return None

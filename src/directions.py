@@ -40,3 +40,13 @@ def build_direction_vectors(model: torch.nn.Module, seed: int) -> Tuple[torch.Te
     vec_a = parameters_to_vector(directions_a).detach().cpu()
     vec_b = parameters_to_vector(directions_b).detach().cpu()
     return base, vec_a, vec_b
+
+
+def build_parameter_vector(
+    base_vector: torch.Tensor,
+    direction_a: torch.Tensor,
+    direction_b: torch.Tensor,
+    alpha: torch.Tensor | float,
+    beta: torch.Tensor | float,
+) -> torch.Tensor:
+    return base_vector + (alpha * direction_a) + (beta * direction_b)

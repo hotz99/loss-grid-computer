@@ -38,6 +38,13 @@ def _float_or_none(value: Any) -> float | None:
     return float(value)
 
 
+def _summary_total_s(summary: Dict[str, Any]) -> float | None:
+    measurement = summary.get("measurement")
+    if isinstance(measurement, dict):
+        return _float_or_none(measurement.get("total_s"))
+    return _float_or_none(summary.get("total_s"))
+
+
 def compare_run_outputs(lhs_path: str, rhs_path: str, atol: float = 1e-6, rtol: float = 1e-5) -> Dict[str, Any]:
     lhs_dir = _resolve_run_dir(lhs_path)
     rhs_dir = _resolve_run_dir(rhs_path)
@@ -73,8 +80,8 @@ def compare_run_outputs(lhs_path: str, rhs_path: str, atol: float = 1e-6, rtol: 
             torch.allclose(lhs_valid, rhs_valid, atol=atol, rtol=rtol)
         )
 
-    lhs_total_s = _float_or_none(lhs_summary.get("total_s"))
-    rhs_total_s = _float_or_none(rhs_summary.get("total_s"))
+    lhs_total_s = _summary_total_s(lhs_summary)
+    rhs_total_s = _summary_total_s(rhs_summary)
     runtime_delta_s = None
     speedup_vs_lhs = None
     if lhs_total_s is not None and rhs_total_s is not None:

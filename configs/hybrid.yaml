@@ -1,0 +1,32 @@
+experiment_name: hybrid
+seed: 1337
+backend: hybrid
+model:
+  checkpoint_path: assets/cifar10-resnet20-0.pkl
+data:
+  root: assets/cifar-10-batches-py
+  subset_size: 1024
+  batch_size: 64
+  cpu_batch_size: 4
+  num_workers: 0
+grid:
+  resolution: 16
+runtime:
+  num_batches: null
+  output_root: outputs
+  preload_gpu_batches: true
+  compile_gpu_chunk_eval: true
+  compile_gpu_chunk_size: null
+resources:
+  cpu_workers: 4
+decomposition:
+  cpu_chunk_size: 1
+  gpu_initial_ratio: 0.86
+  fixed_gpu_chunk_size: null
+  gpu_chunk_size_max: 256
+  cpu_threads_per_worker: 1
+sweep:
+  resources.cpu_workers: [4]
+  data.cpu_batch_size: [4]
+  decomposition.cpu_chunk_size: [1]
+  decomposition.gpu_initial_ratio: [0.86]

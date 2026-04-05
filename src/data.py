@@ -7,7 +7,10 @@ from typing import Tuple
 import torch
 from torch.utils.data import DataLoader, Dataset
 
-from loss_grid.config import DataConfig
+from src.config import DataConfig
+
+CIFAR10_NORMALIZE_MEAN = (0.4914, 0.4822, 0.4465)
+CIFAR10_NORMALIZE_STD = (0.2470, 0.2435, 0.2616)
 
 
 class Cifar10Dataset(Dataset):
@@ -16,13 +19,7 @@ class Cifar10Dataset(Dataset):
         if not root.exists():
             raise FileNotFoundError(f"CIFAR-10 root does not exist: {root}")
 
-        split = config.split.lower()
-        if split == "train":
-            batch_paths = [root / f"data_batch_{index}" for index in range(1, 6)]
-        elif split == "test":
-            batch_paths = [root / "test_batch"]
-        else:
-            raise ValueError(f"Unsupported CIFAR-10 split: {config.split}")
+        batch_paths = [root / "test_batch"]
 
         features = []
         labels = []
@@ -45,8 +42,8 @@ class Cifar10Dataset(Dataset):
             all_features = all_features[:limit]
             all_labels = all_labels[:limit]
 
-        mean = torch.tensor(config.normalize_mean, dtype=torch.float32).view(3, 1, 1)
-        std = torch.tensor(config.normalize_std, dtype=torch.float32).view(3, 1, 1)
+        mean = torch.tensor(CIFAR10_NORMALIZE_MEAN, dtype=torch.float32).view(3, 1, 1)
+        std = torch.tensor(CIFAR10_NORMALIZE_STD, dtype=torch.float32).view(3, 1, 1)
         self.features = (all_features - mean) / std
         self.labels = all_labels
 
@@ -59,10 +56,7 @@ class Cifar10Dataset(Dataset):
 
 def build_dataloader(
     config: DataConfig, batch_size_override: int | None = None
-) -> DataLoader:
-    if config.name != "cifar10":
-        raise ValueError("Unsupported dataset. Expected 'cifar10'.")
-
+) -> DataLoader[Cifar10Dataset]:
     dataset = Cifar10Dataset(config)
     return DataLoader(
         dataset,

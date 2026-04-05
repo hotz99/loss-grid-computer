@@ -38,7 +38,7 @@ def run_profiled_experiment(config_path: Path, cpu_workers: int) -> dict:
     try:
         # Run experiment
         result = subprocess.run(
-            [sys.executable, 'run_experiment.py', 'run', '--config', tmp_path],
+            [sys.executable, '-m', 'src.runner', 'run', '--config', tmp_path],
             capture_output=True,
             text=True,
             timeout=300,
