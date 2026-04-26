@@ -1,87 +1,89 @@
 from __future__ import annotations
 
-import json
+import math
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
-import torch
+from src.results import load_run_summary, load_surface
 
 
 def _resolve_run_dir(path: str) -> Path:
     candidate = Path(path)
     if candidate.is_file():
-        if candidate.name != "loss_surface.pt":
-            raise ValueError(f"Expected a run directory or loss_surface.pt, got: {path}")
+        if candidate.name != "loss_surface.json":
+            raise ValueError(
+                f"Expected a run directory or loss_surface.json, got: {path}"
+            )
         return candidate.parent
     if not candidate.exists():
         raise FileNotFoundError(f"Run path does not exist: {path}")
     return candidate
-
-
-def _load_surface(run_dir: Path) -> torch.Tensor:
-    surface_path = run_dir / "loss_surface.pt"
-    if not surface_path.exists():
-        raise FileNotFoundError(f"Missing surface file: {surface_path}")
-    return torch.load(surface_path, map_location="cpu")
-
-
-def _load_json(path: Path) -> Dict[str, Any]:
-    if not path.exists():
-        return {}
-    with path.open("r", encoding="utf-8") as handle:
-        return json.load(handle)
-
-
-def _float_or_none(value: Any) -> float | None:
-    if value is None:
-        return None
-    return float(value)
-
-
-def _summary_total_s(summary: Dict[str, Any]) -> float | None:
-    measurement = summary.get("measurement")
-    if isinstance(measurement, dict):
-        return _float_or_none(measurement.get("total_s"))
-    return _float_or_none(summary.get("total_s"))
-
-
-def compare_run_outputs(lhs_path: str, rhs_path: str, atol: float = 1e-6, rtol: float = 1e-5) -> Dict[str, Any]:
+def compare_run_outputs(
+    lhs_path: str,
+    rhs_path: str,
+    atol: float = 1e-6,
+    rtol: float = 1e-5,
+) -> Dict[str, Any]:
     lhs_dir = _resolve_run_dir(lhs_path)
     rhs_dir = _resolve_run_dir(rhs_path)
 
-    lhs_surface = _load_surface(lhs_dir)
-    rhs_surface = _load_surface(rhs_dir)
-    if lhs_surface.shape != rhs_surface.shape:
-        raise ValueError(f"Surface shape mismatch: {tuple(lhs_surface.shape)} vs {tuple(rhs_surface.shape)}")
+    lhs_surface = load_surface(lhs_dir)
+    rhs_surface = load_surface(rhs_dir)
+    lhs_summary = load_run_summary(lhs_dir)
+    rhs_summary = load_run_summary(rhs_dir)
 
-    lhs_summary = _load_json(lhs_dir / "summary.json")
-    rhs_summary = _load_json(rhs_dir / "summary.json")
+    return compare_surfaces(
+        lhs_surface=lhs_surface,
+        rhs_surface=rhs_surface,
+        atol=atol,
+        rtol=rtol,
+        lhs_total_s=lhs_summary.measurement.total_s,
+        rhs_total_s=rhs_summary.measurement.total_s,
+        lhs_run_dir=str(lhs_dir),
+        rhs_run_dir=str(rhs_dir),
+        lhs_device=lhs_summary.device,
+        rhs_device=rhs_summary.device,
+    )
 
-    lhs_nan_mask = torch.isnan(lhs_surface)
-    rhs_nan_mask = torch.isnan(rhs_surface)
-    nan_mismatch_count = int(torch.count_nonzero(lhs_nan_mask != rhs_nan_mask).item())
 
-    valid_mask = ~(lhs_nan_mask | rhs_nan_mask)
-    valid_points = int(torch.count_nonzero(valid_mask).item())
-    if valid_points == 0:
-        max_abs_diff = 0.0
-        mean_abs_diff = 0.0
-        rmse = 0.0
-        allclose = nan_mismatch_count == 0
-    else:
-        lhs_valid = lhs_surface[valid_mask]
-        rhs_valid = rhs_surface[valid_mask]
-        abs_diff = torch.abs(lhs_valid - rhs_valid)
-        squared_diff = torch.square(lhs_valid - rhs_valid)
-        max_abs_diff = float(abs_diff.max().item())
-        mean_abs_diff = float(abs_diff.mean().item())
-        rmse = float(torch.sqrt(squared_diff.mean()).item())
-        allclose = nan_mismatch_count == 0 and bool(
-            torch.allclose(lhs_valid, rhs_valid, atol=atol, rtol=rtol)
-        )
+def compare_surfaces(
+    lhs_surface: list[tuple[int, int, float]],
+    rhs_surface: list[tuple[int, int, float]],
+    atol: float = 1e-6,
+    rtol: float = 1e-5,
+    lhs_total_s: Optional[float] = None,
+    rhs_total_s: Optional[float] = None,
+    lhs_run_dir: Optional[str] = None,
+    rhs_run_dir: Optional[str] = None,
+    lhs_device: Any = None,
+    rhs_device: Any = None,
+) -> Dict[str, Any]:
+    lhs_sorted = sorted(lhs_surface, key=lambda record: (record[0], record[1]))
+    rhs_sorted = sorted(rhs_surface, key=lambda record: (record[0], record[1]))
+    if len(lhs_sorted) != len(rhs_sorted):
+        raise ValueError(f"Point-count mismatch: {len(lhs_sorted)} vs {len(rhs_sorted)}")
 
-    lhs_total_s = _summary_total_s(lhs_summary)
-    rhs_total_s = _summary_total_s(rhs_summary)
+    allclose = True
+    mismatch_count = 0
+    finite_squared_error_sum = 0.0
+    finite_error_count = 0
+    for lhs_record, rhs_record in zip(lhs_sorted, rhs_sorted):
+        lhs_row, lhs_col, lhs_value = lhs_record
+        rhs_row, rhs_col, rhs_value = rhs_record
+        if lhs_row != rhs_row or lhs_col != rhs_col:
+            raise ValueError(
+                f"Point mismatch: {(lhs_row, lhs_col)} vs {(rhs_row, rhs_col)}"
+            )
+        if math.isnan(lhs_value) and math.isnan(rhs_value):
+            continue
+        if math.isfinite(lhs_value) and math.isfinite(rhs_value):
+            finite_squared_error_sum += (lhs_value - rhs_value) ** 2
+            finite_error_count += 1
+        if not math.isclose(lhs_value, rhs_value, rel_tol=rtol, abs_tol=atol):
+            allclose = False
+            mismatch_count += 1
+    rmse = math.sqrt(finite_squared_error_sum / max(1, finite_error_count))
+
     runtime_delta_s = None
     speedup_vs_lhs = None
     if lhs_total_s is not None and rhs_total_s is not None:
@@ -90,17 +92,14 @@ def compare_run_outputs(lhs_path: str, rhs_path: str, atol: float = 1e-6, rtol: 
             speedup_vs_lhs = lhs_total_s / rhs_total_s
 
     return {
-        "lhs_run_dir": str(lhs_dir),
-        "rhs_run_dir": str(rhs_dir),
-        "lhs_device": lhs_summary.get("device"),
-        "rhs_device": rhs_summary.get("device"),
-        "shape": list(lhs_surface.shape),
-        "valid_points": valid_points,
-        "nan_mismatch_count": nan_mismatch_count,
-        "max_abs_diff": max_abs_diff,
-        "mean_abs_diff": mean_abs_diff,
-        "rmse": rmse,
+        "lhs_run_dir": lhs_run_dir,
+        "rhs_run_dir": rhs_run_dir,
+        "lhs_device": lhs_device,
+        "rhs_device": rhs_device,
+        "num_points": len(lhs_sorted),
         "allclose": allclose,
+        "mismatch_count": mismatch_count,
+        "rmse": rmse,
         "atol": atol,
         "rtol": rtol,
         "lhs_total_s": lhs_total_s,

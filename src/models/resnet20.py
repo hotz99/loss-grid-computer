@@ -98,6 +98,8 @@ def _load_checkpoint(model: nn.Module, checkpoint_path: str) -> None:
         raise ValueError(f"Unsupported checkpoint format in {path}")
     cleaned = OrderedDict()
     for key, value in state_dict.items():
+        if torch.is_floating_point(value):
+            value = value.to(torch.float32)
         cleaned[key.removeprefix("module.")] = value
     model.load_state_dict(cleaned, strict=True)
 
@@ -106,4 +108,4 @@ def build_model(config: ModelConfig) -> nn.Module:
     model = ResNet20()
     if config.checkpoint_path:
         _load_checkpoint(model, config.checkpoint_path)
-    return model
+    return model.float()

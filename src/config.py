@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 import copy
+from importlib import import_module
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
-import yaml
+from typing import Any, Literal, Optional
 
 
 @dataclass
@@ -27,31 +26,23 @@ class DataConfig:
 @dataclass
 class GridConfig:
     resolution: int = 9
+    scale: float = 1.0
 
 
 @dataclass
 class RuntimeConfig:
+    device: Literal["auto", "mps", "cuda", "cpu"] = "auto"
     num_batches: Optional[int] = 4
-    preload_gpu_batches: bool = False
-    preload_max_batches: Optional[int] = None
-    compile_gpu_chunk_eval: bool = False
-    compile_gpu_chunk_size: Optional[int] = 4
+    preload: bool = False
     gpu_slowdown_factor: float = 1.0
+    validation_baseline_config: Optional[str] = None
     output_root: str = "outputs"
+    verbose: bool = False
 
 
 @dataclass
 class ResourcesConfig:
     cpu_workers: int = 1
-
-
-@dataclass
-class DecompositionConfig:
-    cpu_chunk_size: int = 1
-    gpu_chunk_size_max: int = 8
-    fixed_gpu_chunk_size: Optional[int] = None
-    gpu_initial_ratio: float = 0.5
-    cpu_threads_per_worker: int = 1
 
 
 @dataclass
@@ -64,72 +55,74 @@ class ExperimentConfig:
     grid: GridConfig = field(default_factory=GridConfig)
     runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
     resources: ResourcesConfig = field(default_factory=ResourcesConfig)
-    decomposition: DecompositionConfig = field(default_factory=DecompositionConfig)
-    sweep: Dict[str, List[Any]] = field(default_factory=dict)
-
-    def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
 
     def clone(self) -> "ExperimentConfig":
-        return experiment_config_from_dict(copy.deepcopy(self.to_dict()))
+        return copy.deepcopy(self)
 
 
-def _load_raw(path: str) -> Dict[str, Any]:
+@dataclass(frozen=True)
+class VanillaExecutionConfig:
+    workload: ExperimentConfig
+    _tag: Literal["vanilla"] = "vanilla"
+
+
+@dataclass(frozen=True)
+class HybridExecutionConfig:
+    workload: ExperimentConfig
+    cpu_workers: int
+    cpu_batch_size: int
+    _tag: Literal["hybrid"] = "hybrid"
+
+
+def experiment_config_to_dict(config: ExperimentConfig) -> dict[str, Any]:
+    return asdict(config)
+
+
+def _load_raw(path: str) -> dict[str, Any]:
     config_path = Path(path)
     with config_path.open("r", encoding="utf-8") as handle:
         if config_path.suffix.lower() == ".json":
             return json.load(handle)
+        try:
+            yaml = import_module("yaml")
+        except ModuleNotFoundError as exc:
+            raise ModuleNotFoundError(
+                "PyYAML is required to load YAML configs. "
+                "Install dependencies with `pip install -r requirements.txt`."
+            ) from exc
         return yaml.safe_load(handle)
 
 
-def experiment_config_from_dict(raw: Dict[str, Any]) -> ExperimentConfig:
+def experiment_config_from_dict(raw: dict[str, Any]) -> ExperimentConfig:
+    runtime_raw = dict(raw.get("runtime") or {})
+    if "preload" not in runtime_raw:
+        if "preload_device_batches" in runtime_raw:
+            runtime_raw["preload"] = runtime_raw["preload_device_batches"]
+        elif "preload_gpu_batches" in runtime_raw:
+            runtime_raw["preload"] = runtime_raw["preload_gpu_batches"]
+
     return ExperimentConfig(
         experiment_name=raw.get("experiment_name", "loss-grid"),
         seed=raw.get("seed", 1337),
-        backend=raw.get("backend", "gpu"),
+        backend=raw.get("backend", "vanilla"),
         model=ModelConfig(**(raw.get("model") or {})),
         data=DataConfig(**(raw.get("data") or {})),
         grid=GridConfig(**(raw.get("grid") or {})),
-        runtime=RuntimeConfig(**(raw.get("runtime") or {})),
+        runtime=RuntimeConfig(**runtime_raw),
         resources=ResourcesConfig(**(raw.get("resources") or {})),
-        decomposition=DecompositionConfig(**(raw.get("decomposition") or {})),
-        sweep=raw.get("sweep", {}) or {},
     )
 
 
-def _validate_sweep(config: ExperimentConfig) -> None:
-    for key, values in config.sweep.items():
-        if not isinstance(values, list) or not values:
-            raise ValueError(f"sweep.{key} must be a non-empty list")
-        if key == "resources.cpu_workers":
-            for value in values:
-                if value < 1:
-                    raise ValueError("sweep.resources.cpu_workers values must be >= 1")
-        elif key == "data.cpu_batch_size":
-            for value in values:
-                if value < 1:
-                    raise ValueError("sweep.data.cpu_batch_size values must be >= 1")
-        elif key == "decomposition.cpu_chunk_size":
-            for value in values:
-                if value < 1:
-                    raise ValueError(
-                        "sweep.decomposition.cpu_chunk_size values must be >= 1"
-                    )
-        elif key == "decomposition.gpu_initial_ratio":
-            for value in values:
-                if not 0.0 <= value <= 1.0:
-                    raise ValueError(
-                        "sweep.decomposition.gpu_initial_ratio values must be in [0, 1]"
-                    )
-        else:
-            raise ValueError(f"Unsupported sweep key: {key}")
-
-
 def validate_config(config: ExperimentConfig) -> None:
-    if config.backend not in {"vanilla", "vanilla_compiled", "hybrid"}:
+    total_points = config.grid.resolution * config.grid.resolution
+    if config.backend not in {"vanilla", "hybrid"}:
         raise ValueError(f"Unsupported backend: {config.backend}")
+    if config.runtime.device not in {"auto", "cuda", "mps", "cpu"}:
+        raise ValueError("runtime.device must be one of: auto, cuda, mps, cpu")
     if config.grid.resolution < 1:
         raise ValueError("grid.resolution must be >= 1")
+    if config.grid.scale <= 0:
+        raise ValueError("grid.scale must be > 0")
     if config.data.batch_size < 1:
         raise ValueError("data.batch_size must be >= 1")
     if config.data.cpu_batch_size is not None and config.data.cpu_batch_size < 1:
@@ -138,36 +131,28 @@ def validate_config(config: ExperimentConfig) -> None:
         raise ValueError("data.gpu_batch_size must be >= 1 when set")
     if config.resources.cpu_workers < 0:
         raise ValueError("resources.cpu_workers must be >= 0")
-    if config.backend == "hybrid" and config.resources.cpu_workers < 1:
-        raise ValueError("resources.cpu_workers must be >= 1 for hybrid")
-    if config.decomposition.cpu_chunk_size < 1:
-        raise ValueError("decomposition.cpu_chunk_size must be >= 1")
-    if config.decomposition.gpu_chunk_size_max < 1:
-        raise ValueError("decomposition.gpu_chunk_size_max must be >= 1")
-    if (
-        config.decomposition.fixed_gpu_chunk_size is not None
-        and config.decomposition.fixed_gpu_chunk_size < 1
-    ):
-        raise ValueError("decomposition.fixed_gpu_chunk_size must be >= 1 when set")
-    if not 0.0 <= config.decomposition.gpu_initial_ratio <= 1.0:
-        raise ValueError("decomposition.gpu_initial_ratio must be in [0, 1]")
-    if config.decomposition.cpu_threads_per_worker < 1:
-        raise ValueError("decomposition.cpu_threads_per_worker must be >= 1")
+    if config.backend == "hybrid" and total_points < 2:
+        raise ValueError("hybrid requires at least 2 grid points")
     if config.runtime.num_batches is not None and config.runtime.num_batches < 1:
         raise ValueError("runtime.num_batches must be >= 1 when set")
-    if (
-        config.runtime.preload_max_batches is not None
-        and config.runtime.preload_max_batches < 1
-    ):
-        raise ValueError("runtime.preload_max_batches must be >= 1 when set")
-    if (
-        config.runtime.compile_gpu_chunk_size is not None
-        and config.runtime.compile_gpu_chunk_size < 1
-    ):
-        raise ValueError("runtime.compile_gpu_chunk_size must be >= 1 when set")
     if config.runtime.gpu_slowdown_factor < 1.0:
         raise ValueError("runtime.gpu_slowdown_factor must be >= 1.0")
-    _validate_sweep(config)
+
+
+def validate_rq1_config(
+    repeats: int,
+    max_slowdown: float,
+    jump_factor: float,
+    linear_samples: int,
+) -> None:
+    if repeats < 1:
+        raise ValueError("--repeats must be >= 1")
+    if max_slowdown < 1.0:
+        raise ValueError("--max-slowdown must be >= 1.0")
+    if jump_factor <= 1.0:
+        raise ValueError("--jump-factor must be > 1.0")
+    if linear_samples < 2:
+        raise ValueError("--linear-samples must be >= 2")
 
 
 def load_config(path: str) -> ExperimentConfig:

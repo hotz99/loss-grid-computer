@@ -1,146 +1,112 @@
 from __future__ import annotations
 
 import time
+
+import torch
 from torch.nn.utils import vector_to_parameters
 
 from src.backends.base import (
+    apply_gpu_slowdown,
+    build_grid_points,
     build_output_dir,
     evaluate_points_on_device,
-    make_surface,
+    prepare_model_and_data,
+    throughput,
 )
-from src.directions import build_parameter_vector
-from src.grid import partition_points
-from src.kernel import (
-    build_execution_context,
-    compile_chunk_evaluator,
-    evaluate_loss,
+from src.config import VanillaExecutionConfig
+from src.results import (
+    DeviceRecord,
+    ExperimentResult,
+    Measurement,
+    RunRecord,
+    synchronize_device,
 )
-from src.results import ExperimentResult, Measurement, RunRecord
 
 
-def _evaluate_points_eager(
-    context,
-    points,
-    base_vector_device,
-    direction_a_device,
-    direction_b_device,
-    surface,
-) -> None:
-    for point in points:
-        parameter_vector = build_parameter_vector(
-            base_vector_device,
-            direction_a_device,
-            direction_b_device,
-            point.alpha,
-            point.beta,
+def run(config: VanillaExecutionConfig):
+    workload = config.workload
+    device = torch.device(
+        workload.runtime.device
+        if workload.runtime.device != "auto"
+        else (
+            "cuda"
+            if torch.cuda.is_available()
+            else "mps"
+            if torch.backends.mps.is_available()
+            else "cpu"
         )
-        vector_to_parameters(parameter_vector, context.model.parameters())
-        loss_value = evaluate_loss(
-            model=context.model,
-            data_loader=context.data_loader,
-            device=context.device,
-            num_batches=context.config.runtime.num_batches,
-        )
-        surface[point.row, point.col] = loss_value
+    )
+    (
+        model,
+        data_loader,
+        preload_s,
+        base_vector_cpu,
+        direction_a_cpu,
+        direction_b_cpu,
+    ) = prepare_model_and_data(
+        config,
+        device,
+    )
 
+    points = build_grid_points(workload.grid)
 
-def _evaluate_points_compiled(
-    context,
-    points,
-    base_vector_device,
-    direction_a_device,
-    direction_b_device,
-    surface,
-) -> None:
-    for row, col, loss_value in evaluate_points_on_device(
-        context=context,
-        points=points,
+    base_vector_device = base_vector_cpu.to(device)
+    direction_a_device = direction_a_cpu.to(device)
+    direction_b_device = direction_b_cpu.to(device)
+    vector_to_parameters(base_vector_device, model.parameters())
+    synchronize_device(device)
+
+    synchronize_device(device)
+    total_start = time.perf_counter()
+    records = evaluate_points_on_device(
+        model=model,
+        data_loader=data_loader,
+        device=device,
+        chunk=points,
         base_vector_device=base_vector_device,
         direction_a_device=direction_a_device,
         direction_b_device=direction_b_device,
-    ):
-        surface[row, col] = loss_value
-
-
-def _run_single_device(config, evaluation_fn, log_gpu_only: bool) -> ExperimentResult:
-    context = build_execution_context(config)
-    surface = make_surface(config.grid.resolution)
-    output_dir = build_output_dir(config)
-    points = partition_points(
-        context.points,
-        config.grid,
-        worker_index=0,
-        worker_count=1,
     )
-
-    base_vector_device = context.base_vector_cpu.to(context.device)
-    direction_a_device = context.direction_a_cpu.to(context.device)
-    direction_b_device = context.direction_b_cpu.to(context.device)
-
-    if (
-        evaluation_fn is _evaluate_points_compiled
-        and context.device.type != "cpu"
-        and context.compiled_gpu_chunk_eval_enabled
-        and context.compiled_chunk_evaluator is None
-        and isinstance(context.data_loader, list)
-        and len(context.data_loader) > 0
-    ):
-        compile_chunk_evaluator(context)
-
-    total_start = time.perf_counter()
-    evaluation_fn(
-        context,
-        points,
-        base_vector_device,
-        direction_a_device,
-        direction_b_device,
-        surface,
+    synchronize_device(device)
+    evaluation_runtime = time.perf_counter() - total_start
+    apply_gpu_slowdown(
+        device=device,
+        gpu_slowdown_factor=workload.runtime.gpu_slowdown_factor,
+        elapsed_s=evaluation_runtime,
     )
+    synchronize_device(device)
     total_runtime = time.perf_counter() - total_start
+    total_points = len(points)
+    total_throughput = throughput(total_points, total_runtime)
 
-    if log_gpu_only:
-        print(f"[gpu_only] wall={total_runtime:.4f}s points={len(points)}")
+    print(
+        f"[vanilla] device={device.type} "
+        f"grid_time={total_runtime:.4f}s "
+        f"throughput={total_throughput:.4f}pts/s "
+        f"points={total_points}"
+    )
 
-    result = ExperimentResult(
+    return ExperimentResult(
         record=RunRecord(
-            experiment_name=config.experiment_name,
+            experiment_name=workload.experiment_name,
             measurement=Measurement(
                 total_s=float(total_runtime),
-                num_points=int(surface.numel()),
+                num_points=total_points,
             ),
-            backend=config.backend,
-            device={
-                "gpu": str(context.device),
-                "cpu": 0,
-            },
-            config=config.to_dict(),
+            backend=config._tag,
+            device=DeviceRecord(str(device), 0),
+            config=workload,
             comparison=None,
-            output_dir=output_dir,
+            output_dir=build_output_dir(config),
         ),
-        runtime_log={"total_s": total_runtime},
-        surface=surface,
-    )
-    if log_gpu_only:
-        result.runtime_log["single_gpu"] = {
-            "gpu_worker_wall_s": total_runtime,
-            "gpu_points_processed": len(points),
-            "preload_s": context.preload_s,
-            "compile_s": context.compile_s,
-        }
-    return result
-
-
-def run(config):
-    return _run_single_device(
-        config=config,
-        evaluation_fn=_evaluate_points_eager,
-        log_gpu_only=False,
-    )
-
-
-def run_compiled(config):
-    return _run_single_device(
-        config=config,
-        evaluation_fn=_evaluate_points_compiled,
-        log_gpu_only=True,
+        runtime_log={
+            "total_s": total_runtime,
+            "vanilla_execution": {
+                "grid_compute_only_s": total_runtime,
+                "points_processed": total_points,
+                "throughput_points_per_s": total_throughput,
+                "preload_s": preload_s,
+            },
+        },
+        records=records,
     )

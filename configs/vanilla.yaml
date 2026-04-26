@@ -1,4 +1,4 @@
-experiment_name: vanilla
+experiment_name: vanilla-rq1
 seed: 1337
 backend: vanilla
 model:
@@ -9,17 +9,11 @@ data:
   batch_size: 64
   num_workers: 0
 grid:
-  resolution: 16
+  resolution: 8
+  scale: 1.0
 runtime:
   num_batches: null
   output_root: outputs
-  preload_gpu_batches: false
-  compile_gpu_chunk_eval: false
+  preload: false
 resources:
   cpu_workers: 0
-decomposition:
-  gpu_initial_ratio: 1.0
-  fixed_gpu_chunk_size: null
-  gpu_chunk_size_max: 256
-  cpu_chunk_size: 1
-  cpu_threads_per_worker: 1

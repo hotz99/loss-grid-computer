@@ -1,0 +1,104 @@
+/content/loss-grid-computer# python3 -u -m src.runner rq1 \
+    --config configs/hybrid_rq1.yaml \
+    --bench configs/vanilla_rq1.yaml \
+    --repeats 1 \
+    --max-slowdown 100 \
+    --jump-factor 6.0 \
+    --linear-samples 6
+[hybrid_metrics] grid_time=14.4381s throughput=4.4327pts/s gpu_throughput=4.9571pts/s cpu_throughput=0.2770pts/s
+[hybrid_metrics] grid_time=63.1331s throughput=1.0137pts/s gpu_throughput=0.6353pts/s cpu_throughput=0.3960pts/s
+[hybrid_metrics] grid_time=132.0821s throughput=0.4845pts/s gpu_throughput=0.0929pts/s cpu_throughput=0.3937pts/s
+[hybrid_metrics] grid_time=116.7586s throughput=0.5481pts/s gpu_throughput=0.1542pts/s cpu_throughput=0.4005pts/s
+[hybrid_metrics] grid_time=122.6642s throughput=0.5217pts/s gpu_throughput=0.1256pts/s cpu_throughput=0.3995pts/s
+[hybrid_metrics] grid_time=115.6814s throughput=0.5532pts/s gpu_throughput=0.1729pts/s cpu_throughput=0.3952pts/s
+[hybrid_metrics] grid_time=113.2002s throughput=0.5654pts/s gpu_throughput=0.1612pts/s cpu_throughput=0.4064pts/s
+[hybrid_metrics] grid_time=119.2868s throughput=0.5365pts/s gpu_throughput=0.1341pts/s cpu_throughput=0.4072pts/s
+[hybrid_metrics] grid_time=116.2823s throughput=0.5504pts/s gpu_throughput=0.1420pts/s cpu_throughput=0.4128pts/s
+[hybrid_metrics] grid_time=122.5246s throughput=0.5223pts/s gpu_throughput=0.1275pts/s cpu_throughput=0.3999pts/s
+[hybrid_metrics] grid_time=126.6686s throughput=0.5053pts/s gpu_throughput=0.0980pts/s cpu_throughput=0.4105pts/s
+
+
+
+
+
+
+
+        "speedup": 0.879492820048285,
+        "vanilla_total_s": 101.74100367899632
+      }
+    ],
+    "slowdown": 21.0,
+    "speedup_mean": 0.879492820048285,
+    "vanilla_total_s_mean": 101.74100367899632
+  },
+  {
+    "hybrid_total_s_mean": 113.20019186899981,
+    "hybrid_wins": false,
+    "repeats": [
+      {
+        "hybrid_total_s": 113.20019186899981,
+        "speedup": 0.9629684934955333,
+        "vanilla_total_s": 109.00821822749606
+      }
+    ],
+    "slowdown": 22.5,
+    "speedup_mean": 0.9629684934955333,
+    "vanilla_total_s_mean": 109.00821822749606
+  },
+  {
+    "hybrid_total_s_mean": 119.28677413099967,
+    "hybrid_wins": false,
+    "repeats": [
+      {
+        "hybrid_total_s": 119.28677413099967,
+        "speedup": 0.9747554464697247,
+        "vanilla_total_s": 116.2754327759958
+      }
+    ],
+    "slowdown": 24.0,
+    "speedup_mean": 0.9747554464697247,
+    "vanilla_total_s_mean": 116.2754327759958
+  },
+  {
+    "hybrid_total_s_mean": 116.28232408500025,
+    "hybrid_wins": true,
+    "repeats": [
+      {
+        "hybrid_total_s": 116.28232408500025,
+        "speedup": 1.0624370324262535,
+        "vanilla_total_s": 123.54264732449553
+      }
+    ],
+    "slowdown": 25.5,
+    "speedup_mean": 1.0624370324262535,
+    "vanilla_total_s_mean": 123.54264732449553
+  },
+  {
+    "hybrid_total_s_mean": 122.52458278999984,
+    "hybrid_wins": true,
+    "repeats": [
+      {
+        "hybrid_total_s": 122.52458278999984,
+        "speedup": 1.0676213613164953,
+        "vanilla_total_s": 130.80986187299527
+      }
+    ],
+    "slowdown": 27.0,
+    "speedup_mean": 1.0676213613164953,
+    "vanilla_total_s_mean": 130.80986187299527
+  },
+  {
+    "hybrid_total_s_mean": 126.66856997599962,
+    "hybrid_wins": true,
+    "repeats": [
+      {
+        "hybrid_total_s": 126.66856997599962,
+        "speedup": 1.0900658028085184,
+        "vanilla_total_s": 138.077076421495
+      }
+    ],
+    "slowdown": 28.5,
+    "speedup_mean": 1.0900658028085184,
+    "vanilla_total_s_mean": 138.077076421495
+  }
+]
