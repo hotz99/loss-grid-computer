@@ -6,7 +6,7 @@ from pathlib import Path
 import torch
 from torch import nn
 
-from src.config import ModelConfig
+from src.config import MLTaskSpec
 
 
 def _conv3x3(in_planes: int, out_planes: int, stride: int = 1) -> nn.Conv2d:
@@ -104,7 +104,7 @@ def _load_checkpoint(model: nn.Module, checkpoint_path: str) -> None:
     model.load_state_dict(cleaned, strict=True)
 
 
-def build_model(config: ModelConfig) -> nn.Module:
+def build_model(config: MLTaskSpec) -> nn.Module:
     model = ResNet20()
     if config.checkpoint_path:
         _load_checkpoint(model, config.checkpoint_path)

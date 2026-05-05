@@ -7,7 +7,7 @@ import json
 import os
 from pathlib import Path
 import platform
-from typing import Any
+from typing import Any, Optional
 
 import torch
 
@@ -16,16 +16,15 @@ from src.calibration import CalibrationPolicy, run_calibration
 from src.config import (
     ExperimentConfig,
     HybridExecutionConfig,
-    ModelConfig,
     VanillaExecutionConfig,
 )
-from src.models import build_model
 from src.results import (
     load_cached_run_summary,
     load_json,
     write_experiment_result,
     write_json,
 )
+from src.workloads import WORKLOADS
 
 
 @dataclass(frozen=True)
@@ -86,8 +85,11 @@ def resolve_hardware(config: ExperimentConfig) -> ResolvedHardware:
     )
 
 
-def _model_param_shape_signature() -> tuple[int, ...]:
-    model = build_model(ModelConfig(checkpoint_path=None))
+def _model_param_shape_signature(
+    task: "MLTaskSpec",
+) -> tuple[int, ...]:
+    definition = WORKLOADS[task.name]
+    model = definition.build_model(task)
     return tuple(parameter.numel() for parameter in model.parameters())
 
 
@@ -95,16 +97,21 @@ def build_calibration_cache_key(
     input_payload: InputPayload,
     resolved_hardware: ResolvedHardware,
 ) -> CalibrationCacheKey:
+    workload_spec = input_payload.config.task
     return CalibrationCacheKey(
         resolved_hardware=asdict(resolved_hardware),
         input_payload={
             "scheduler_policy_id": "pickup_as_you_finish:v2",
             "preload_enabled": input_payload.config.runtime.preload,
-            "model_family": "resnet20",
-            "model_param_shape_signature": _model_param_shape_signature(),
-            "task_family": "classification.cross_entropy",
-            "dataset_family": "cifar10",
-            "input_shape": (3, 32, 32),
+            "workload_name": workload_spec.name,
+            "model_family": workload_spec.model,
+            "model_param_shape_signature": _model_param_shape_signature(
+                input_payload.config.task,
+            ),
+            "task_family": workload_spec.task,
+            "loss_family": workload_spec.loss,
+            "dataset_family": workload_spec.dataset,
+            "input_shape": workload_spec.input_shape,
             "data_batch_size": input_payload.config.data.batch_size,
             "gpu_batch_size": input_payload.config.data.gpu_batch_size,
             "gpu_slowdown_factor": input_payload.config.runtime.gpu_slowdown_factor,

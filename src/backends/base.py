@@ -17,9 +17,8 @@ from src.config import (
     HybridExecutionConfig,
     VanillaExecutionConfig,
 )
-from src.data import Cifar10Dataset
-from src.models import build_model
 from src.results import synchronize_device
+from src.workloads import WORKLOADS
 
 # ------------------------------
 #              TYPES
@@ -68,6 +67,8 @@ def prepare_model_and_data(
     device: torch.device,
 ):
     workload = config.workload
+    workload_spec = workload.task
+    definition = WORKLOADS[workload_spec.name]
     random.seed(workload.seed)
     torch.manual_seed(workload.seed)
     if torch.cuda.is_available():
@@ -85,7 +86,7 @@ def prepare_model_and_data(
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
 
-    model = build_model(workload.model).float()
+    model = definition.build_model(workload_spec).float()
     batch_size = (
         config.cpu_batch_size
         if device.type == "cpu" and isinstance(config, HybridExecutionConfig)
@@ -95,8 +96,9 @@ def prepare_model_and_data(
             else workload.data.batch_size
         )
     )
+    dataset = definition.build_dataset(workload_spec, workload.data, workload.seed)
     data_loader = DataLoader(
-        Cifar10Dataset(workload.data.subset_size),
+        dataset,
         batch_size=batch_size,
         shuffle=False,
         num_workers=workload.data.num_workers,
@@ -124,7 +126,8 @@ def prepare_model_and_data(
 
     print(
         "[run] "
-        "model=resnet20 "
+        f"workload={workload_spec.name} "
+        f"model={workload_spec.model} "
         f"device={device.type} "
         f"total_samples={workload.data.subset_size} "
         f"batch_size={batch_size}"
@@ -219,6 +222,7 @@ def build_direction_vectors(model: torch.nn.Module, seed: int):
 
 
 def evaluate_points_on_device(
+    config: VanillaExecutionConfig | HybridExecutionConfig,
     model,
     data_loader,
     device,
@@ -228,6 +232,7 @@ def evaluate_points_on_device(
     direction_b_device: torch.Tensor,
 ):
     records: Surface = []
+    definition = WORKLOADS[config.workload.task.name]
 
     for point in chunk:
         perturbed_variant = (
@@ -239,18 +244,12 @@ def evaluate_points_on_device(
         vector_to_parameters(perturbed_variant, model.parameters())
 
         model.eval()
-        loss_fn = torch.nn.CrossEntropyLoss()
         total_loss = 0.0
         total_examples = 0
 
         with torch.no_grad():
-            for inputs, targets in data_loader:
-                # TODO meaning of non_blocking ?
-                inputs = inputs.to(device, dtype=torch.float32, non_blocking=True)
-                targets = targets.to(device, non_blocking=True)
-                logits = model(inputs)
-                loss = loss_fn(logits, targets)
-                batch_size = int(targets.shape[0])
+            for batch in data_loader:
+                loss, batch_size = definition.compute_loss(model, batch, device)
                 total_loss += float(loss.cpu()) * batch_size
                 total_examples += batch_size
 

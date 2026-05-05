@@ -87,6 +87,7 @@ def _execute_worker_queue(
 
         chunk_start = time.perf_counter()
         chunk_records = evaluate_points_on_device(
+            config=config,
             model=model,
             data_loader=data_loader,
             device=device,

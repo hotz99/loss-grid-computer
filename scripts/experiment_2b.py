@@ -8,9 +8,10 @@ import time
 from src.backends import run_backend
 from src.calibration import run_calibration
 from src.config import (
+    ExperimentConfig,
     HybridExecutionConfig,
+    MLTaskSpec,
     VanillaExecutionConfig,
-    load_config,
 )
 from src.results import load_cached_run_summary
 from src.runner import run_baseline_and_persist
@@ -32,7 +33,16 @@ def measure_runtime(execution_config):
 
 def build_variant_workload(base_config, checkpoint_path: str, variant_index: int):
     workload = base_config.clone()
-    workload.model.checkpoint_path = checkpoint_path
+    workload.task = MLTaskSpec(
+        workload.task.name,
+        workload.task.dataset,
+        workload.task.dataset_path,
+        workload.task.model,
+        workload.task.task,
+        workload.task.loss,
+        workload.task.input_shape,
+        checkpoint_path,
+    )
     workload.seed = base_config.seed + variant_index
     return workload
 
@@ -82,9 +92,11 @@ def main(
     gpu_slowdown_factor: float,
     retry: int,
     model_variant_checkpoints: list[str],
-    hybrid_config_path: str,
+    base_workload: MLTaskSpec,
+    base_runtime: ExperimentConfig,
 ):
-    base_config = load_config(hybrid_config_path)
+    base_config = base_runtime.clone()
+    base_config.task = base_workload
     base_config.runtime.gpu_slowdown_factor = gpu_slowdown_factor
     cpu_worker_values = resolve_cpu_worker_values()
     cpu_batch_sizes = resolve_cpu_batch_sizes(base_config)
@@ -136,7 +148,8 @@ def main(
 
     return {
         "setup": {
-            "hybrid_config_path": hybrid_config_path,
+            "workload": base_workload.name,
+            "checkpoint_path": base_workload.checkpoint_path,
             "gpu_slowdown_factor": gpu_slowdown_factor,
             "calibration_grid_resolution": calibration_grid_resolution,
             "execution_grid_resolution": base_config.grid.resolution,

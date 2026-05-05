@@ -7,15 +7,20 @@ import json
 from pathlib import Path
 from typing import Any, Literal, Optional
 
-
-@dataclass
-class ModelConfig:
+@dataclass(frozen=True)
+class MLTaskSpec:
+    name: str
+    dataset: str
+    dataset_path: str
+    model: str
+    task: str
+    loss: str
+    input_shape: tuple[int, ...]
     checkpoint_path: Optional[str] = None
 
 
 @dataclass
 class DataConfig:
-    root: str = "assets/cifar-10-batches-py"
     subset_size: int = 256
     batch_size: int = 32
     cpu_batch_size: Optional[int] = None
@@ -50,7 +55,18 @@ class ExperimentConfig:
     experiment_name: str = "loss-grid"
     seed: int = 1337
     backend: str = "vanilla"
-    model: ModelConfig = field(default_factory=ModelConfig)
+    task: MLTaskSpec = field(
+        default_factory=lambda: MLTaskSpec(
+            "cifar10_resnet20_classification",
+            "cifar10",
+            "assets/cifar-10-batches-py",
+            "resnet20",
+            "image_classification",
+            "cross_entropy",
+            (3, 32, 32),
+            "assets/cifar10-resnet20-0.pkl",
+        )
+    )
     data: DataConfig = field(default_factory=DataConfig)
     grid: GridConfig = field(default_factory=GridConfig)
     runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
@@ -94,19 +110,38 @@ def _load_raw(path: str) -> dict[str, Any]:
 
 
 def experiment_config_from_dict(raw: dict[str, Any]) -> ExperimentConfig:
+    from src.workloads import WORKLOADS
+
     runtime_raw = dict(raw.get("runtime") or {})
+    data_raw = dict(raw.get("data") or {})
+    data_raw.pop("root", None)
     if "preload" not in runtime_raw:
         if "preload_device_batches" in runtime_raw:
             runtime_raw["preload"] = runtime_raw["preload_device_batches"]
         elif "preload_gpu_batches" in runtime_raw:
             runtime_raw["preload"] = runtime_raw["preload_gpu_batches"]
 
+    task_name = raw.get("task") or raw.get("workload") or "cifar10_resnet20_classification"
+    task_spec = copy.deepcopy(WORKLOADS[task_name].spec)
+    checkpoint_path = raw.get("checkpoint_path")
+    if checkpoint_path is not None:
+        task_spec = MLTaskSpec(
+            task_spec.name,
+            task_spec.dataset,
+            task_spec.dataset_path,
+            task_spec.model,
+            task_spec.task,
+            task_spec.loss,
+            task_spec.input_shape,
+            checkpoint_path,
+        )
+
     return ExperimentConfig(
         experiment_name=raw.get("experiment_name", "loss-grid"),
         seed=raw.get("seed", 1337),
         backend=raw.get("backend", "vanilla"),
-        model=ModelConfig(**(raw.get("model") or {})),
-        data=DataConfig(**(raw.get("data") or {})),
+        task=task_spec,
+        data=DataConfig(**data_raw),
         grid=GridConfig(**(raw.get("grid") or {})),
         runtime=RuntimeConfig(**runtime_raw),
         resources=ResourcesConfig(**(raw.get("resources") or {})),
@@ -117,6 +152,8 @@ def validate_config(config: ExperimentConfig) -> None:
     total_points = config.grid.resolution * config.grid.resolution
     if config.backend not in {"vanilla", "hybrid"}:
         raise ValueError(f"Unsupported backend: {config.backend}")
+    if not config.task.name:
+        raise ValueError("task.name must be a non-empty string")
     if config.runtime.device not in {"auto", "cuda", "mps", "cpu"}:
         raise ValueError("runtime.device must be one of: auto, cuda, mps, cpu")
     if config.grid.resolution < 1:

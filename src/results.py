@@ -203,6 +203,10 @@ def to_pretty_json(payload: Any) -> str:
     return json.dumps(_round_floats(payload), indent=2, sort_keys=True)
 
 
+def print_json(payload: Any) -> None:
+    print(to_pretty_json(payload))
+
+
 def write_json(path: Path, payload: Any):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(

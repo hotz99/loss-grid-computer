@@ -15,10 +15,12 @@ from src.config import (
     DataConfig,
     ExperimentConfig,
     GridConfig,
-    ModelConfig,
+    MLTaskSpec,
     ResourcesConfig,
     RuntimeConfig,
+    VanillaExecutionConfig,
 )
+from src.original_algo import run_reference_surface
 
 
 DeviceName = Literal["cpu", "mps", "cuda"]
@@ -43,27 +45,34 @@ class BackendEquivalenceTest(unittest.TestCase):
         second = _run_records(_config(device=SELECTED_DEVICE))
         self.assertEqual([], _mismatches(first, second, "first", "second")[:8])
 
+    def test_vanilla_matches_original_algo_on_4x4_grid(self) -> None:
+        config = _config(device=SELECTED_DEVICE)
+        current = _run_records(config)
+        reference = _sorted_records(
+            run_reference_surface(VanillaExecutionConfig(workload=config))
+        )
+        self.assertEqual([], _mismatches(current, reference, "current", "reference")[:8])
+
 
 def _config(device: DeviceName) -> ExperimentConfig:
     return ExperimentConfig(
-        experiment_name="backend-equivalence",
-        seed=1337,
-        backend="vanilla",
-        model=ModelConfig(checkpoint_path="assets/cifar10-resnet20-0.pkl"),
-        data=DataConfig(
-            subset_size=128,
-            batch_size=32,
-            cpu_batch_size=32,
-            num_workers=0,
+        "backend-equivalence",
+        1337,
+        "vanilla",
+        MLTaskSpec(
+            "cifar10_resnet20_classification",
+            "cifar10",
+            "assets/cifar-10-batches-py",
+            "resnet20",
+            "image_classification",
+            "cross_entropy",
+            (3, 32, 32),
+            "assets/cifar10-resnet20-0.pkl",
         ),
-        grid=GridConfig(resolution=4, scale=1.0),
-        runtime=RuntimeConfig(
-            device=device,
-            num_batches=None,
-            preload=False,
-            gpu_slowdown_factor=1.0,
-        ),
-        resources=ResourcesConfig(cpu_workers=0),
+        DataConfig(128, 32, 32, None, 0),
+        GridConfig(4, 1.0),
+        RuntimeConfig(device, None, False, 1.0, None, "outputs", False),
+        ResourcesConfig(0),
     )
 
 
@@ -80,7 +89,9 @@ def _sorted_records(records: list[tuple[int, int, float]]):
 
 
 def _run_records(config: ExperimentConfig) -> list[tuple[int, int, float]]:
-    return _sorted_records(vanilla.run(config).records or [])
+    return _sorted_records(
+        vanilla.run(VanillaExecutionConfig(workload=config)).records or []
+    )
 
 
 def _mismatches(
