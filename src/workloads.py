@@ -8,13 +8,13 @@ import torch
 from torch import nn
 from torch.utils.data import Dataset
 
-from src.config import DataConfig, MLTaskSpec
+from src.system_schema import DatasetSpec, MLTaskSpec
 from src.data import CaliforniaHousingDataset, Cifar10Dataset
 from src.models.mlp_regressor import build_model as build_mlp_regressor_model
 from src.models.resnet20 import build_model as build_resnet20_model
 
 Batch = tuple[torch.Tensor, torch.Tensor]
-DatasetBuilder = Callable[[MLTaskSpec, DataConfig, int], Dataset]
+DatasetBuilder = Callable[[MLTaskSpec, int], Dataset]
 ModelBuilder = Callable[[MLTaskSpec], nn.Module]
 LossComputer = Callable[[nn.Module, Batch, torch.device], tuple[torch.Tensor, int]]
 
@@ -29,21 +29,19 @@ class WorkloadDefinition:
 
 def _build_cifar10_dataset(
     spec: MLTaskSpec,
-    data_config: DataConfig,
     seed: int,
 ) -> Dataset:
     del seed
-    return Cifar10Dataset(Path(spec.dataset_path), data_config.subset_size)
+    return Cifar10Dataset(Path(spec.dataset.path), spec.dataset.sample_count)
 
 
 def _build_california_housing_dataset(
     spec: MLTaskSpec,
-    data_config: DataConfig,
     seed: int,
 ) -> Dataset:
     return CaliforniaHousingDataset(
-        Path(spec.dataset_path),
-        data_config.subset_size,
+        Path(spec.dataset.path),
+        spec.dataset.sample_count,
         seed,
     )
 
@@ -78,12 +76,15 @@ WORKLOADS: dict[str, WorkloadDefinition] = {
     "cifar10_resnet20_classification": WorkloadDefinition(
         MLTaskSpec(
             "cifar10_resnet20_classification",
-            "cifar10",
-            "assets/cifar-10-batches-py",
+            DatasetSpec(
+                "cifar10",
+                "assets/cifar-10-batches-py",
+                (3, 32, 32),
+                1024,
+            ),
             "resnet20",
             "image_classification",
             "cross_entropy",
-            (3, 32, 32),
             "assets/cifar10-resnet20-0.pkl",
         ),
         _build_cifar10_dataset,
@@ -93,12 +94,15 @@ WORKLOADS: dict[str, WorkloadDefinition] = {
     "california_mlp_regression": WorkloadDefinition(
         MLTaskSpec(
             "california_mlp_regression",
-            "california_housing",
-            "assets",
+            DatasetSpec(
+                "california_housing",
+                "assets",
+                (8,),
+                1024,
+            ),
             "mlp_regressor",
             "tabular_regression",
             "mse",
-            (8,),
             "assets/california-mlp-0.pkl",
         ),
         _build_california_housing_dataset,

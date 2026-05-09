@@ -1,8 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import asdict
 import multiprocessing as mp
-import os
-import sys
 import time
 from typing import Any, Sequence, Tuple
 
@@ -16,9 +15,10 @@ from src.backends.base import (
     evaluate_points_on_device,
     GridPoint,
     prepare_model_and_data,
+    resolve_device,
     throughput,
 )
-from src.config import HybridExecutionConfig
+from src.system_schema import HybridMode, SchedulerRequest
 from src.results import (
     DeviceRecord,
     ExperimentResult,
@@ -29,8 +29,9 @@ from src.results import (
 
 
 def _build_worker_context(
-    config: HybridExecutionConfig,
+    request: SchedulerRequest,
     device: torch.device,
+    seed: int,
 ):
     (
         model,
@@ -40,8 +41,9 @@ def _build_worker_context(
         direction_a_cpu,
         direction_b_cpu,
     ) = prepare_model_and_data(
-        config,
+        request,
         device,
+        seed,
     )
 
     base_vector_device = base_vector_cpu.to(device)
@@ -60,11 +62,12 @@ def _build_worker_context(
 
 
 def _execute_worker_queue(
-    config: HybridExecutionConfig,
+    request: SchedulerRequest,
     device: torch.device,
     tasks,
     worker_label: str,
     worker_context,
+    gpu_slowdown_factor: float,
 ):
     (
         model,
@@ -87,22 +90,22 @@ def _execute_worker_queue(
 
         chunk_start = time.perf_counter()
         chunk_records = evaluate_points_on_device(
-            config=config,
-            model=model,
-            data_loader=data_loader,
-            device=device,
-            chunk=chunk,
-            base_vector_device=base_vector_device,
-            direction_a_device=direction_a_device,
-            direction_b_device=direction_b_device,
+            request,
+            model,
+            data_loader,
+            device,
+            chunk,
+            base_vector_device,
+            direction_a_device,
+            direction_b_device,
         )
         synchronize_device(device)
         chunk_runtime = time.perf_counter() - chunk_start
 
         apply_gpu_slowdown(
-            device=device,
-            gpu_slowdown_factor=config.workload.runtime.gpu_slowdown_factor,
-            elapsed_s=chunk_runtime,
+            device,
+            gpu_slowdown_factor,
+            chunk_runtime,
         )
         local_records.extend(
             (row, col, loss, worker_label) for row, col, loss in chunk_records
@@ -137,27 +140,27 @@ def _execute_worker_queue(
 
 
 def _worker_main(
-    config: HybridExecutionConfig,
+    request: SchedulerRequest,
     device: torch.device,
     tasks,
     result_queue,
     worker_label: str,
+    seed: int,
+    gpu_slowdown_factor: float,
 ):
-    verbose = bool(config.workload.runtime.verbose)
-    if not verbose:
-        sys.stdout = open(os.devnull, "w", encoding="utf-8")
-
     worker_context = _build_worker_context(
-        config,
+        request,
         device,
+        seed,
     )
     result_queue.put(
         _execute_worker_queue(
-            config,
+            request,
             device,
             tasks,
             worker_label,
             worker_context,
+            gpu_slowdown_factor,
         )
     )
 
@@ -167,18 +170,8 @@ def _chunk_points(points: Sequence[GridPoint], chunk_size: int):
     return [list(points[index : index + size]) for index in range(0, len(points), size)]
 
 
-def _resolve_gpu_device(config: HybridExecutionConfig):
-    gpu_device = torch.device(
-        config.workload.runtime.device
-        if config.workload.runtime.device != "auto"
-        else (
-            "cuda"
-            if torch.cuda.is_available()
-            else "mps"
-            if torch.backends.mps.is_available()
-            else "cpu"
-        )
-    )
+def _resolve_gpu_device(request: SchedulerRequest):
+    gpu_device = resolve_device(request.device)
     if gpu_device.type == "cpu":
         raise RuntimeError("hybrid backend requires a GPU device")
     return gpu_device
@@ -195,38 +188,45 @@ def _build_task_queue(ctx, chunks, num_workers: int):
 
 def _spawn_workers(
     ctx,
-    config: HybridExecutionConfig,
+    request: SchedulerRequest,
     gpu_device: torch.device,
     tasks,
     result_queue,
+    seed: int,
+    gpu_slowdown_factor: float,
 ):
+    assert isinstance(request.mode, HybridMode)
     workers = []
     cpu_device = torch.device("cpu")
 
-    for worker_index in range(config.cpu_workers):
+    for worker_index in range(int(request.mode.cpu_workers or 0)):
         process = ctx.Process(
             target=_worker_main,
             args=(
-                config,
+                request,
                 cpu_device,
                 tasks,
                 result_queue,
                 f"cpu_{worker_index}",
+                seed,
+                gpu_slowdown_factor,
             ),
         )
         process.start()
         workers.append(process)
 
     process = ctx.Process(
-        target=_worker_main,
-        args=(
-            config,
-            gpu_device,
-            tasks,
-            result_queue,
-            "gpu_0",
-        ),
-    )
+            target=_worker_main,
+            args=(
+                request,
+                gpu_device,
+                tasks,
+                result_queue,
+                "gpu_0",
+                seed,
+                gpu_slowdown_factor,
+            ),
+        )
     process.start()
     workers.append(process)
     return workers
@@ -240,10 +240,11 @@ def _collect_payloads(workers, result_queue):
 
 
 def _summarize_payloads(
-    config: HybridExecutionConfig,
+    request: SchedulerRequest,
     payloads,
     total_chunks: int,
 ):
+    assert isinstance(request.mode, HybridMode)
     records: list[tuple[int, int, float]] = []
     worker_records: list[tuple[int, int, float, str]] = []
     worker_log: dict[str, dict[str, Any]] = {}
@@ -294,7 +295,7 @@ def _summarize_payloads(
         },
         "hybrid_scheduler": {
             "cpu": {
-                "workers": config.cpu_workers,
+                "workers": int(request.mode.cpu_workers or 0),
                 "points_processed": {
                     label: log["points_processed"] for label, log in cpu_logs.items()
                 },
@@ -328,46 +329,53 @@ def _summarize_payloads(
     return measurement, runtime_log, records, gpu_log
 
 
-def run(config: HybridExecutionConfig):
-    gpu_device = _resolve_gpu_device(config)
+def run(
+    request: SchedulerRequest,
+    seed: int = 1337,
+    gpu_slowdown_factor: float = 1.0,
+):
+    assert isinstance(request.mode, HybridMode)
+    gpu_device = _resolve_gpu_device(request)
 
-    points = build_grid_points(config.workload.grid)
+    points = build_grid_points(request.grid)
     chunks = _chunk_points(points, 1)
     print(
         "[hybrid] allocation "
         f"total_points={len(points)} "
         f"gpu_device={gpu_device.type} "
-        f"cpu_workers={config.cpu_workers} "
+        f"cpu_workers={request.mode.cpu_workers} "
         "chunk_size=1"
     )
 
     ctx = mp.get_context("spawn")
     result_queue = ctx.Queue()
-    tasks = _build_task_queue(ctx, chunks, 1 + config.cpu_workers)
+    tasks = _build_task_queue(ctx, chunks, 1 + int(request.mode.cpu_workers or 0))
     workers = _spawn_workers(
         ctx,
-        config,
+        request,
         gpu_device,
         tasks,
         result_queue,
+        seed,
+        gpu_slowdown_factor,
     )
     payloads = _collect_payloads(workers, result_queue)
-    measurement, runtime_log, records, gpu_log = _summarize_payloads(
-        config,
+    measurement_result, runtime_log_result, records_result, gpu_log = _summarize_payloads(
+        request,
         payloads,
         len(chunks),
     )
 
     return ExperimentResult(
         record=RunRecord(
-            experiment_name=config.workload.experiment_name,
-            measurement=measurement,
-            backend=config._tag,
-            device=DeviceRecord(gpu_log["device"], config.cpu_workers),
-            config=config.workload,
+            experiment_name=request.task.name,
+            measurement=measurement_result,
+            backend=request.mode._tag,
+            device=DeviceRecord(gpu_log["device"], int(request.mode.cpu_workers or 0)),
+            config=asdict(request),
             comparison=None,
-            output_dir=build_output_dir(config),
+            output_dir=build_output_dir(request),
         ),
-        runtime_log=runtime_log,
-        records=records,
+        runtime_log=runtime_log_result,
+        records=records_result,
     )

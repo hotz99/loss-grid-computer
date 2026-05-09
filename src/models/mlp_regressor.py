@@ -6,7 +6,7 @@ from pathlib import Path
 import torch
 from torch import nn
 
-from src.config import MLTaskSpec
+from src.system_schema import MLTaskSpec
 
 
 class MLPRegressor(nn.Module):
@@ -40,7 +40,7 @@ def _load_checkpoint(model: nn.Module, checkpoint_path: str) -> None:
 
 
 def build_model(spec: MLTaskSpec) -> nn.Module:
-    model = MLPRegressor(spec.input_shape[0])
+    model = MLPRegressor(spec.dataset.input_shape[0])
     if spec.checkpoint_path:
         _load_checkpoint(model, spec.checkpoint_path)
     return model.float()

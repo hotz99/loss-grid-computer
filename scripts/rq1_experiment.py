@@ -5,38 +5,45 @@ import statistics
 
 from src.backends import run_backend
 from src.compare import compare_surfaces
-from src.config import ExperimentConfig, HybridExecutionConfig
+from src.system_schema import HybridMode, SchedulerRequest
 
 
 def main(
     *,
-    hybrid_workload: ExperimentConfig,
+    hybrid_request: SchedulerRequest,
     vanilla_surface: list[tuple[int, int, float]],
     vanilla_total_s: float,
-    repeats: int,
+    bracket_repeats: int,
+    sample_repeats: int,
     max_slowdown: float,
     jump_factor: float,
     linear_samples: int,
     atol: float,
     rtol: float,
+    seed: int,
+    cpu_workers: int,
+    cpu_batch_size: int,
 ):
-    def evaluate_slowdown(slowdown: float):
+    assert isinstance(hybrid_request.mode, HybridMode)
+
+    def evaluate_slowdown(slowdown: float, repeats: int):
         runs = []
 
         for repeat_index in range(repeats):
-            repeated_workload = hybrid_workload.clone()
-            repeated_workload.runtime.gpu_slowdown_factor = slowdown
-            repeated_workload.experiment_name = (
-                f"{repeated_workload.experiment_name}-slowdown{slowdown:.3f}"
-                f"-rep{repeat_index:02d}"
-            ).replace(".", "p")
+            repeated_request = SchedulerRequest(
+                hybrid_request.task,
+                hybrid_request.grid,
+                HybridMode(
+                    hybrid_request.mode.gpu_batch_size,
+                    cpu_batch_size,
+                    cpu_workers,
+                ),
+            )
             runs.append(
                 run_backend(
-                    HybridExecutionConfig(
-                        workload=repeated_workload,
-                        cpu_workers=repeated_workload.resources.cpu_workers,
-                        cpu_batch_size=repeated_workload.data.cpu_batch_size or 1,
-                    )
+                    repeated_request,
+                    seed=seed + repeat_index,
+                    gpu_slowdown_factor=slowdown,
                 )
             )
 
@@ -50,7 +57,7 @@ def main(
             "runs": runs,
         }
 
-    low = evaluate_slowdown(1.0)
+    low = evaluate_slowdown(1.0, bracket_repeats)
     assert low["speedup_mean"] <= 1.0, (
         "RQ1 assumes slowdown=1.0 is not already in the positive-speedup regime"
     )
@@ -60,7 +67,7 @@ def main(
 
     while current < max_slowdown:
         current = min(max_slowdown, max(current * jump_factor, current + 0.1))
-        candidate = evaluate_slowdown(current)
+        candidate = evaluate_slowdown(current, bracket_repeats)
         if candidate["speedup_mean"] > 1.0:
             high = candidate
             break
@@ -75,7 +82,10 @@ def main(
         interval = high["slowdown"] - low["slowdown"]
         if interval <= 0.1:
             break
-        candidate = evaluate_slowdown((high["slowdown"] + low["slowdown"]) / 2.0)
+        candidate = evaluate_slowdown(
+            (high["slowdown"] + low["slowdown"]) / 2.0,
+            bracket_repeats,
+        )
         if candidate["speedup_mean"] > 1.0:
             high = candidate
         else:
@@ -89,7 +99,7 @@ def main(
 
     evaluations = []
     for slowdown in sampled_slowdowns:
-        evaluation = evaluate_slowdown(slowdown)
+        evaluation = evaluate_slowdown(slowdown, sample_repeats)
         repeat_metrics = []
 
         for run in evaluation["runs"]:
@@ -132,6 +142,11 @@ def main(
                 ),
                 "speedup_mean": statistics.fmean(
                     metric["speedup"] for metric in repeat_metrics
+                ),
+                "speedup_std": (
+                    statistics.stdev(metric["speedup"] for metric in repeat_metrics)
+                    if len(repeat_metrics) > 1
+                    else None
                 ),
                 "rmse_mean": statistics.fmean(
                     metric["rmse"] for metric in repeat_metrics

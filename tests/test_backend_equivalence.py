@@ -1,30 +1,18 @@
 from __future__ import annotations
 
-import argparse
 import math
-import os
-import sys
 import unittest
 from pathlib import Path
-from typing import Literal
-
-import torch
 
 from src.backends import vanilla
-from src.config import (
-    DataConfig,
-    ExperimentConfig,
-    GridConfig,
+from src.system_schema import (
+    DatasetSpec,
+    GridSpec,
     MLTaskSpec,
-    ResourcesConfig,
-    RuntimeConfig,
-    VanillaExecutionConfig,
+    SchedulerRequest,
+    VanillaMode,
 )
 from src.original_algo import run_reference_surface
-
-
-DeviceName = Literal["cpu", "mps", "cuda"]
-SELECTED_DEVICE: DeviceName = os.environ.get("LOSS_GRID_TEST_DEVICE", "cpu")  # type: ignore[assignment]
 
 
 class BackendEquivalenceTest(unittest.TestCase):
@@ -35,44 +23,42 @@ class BackendEquivalenceTest(unittest.TestCase):
             self.skipTest("ResNet20 checkpoint is not available")
         if not Path("assets/cifar-10-batches-py/test_batch").exists():
             self.skipTest("CIFAR-10 test batch is not available")
-        if SELECTED_DEVICE == "mps" and not torch.backends.mps.is_available():
-            self.skipTest("MPS backend is not available")
-        if SELECTED_DEVICE == "cuda" and not torch.cuda.is_available():
-            self.skipTest("CUDA backend is not available")
 
     def test_vanilla_repeated_runs_match_on_4x4_grid(self) -> None:
-        first = _run_records(_config(device=SELECTED_DEVICE))
-        second = _run_records(_config(device=SELECTED_DEVICE))
+        first = _run_records(_config())
+        second = _run_records(_config())
         self.assertEqual([], _mismatches(first, second, "first", "second")[:8])
 
     def test_vanilla_matches_original_algo_on_4x4_grid(self) -> None:
-        config = _config(device=SELECTED_DEVICE)
+        config = _config()
         current = _run_records(config)
         reference = _sorted_records(
-            run_reference_surface(VanillaExecutionConfig(workload=config))
+            run_reference_surface(
+                config,
+                seed=1337,
+            )
         )
         self.assertEqual([], _mismatches(current, reference, "current", "reference")[:8])
 
 
-def _config(device: DeviceName) -> ExperimentConfig:
-    return ExperimentConfig(
-        "backend-equivalence",
-        1337,
-        "vanilla",
+def _config() -> SchedulerRequest:
+    return SchedulerRequest(
         MLTaskSpec(
             "cifar10_resnet20_classification",
-            "cifar10",
-            "assets/cifar-10-batches-py",
+            DatasetSpec(
+                "cifar10",
+                "assets/cifar-10-batches-py",
+                (3, 32, 32),
+                1024,
+            ),
             "resnet20",
             "image_classification",
             "cross_entropy",
-            (3, 32, 32),
             "assets/cifar10-resnet20-0.pkl",
         ),
-        DataConfig(128, 32, 32, None, 0),
-        GridConfig(4, 1.0),
-        RuntimeConfig(device, None, False, 1.0, None, "outputs", False),
-        ResourcesConfig(0),
+        GridSpec(4, 1.0),
+        VanillaMode(32),
+        "cpu",
     )
 
 
@@ -88,9 +74,12 @@ def _sorted_records(records: list[tuple[int, int, float]]):
     return sorted(records, key=lambda record: (record[0], record[1]))
 
 
-def _run_records(config: ExperimentConfig) -> list[tuple[int, int, float]]:
+def _run_records(config: SchedulerRequest) -> list[tuple[int, int, float]]:
     return _sorted_records(
-        vanilla.run(VanillaExecutionConfig(workload=config)).records or []
+        vanilla.run(
+            config,
+            seed=1337,
+        ).records or []
     )
 
 
@@ -118,14 +107,5 @@ def _mismatches(
         )
     return mismatches
 
-
-def _parse_device(argv: list[str]) -> tuple[DeviceName, list[str]]:
-    parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("--device", choices=("cpu", "mps", "cuda"), default="cpu")
-    args, remaining = parser.parse_known_args(argv)
-    return args.device, remaining
-
-
 if __name__ == "__main__":
-    SELECTED_DEVICE, remaining_argv = _parse_device(sys.argv[1:])
-    unittest.main(argv=[sys.argv[0], *remaining_argv])
+    unittest.main()

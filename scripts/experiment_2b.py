@@ -1,56 +1,23 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+from dataclasses import asdict, replace
 import math
-import os
 import time
 
 from src.backends import run_backend
-from src.calibration import run_calibration
-from src.config import (
-    ExperimentConfig,
-    HybridExecutionConfig,
-    MLTaskSpec,
-    VanillaExecutionConfig,
+from src.calibration import (
+    run_calibration,
+    resolve_cpu_batch_size_candidates,
+    resolve_cpu_worker_candidates,
 )
-from src.results import load_cached_run_summary
-from src.runner import run_baseline_and_persist
+from src.system_schema import GridSpec, HybridMode, MLTaskSpec, SchedulerRequest, VanillaMode
 
 
-def derive_vanilla_workload(workload):
-    baseline = workload.clone()
-    baseline.backend = "vanilla"
-    baseline.resources.cpu_workers = 0
-    baseline.data.cpu_batch_size = None
-    return baseline
-
-
-def measure_runtime(execution_config):
+def measure_runtime(request: SchedulerRequest, **runtime_kwargs):
     start = time.perf_counter()
-    run_backend(execution_config)
+    run_backend(request, **runtime_kwargs)
     return time.perf_counter() - start
-
-
-def build_variant_workload(base_config, checkpoint_path: str, variant_index: int):
-    workload = base_config.clone()
-    workload.task = MLTaskSpec(
-        workload.task.name,
-        workload.task.dataset,
-        workload.task.dataset_path,
-        workload.task.model,
-        workload.task.task,
-        workload.task.loss,
-        workload.task.input_shape,
-        checkpoint_path,
-    )
-    workload.seed = base_config.seed + variant_index
-    return workload
-
-
-def derive_calibration_workload(workload, grid_resolution: int):
-    calibration_workload = workload.clone()
-    calibration_workload.grid.resolution = grid_resolution
-    return calibration_workload
 
 
 def derive_calibration_grid_resolution(cpu_worker_values):
@@ -58,93 +25,175 @@ def derive_calibration_grid_resolution(cpu_worker_values):
     return max(4, math.ceil(math.sqrt(required_points)))
 
 
-def resolve_cpu_worker_values():
-    cpu_core_count = max(1, os.cpu_count() or 1)
-    values = []
-    candidate = 1
+def _run_without_cache_session(
+    variant_tasks: list[MLTaskSpec],
+    calibration_grid: GridSpec,
+    grid: GridSpec,
+    gpu_batch_size: int,
+    cpu_worker_values: tuple[int, ...],
+    cpu_batch_sizes: tuple[int, ...],
+    retry: int,
+    seed: int,
+    gpu_slowdown_factor: float,
+) -> dict:
+    """
+    Empirical without-cache session: each variant pays full baseline + calibration
+    overhead before its grid execution. Records actual wall time per variant.
+    """
+    session_start = time.perf_counter()
+    variant_details = []
 
-    while candidate < cpu_core_count:
-        values.append(candidate)
-        candidate *= 2
+    for index, task in enumerate(variant_tasks):
+        variant_seed = seed + index
 
-    if not values or values[-1] != cpu_core_count:
-        values.append(cpu_core_count)
+        baseline_start = time.perf_counter()
+        baseline_result = run_backend(
+            SchedulerRequest(task, calibration_grid, VanillaMode(gpu_batch_size)),
+            seed=variant_seed,
+            gpu_slowdown_factor=gpu_slowdown_factor,
+        )
+        baseline_s = time.perf_counter() - baseline_start
 
-    return tuple(values)
+        calibration_start = time.perf_counter()
+        execution_mode = run_calibration(
+            SchedulerRequest(task, calibration_grid, HybridMode(gpu_batch_size)),
+            baseline_result.record.measurement.total_s,
+            cpu_worker_values,
+            cpu_batch_sizes,
+            retry,
+            seed=variant_seed,
+            gpu_slowdown_factor=gpu_slowdown_factor,
+        )
+        calibration_s = time.perf_counter() - calibration_start
 
+        grid_start = time.perf_counter()
+        run_backend(
+            SchedulerRequest(task, grid, execution_mode),
+            seed=variant_seed,
+            gpu_slowdown_factor=gpu_slowdown_factor,
+        )
+        grid_s = time.perf_counter() - grid_start
 
-def resolve_cpu_batch_sizes(workload):
-    upper_bound = max(1, min(workload.data.batch_size, workload.data.subset_size))
-    values = []
-    candidate = 4
+        variant_details.append(
+            {
+                "baseline_s": round(baseline_s, 3),
+                "calibration_s": round(calibration_s, 3),
+                "grid_s": round(grid_s, 3),
+                "execution_mode": asdict(execution_mode),
+            }
+        )
 
-    while candidate < upper_bound:
-        values.append(candidate)
-        candidate *= 2
-
-    if not values or values[-1] != upper_bound:
-        values.append(upper_bound)
-
-    return tuple(values)
+    session_total_s = time.perf_counter() - session_start
+    return {
+        "session_total_s": round(session_total_s, 3),
+        "baseline_s": round(sum(v["baseline_s"] for v in variant_details), 3),
+        "calibration_s": round(sum(v["calibration_s"] for v in variant_details), 3),
+        "execution_s": round(sum(v["grid_s"] for v in variant_details), 3),
+        "variants": len(variant_details),
+        "variant_details": variant_details,
+    }
 
 
 def main(
     gpu_slowdown_factor: float,
     retry: int,
     model_variant_checkpoints: list[str],
+    *,
     base_workload: MLTaskSpec,
-    base_runtime: ExperimentConfig,
+    grid: GridSpec,
+    gpu_batch_size: int,
+    seed: int,
+    measure_without_cache: bool = False,
 ):
-    base_config = base_runtime.clone()
-    base_config.task = base_workload
-    base_config.runtime.gpu_slowdown_factor = gpu_slowdown_factor
-    cpu_worker_values = resolve_cpu_worker_values()
-    cpu_batch_sizes = resolve_cpu_batch_sizes(base_config)
-    calibration_grid_resolution = derive_calibration_grid_resolution(cpu_worker_values)
-
-    workloads = [
-        build_variant_workload(base_config, checkpoint_path, index)
-        for index, checkpoint_path in enumerate(model_variant_checkpoints)
-    ]
-
-    calibration_workload = derive_calibration_workload(
-        workloads[0], calibration_grid_resolution
+    cpu_worker_values = resolve_cpu_worker_candidates()
+    cpu_batch_sizes = resolve_cpu_batch_size_candidates(
+        base_workload.dataset.sample_count,
+        gpu_batch_size,
     )
+    calibration_grid_resolution = derive_calibration_grid_resolution(cpu_worker_values)
+    calibration_grid = GridSpec(calibration_grid_resolution, grid.scale)
+
+    variant_tasks = [
+        replace(base_workload, checkpoint_path=checkpoint_path)
+        for checkpoint_path in model_variant_checkpoints
+    ]
+    calibration_task = variant_tasks[0]
 
     baseline_start = time.perf_counter()
-    baseline_workload = derive_vanilla_workload(calibration_workload)
-    try:
-        baseline_summary = load_cached_run_summary(baseline_workload)
-    except FileNotFoundError:
-        baseline_summary = run_baseline_and_persist(baseline_workload).record
+    baseline_result = run_backend(
+        SchedulerRequest(
+            calibration_task,
+            calibration_grid,
+            VanillaMode(gpu_batch_size),
+        ),
+        seed=seed,
+        gpu_slowdown_factor=gpu_slowdown_factor,
+    )
     baseline_s = time.perf_counter() - baseline_start
 
     calibration_start = time.perf_counter()
-    execution_policy = run_calibration(
-        calibration_workload,
-        baseline_summary.measurement.total_s,
+    execution_mode = run_calibration(
+        SchedulerRequest(
+            calibration_task,
+            calibration_grid,
+            HybridMode(gpu_batch_size),
+        ),
+        baseline_result.record.measurement.total_s,
         cpu_worker_values,
         cpu_batch_sizes,
         retry,
+        seed=seed,
+        gpu_slowdown_factor=gpu_slowdown_factor,
     )
     calibration_s = time.perf_counter() - calibration_start
 
-    grid_processing_runtimes = []
-    # note: each variant's workload differs in the model params value
-    for workload in workloads:
-        execution_config = (
-            VanillaExecutionConfig(workload=derive_vanilla_workload(workload))
-            if execution_policy["_tag"] == "vanilla"
-            else HybridExecutionConfig(
-                workload,
-                cpu_workers=int(execution_policy["cpu"]["workers"]),
-                cpu_batch_size=int(execution_policy["cpu"]["batch_size"]),
-            )
+    grid_processing_runtimes = [
+        measure_runtime(
+            SchedulerRequest(task, grid, execution_mode),
+            seed=seed + index,
+            gpu_slowdown_factor=gpu_slowdown_factor,
         )
-        grid_processing_runtimes.append(measure_runtime(execution_config))
+        for index, task in enumerate(variant_tasks)
+    ]
 
     execution_s = sum(grid_processing_runtimes)
-    variants = len(workloads)
+    variants = len(variant_tasks)
+    with_cache_session = {
+        "baseline_s": round(baseline_s, 3),
+        "calibration_s": round(calibration_s, 3),
+        "execution_mode": asdict(execution_mode),
+        "execution_s": round(execution_s, 3),
+        "first_variant_total_s": round(
+            baseline_s + calibration_s + grid_processing_runtimes[0], 3
+        ),
+        "subsequent_variants_total_s": round(sum(grid_processing_runtimes[1:]), 3),
+        "session_total_s": round(baseline_s + calibration_s + execution_s, 3),
+    }
+
+    if measure_without_cache:
+        without_cache_session = _run_without_cache_session(
+            variant_tasks,
+            calibration_grid,
+            grid,
+            gpu_batch_size,
+            cpu_worker_values,
+            cpu_batch_sizes,
+            retry,
+            seed=seed,
+            gpu_slowdown_factor=gpu_slowdown_factor,
+        )
+        without_cache_session["source"] = "empirical"
+    else:
+        without_cache_session = {
+            "source": "derived",
+            "variants": variants,
+            "baseline_s": round(baseline_s * variants, 3),
+            "calibration_s": round(calibration_s * variants, 3),
+            "execution_s": round(execution_s, 3),
+            "session_total_s": round(
+                baseline_s * variants + calibration_s * variants + execution_s, 3
+            ),
+        }
 
     return {
         "setup": {
@@ -152,34 +201,13 @@ def main(
             "checkpoint_path": base_workload.checkpoint_path,
             "gpu_slowdown_factor": gpu_slowdown_factor,
             "calibration_grid_resolution": calibration_grid_resolution,
-            "execution_grid_resolution": base_config.grid.resolution,
-            "cpu_worker_values": cpu_worker_values,
-            "cpu_batch_sizes": cpu_batch_sizes,
+            "execution_grid_resolution": grid.resolution,
+            "cpu_worker_values": list(cpu_worker_values),
+            "cpu_batch_sizes": list(cpu_batch_sizes),
             "retry": retry,
             "model_variant_checkpoints": model_variant_checkpoints,
+            "measure_without_cache": measure_without_cache,
         },
-        "with_cache_session": (
-            with_cache_session := {
-                "baseline_s": baseline_s,
-                "calibration_s": calibration_s,
-                "execution_policy": execution_policy,
-                "execution_s": execution_s,
-                "first_variant_total_s": baseline_s
-                + calibration_s
-                + grid_processing_runtimes[0],
-                "subsequent_variants_total_s": sum(grid_processing_runtimes[1:]),
-                "session_total_s": baseline_s + calibration_s + execution_s,
-            }
-        ),
-        "without_cache_session": {
-            "variants": variants,
-            "baseline_s": with_cache_session["baseline_s"] * variants,
-            "calibration_s": with_cache_session["calibration_s"] * variants,
-            "execution_s": with_cache_session["execution_s"],
-            "session_total_s": (
-                with_cache_session["baseline_s"] * variants
-                + with_cache_session["calibration_s"] * variants
-                + with_cache_session["execution_s"]
-            ),
-        },
+        "with_cache_session": with_cache_session,
+        "without_cache_session": without_cache_session,
     }

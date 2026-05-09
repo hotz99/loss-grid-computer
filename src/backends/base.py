@@ -5,17 +5,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 import random
 import time
-from typing import Iterable, List, Sequence, Tuple, TypeAlias
+from typing import List, Sequence, TypeAlias
 
 import torch
 from torch.nn.utils import parameters_to_vector, vector_to_parameters
 from torch.utils.data import DataLoader
 
-from src.config import (
-    ExperimentConfig,
-    GridConfig,
-    HybridExecutionConfig,
-    VanillaExecutionConfig,
+from src.system_schema import (
+    GridSpec,
+    HybridMode,
+    SchedulerRequest,
 )
 from src.results import synchronize_device
 from src.workloads import WORKLOADS
@@ -42,7 +41,7 @@ Surface: TypeAlias = list[tuple[int, int, float]]
 # ------------------------------
 
 
-def build_grid_points(config: GridConfig):
+def build_grid_points(config: GridSpec):
     alphas = torch.linspace(-config.scale, config.scale, config.resolution).tolist()
     betas = torch.linspace(-config.scale, config.scale, config.resolution).tolist()
     points: List[GridPoint] = []
@@ -54,31 +53,43 @@ def build_grid_points(config: GridConfig):
     return points
 
 
-def build_output_dir(config: VanillaExecutionConfig | HybridExecutionConfig) -> str:
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    return str(
-        Path(config.workload.runtime.output_root)
-        / f"{config.workload.experiment_name}-{timestamp}"
+def resolve_device(device: str = "auto") -> torch.device:
+    return torch.device(
+        device
+        if device != "auto"
+        else (
+            "cuda"
+            if torch.cuda.is_available()
+            else "mps"
+            if torch.backends.mps.is_available()
+            else "cpu"
+        )
     )
 
 
+def build_output_dir(
+    request: SchedulerRequest,
+) -> str:
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return str(Path("outputs") / f"{request.task.name}-{request.mode._tag}-{timestamp}")
+
+
 def prepare_model_and_data(
-    config: VanillaExecutionConfig | HybridExecutionConfig,
+    request: SchedulerRequest,
     device: torch.device,
+    seed: int,
 ):
-    workload = config.workload
-    workload_spec = workload.task
-    definition = WORKLOADS[workload_spec.name]
-    random.seed(workload.seed)
-    torch.manual_seed(workload.seed)
+    definition = WORKLOADS[request.task.name]
+    random.seed(seed)
+    torch.manual_seed(seed)
     if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(workload.seed)
+        torch.cuda.manual_seed_all(seed)
     if (
         device.type == "mps"
         and hasattr(torch, "mps")
         and hasattr(torch.mps, "manual_seed")
     ):
-        torch.mps.manual_seed(workload.seed)
+        torch.mps.manual_seed(seed)
     try:
         torch.use_deterministic_algorithms(True)
     except Exception:
@@ -86,57 +97,37 @@ def prepare_model_and_data(
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
 
-    model = definition.build_model(workload_spec).float()
+    model = definition.build_model(request.task).float()
     batch_size = (
-        config.cpu_batch_size
-        if device.type == "cpu" and isinstance(config, HybridExecutionConfig)
+        request.mode.cpu_batch_size
+        if device.type == "cpu" and isinstance(request.mode, HybridMode)
         else (
-            workload.data.gpu_batch_size
-            if device.type != "cpu" and workload.data.gpu_batch_size is not None
-            else workload.data.batch_size
+            request.mode.gpu_batch_size
         )
     )
-    dataset = definition.build_dataset(workload_spec, workload.data, workload.seed)
+    dataset = definition.build_dataset(request.task, seed)
     data_loader = DataLoader(
         dataset,
         batch_size=batch_size,
         shuffle=False,
-        num_workers=workload.data.num_workers,
+        num_workers=0,
         pin_memory=torch.cuda.is_available(),
     )
 
-    # TODO measure runtime impact of preloading
     preload_s = 0.0
-    if workload.runtime.preload and device.type != "cpu":
-        preloaded_batches = []
-        preload_start = time.perf_counter()
-        for inputs, targets in data_loader:
-            inputs_device = inputs.to(device, non_blocking=False)
-            targets_device = targets.to(device, non_blocking=False)
-            preloaded_batches.append((inputs_device, targets_device))
-        synchronize_device(device)
-        preload_s = time.perf_counter() - preload_start
-        print(
-            "[preload] "
-            f"device={device.type} "
-            f"batches={len(preloaded_batches)} "
-            f"seconds={preload_s:.6f}"
-        )
-        data_loader = preloaded_batches
-
     print(
         "[run] "
-        f"workload={workload_spec.name} "
-        f"model={workload_spec.model} "
+        f"workload={request.task.name} "
+        f"model={request.task.model} "
         f"device={device.type} "
-        f"total_samples={workload.data.subset_size} "
+        f"total_samples={len(dataset)} "
         f"batch_size={batch_size}"
     )
 
     model = model.to(device)
     base_vector_cpu, direction_a_cpu, direction_b_cpu = build_direction_vectors(
         model,
-        workload.seed,
+        seed,
     )
     return (
         model,
@@ -222,7 +213,7 @@ def build_direction_vectors(model: torch.nn.Module, seed: int):
 
 
 def evaluate_points_on_device(
-    config: VanillaExecutionConfig | HybridExecutionConfig,
+    request: SchedulerRequest,
     model,
     data_loader,
     device,
@@ -232,7 +223,7 @@ def evaluate_points_on_device(
     direction_b_device: torch.Tensor,
 ):
     records: Surface = []
-    definition = WORKLOADS[config.workload.task.name]
+    definition = WORKLOADS[request.task.name]
 
     for point in chunk:
         perturbed_variant = (

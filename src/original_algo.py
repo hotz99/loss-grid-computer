@@ -1,76 +1,41 @@
 from __future__ import annotations
 
-from dataclasses import replace
-import random
-from pathlib import Path
 from typing import Sequence
 
 import torch
-from torch.nn.utils import parameters_to_vector, vector_to_parameters
-from torch.utils.data import DataLoader
+from torch.nn.utils import vector_to_parameters
 
-from src.backends.base import GridPoint, Surface, build_direction_vectors, build_grid_points
-from src.config import VanillaExecutionConfig
-from src.data import Cifar10Dataset
-from src.models.resnet20 import build_model as build_resnet20_model
+from src.backends.base import (
+    GridPoint,
+    Surface,
+    build_grid_points,
+    prepare_model_and_data,
+)
+from src.system_schema import SchedulerRequest, VanillaMode
 from src.results import synchronize_device
-from src.workloads import WORKLOADS
 
 
 def _prepare_reference_model_and_data(
-    config: VanillaExecutionConfig,
+    request: SchedulerRequest,
     device: torch.device,
+    *,
+    seed: int,
 ):
-    workload = config.workload
-    if workload.task.name != "cifar10_resnet20_classification":
+    if request.task.name != "cifar10_resnet20_classification":
         raise ValueError(
             "original_algo only supports cifar10_resnet20_classification"
         )
-
-    random.seed(workload.seed)
-    torch.manual_seed(workload.seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(workload.seed)
-    if (
-        device.type == "mps"
-        and hasattr(torch, "mps")
-        and hasattr(torch.mps, "manual_seed")
-    ):
-        torch.mps.manual_seed(workload.seed)
-    try:
-        torch.use_deterministic_algorithms(True)
-    except Exception:
-        pass
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = True
-
-    model = build_resnet20_model(
-        replace(
-            WORKLOADS["cifar10_resnet20_classification"].spec,
-            checkpoint_path=workload.task.checkpoint_path,
-        )
-    ).float()
-
-    batch_size = (
-        workload.data.gpu_batch_size
-        if device.type != "cpu" and workload.data.gpu_batch_size is not None
-        else workload.data.batch_size
-    )
-    data_loader = DataLoader(
-        Cifar10Dataset(
-            Path(WORKLOADS["cifar10_resnet20_classification"].spec.dataset_path),
-            workload.data.subset_size,
-        ),
-        batch_size=batch_size,
-        shuffle=False,
-        num_workers=workload.data.num_workers,
-        pin_memory=torch.cuda.is_available(),
-    )
-
-    model = model.to(device)
-    base_vector_cpu, direction_a_cpu, direction_b_cpu = build_direction_vectors(
+    (
         model,
-        workload.seed,
+        data_loader,
+        _preload_s,
+        base_vector_cpu,
+        direction_a_cpu,
+        direction_b_cpu,
+    ) = prepare_model_and_data(
+        request,
+        device,
+        seed=seed,
     )
     return model, data_loader, base_vector_cpu, direction_a_cpu, direction_b_cpu
 
@@ -115,11 +80,15 @@ def _evaluate_points_reference(
     return records
 
 
-def run_reference_surface(config: VanillaExecutionConfig) -> Surface:
-    workload = config.workload
-    device = torch.device(
-        workload.runtime.device
-        if workload.runtime.device != "auto"
+def run_reference_surface(
+    request: SchedulerRequest,
+    *,
+    seed: int = 1337,
+) -> Surface:
+    assert isinstance(request.mode, VanillaMode)
+    torch_device = torch.device(
+        request.device
+        if request.device != "auto"
         else (
             "cuda"
             if torch.cuda.is_available()
@@ -134,19 +103,23 @@ def run_reference_surface(config: VanillaExecutionConfig) -> Surface:
         base_vector_cpu,
         direction_a_cpu,
         direction_b_cpu,
-    ) = _prepare_reference_model_and_data(config, device)
+    ) = _prepare_reference_model_and_data(
+        request,
+        torch_device,
+        seed=seed,
+    )
 
-    points = build_grid_points(workload.grid)
-    base_vector_device = base_vector_cpu.to(device)
-    direction_a_device = direction_a_cpu.to(device)
-    direction_b_device = direction_b_cpu.to(device)
+    points = build_grid_points(request.grid)
+    base_vector_device = base_vector_cpu.to(torch_device)
+    direction_a_device = direction_a_cpu.to(torch_device)
+    direction_b_device = direction_b_cpu.to(torch_device)
     vector_to_parameters(base_vector_device, model.parameters())
-    synchronize_device(device)
+    synchronize_device(torch_device)
 
     return _evaluate_points_reference(
         model=model,
         data_loader=data_loader,
-        device=device,
+        device=torch_device,
         chunk=points,
         base_vector_device=base_vector_device,
         direction_a_device=direction_a_device,

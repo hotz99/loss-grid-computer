@@ -6,7 +6,7 @@ from pathlib import Path
 import torch
 from torch import nn
 
-from src.config import MLTaskSpec
+from src.system_schema import MLTaskSpec
 
 
 def _conv3x3(in_planes: int, out_planes: int, stride: int = 1) -> nn.Conv2d:

@@ -1,4 +1,4 @@
-from src.config import MLTaskSpec
+from src.system_schema import MLTaskSpec
 from src.models.mlp_regressor import build_model as build_mlp_regressor_model
 from src.models.resnet20 import build_model as build_resnet20_model
 

@@ -1,12 +1,25 @@
 from src.backends import hybrid, vanilla
-from src.config import HybridExecutionConfig, VanillaExecutionConfig
+from src.system_schema import SchedulerRequest
 
 
-def run_backend(config: VanillaExecutionConfig | HybridExecutionConfig):
-    if config._tag == "vanilla":
-        return vanilla.run(config)
-    if config._tag == "hybrid":
-        return hybrid.run(config)
+def run_backend(
+    request: SchedulerRequest,
+    seed: int = 1337,
+    gpu_slowdown_factor: float = 1.0,
+):
+    if request.mode._tag == "vanilla":
+        return vanilla.run(
+            request,
+            seed,
+            gpu_slowdown_factor,
+        )
+    if request.mode._tag == "hybrid":
+        return hybrid.run(
+            request,
+            seed,
+            gpu_slowdown_factor,
+        )
+    raise TypeError(f"Unsupported run mode: {type(request.mode)!r}")
 
 
 __all__ = ["run_backend"]

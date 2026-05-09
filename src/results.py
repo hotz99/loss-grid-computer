@@ -1,17 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 import json
 from pathlib import Path
 from typing import Any, Optional, TypeAlias
 
 import torch
-
-from src.config import (
-    ExperimentConfig,
-    experiment_config_from_dict,
-    experiment_config_to_dict,
-)
 
 
 @dataclass(frozen=True)
@@ -61,7 +55,7 @@ class RunRecord:
     measurement: Measurement
     backend: str
     device: DeviceRecord
-    config: ExperimentConfig
+    config: dict[str, Any]
     comparison: Optional[ComparisonRecord]
     output_dir: str
 
@@ -124,7 +118,7 @@ def _parse_run_record(raw: Any) -> RunRecord:
         measurement=_parse_measurement(raw["measurement"]),
         backend=str(raw["backend"]),
         device=_parse_device_record(raw["device"]),
-        config=experiment_config_from_dict(raw["config"]),
+        config=dict(raw["config"]),
         comparison=_parse_comparison_record(raw.get("comparison")),
         output_dir=str(raw["output_dir"]),
     )
@@ -169,24 +163,6 @@ def find_latest_matching_run_dir(
     return matches[0]
 
 
-def find_cached_run_dir(config: ExperimentConfig) -> Path:
-    return find_latest_matching_run_dir(
-        config.runtime.output_root,
-        config.experiment_name,
-        experiment_config_to_dict(config),
-    )
-
-
-def load_cached_run_summary(config: ExperimentConfig) -> RunRecord:
-    return load_run_summary(find_cached_run_dir(config))
-
-
-def load_cached_run_with_surface(config: ExperimentConfig) -> tuple[str, RunRecord]:
-    run_dir = find_cached_run_dir(config)
-    load_surface(run_dir)
-    return str(run_dir), load_run_summary(run_dir)
-
-
 def _round_floats(value: Any) -> Any:
     if isinstance(value, float):
         return round(value, 3)
@@ -205,48 +181,3 @@ def to_pretty_json(payload: Any) -> str:
 
 def print_json(payload: Any) -> None:
     print(to_pretty_json(payload))
-
-
-def write_json(path: Path, payload: Any):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        to_pretty_json(payload),
-        encoding="utf-8",
-    )
-
-
-def write_summary_json(
-    config: ExperimentConfig,
-    filename: str,
-    payload: Any,
-):
-    summary_dir = Path(config.runtime.output_root) / f"{config.experiment_name}-summary"
-    summary_dir.mkdir(parents=True, exist_ok=True)
-    path = summary_dir / filename
-    write_json(path, payload)
-    return str(path)
-
-
-def write_experiment_result(result: ExperimentResult):
-    record = result.record
-
-    output_dir = Path(record.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    config_path = output_dir / CONFIG_SNAPSHOT_FILENAME
-    breakdown_path = output_dir / "runtime_breakdown.json"
-    summary_path = output_dir / SUMMARY_FILENAME
-    surface_path = output_dir / SURFACE_FILENAME
-
-    write_json(config_path, experiment_config_to_dict(record.config))
-    write_json(breakdown_path, result.runtime_log)
-    write_json(
-        summary_path,
-        {
-            **asdict(record),
-            "config": experiment_config_to_dict(record.config),
-        },
-    )
-
-    if result.records is not None:
-        write_json(surface_path, result.records)
