@@ -166,6 +166,10 @@ def pipeline(
     task_specs = [
         base_task,
         replace(WORKLOADS["california_mlp_regression"].spec, checkpoint_path=None),
+        replace(
+            WORKLOADS["cifar10_row_gru_classification"].spec,
+            checkpoint_path="assets/cifar10-row-gru-0.pkl",
+        ),
     ]
     workload_showcases = {
         task_spec.name: run_experiments(
