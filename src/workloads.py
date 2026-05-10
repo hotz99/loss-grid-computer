@@ -12,6 +12,7 @@ from src.system_schema import DatasetSpec, MLTaskSpec
 from src.data import CaliforniaHousingDataset, Cifar10Dataset
 from src.models.mlp_regressor import build_model as build_mlp_regressor_model
 from src.models.resnet20 import build_model as build_resnet20_model
+from src.models.row_gru import build_model as build_row_gru_model
 
 Batch = tuple[torch.Tensor, torch.Tensor]
 DatasetBuilder = Callable[[MLTaskSpec, int], Dataset]
@@ -108,5 +109,23 @@ WORKLOADS: dict[str, WorkloadDefinition] = {
         _build_california_housing_dataset,
         build_mlp_regressor_model,
         _compute_mse,
+    ),
+    "cifar10_row_gru_classification": WorkloadDefinition(
+        MLTaskSpec(
+            "cifar10_row_gru_classification",
+            DatasetSpec(
+                "cifar10",
+                "assets/cifar-10-batches-py",
+                (3, 32, 32),
+                1024,
+            ),
+            "row_gru",
+            "image_classification",
+            "cross_entropy",
+            "assets/cifar10-row-gru-0.pkl",
+        ),
+        _build_cifar10_dataset,
+        build_row_gru_model,
+        _compute_cross_entropy,
     ),
 }
