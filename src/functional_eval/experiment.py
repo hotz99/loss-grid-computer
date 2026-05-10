@@ -33,6 +33,7 @@ class FunctionalEvalConfig:
     rel_tol: float = 1e-5
     abs_tol: float = 1e-6
     max_memory_fraction: float | None = 0.85
+    run_label: str | None = None
 
 
 @dataclass(frozen=True)
@@ -40,6 +41,9 @@ class CandidateSpec:
     name: str
     runner: Runner | None
     kwargs: dict[str, Any]
+    components: tuple[str, ...]
+    applies_to_sections: tuple[str, ...]
+    hypothesis: str
     skipped_reason: str | None = None
 
 
@@ -83,7 +87,6 @@ def build_default_request(
 
 def run_experiment(config: FunctionalEvalConfig) -> dict[str, Any]:
     device = _resolve_device(config.request.device)
-    definitive = _is_definitive_backend(device)
     candidate_specs = _candidate_specs(config)
 
     baseline_runs: list[CandidateRun] = []
@@ -91,7 +94,18 @@ def run_experiment(config: FunctionalEvalConfig) -> dict[str, Any]:
 
     for repeat in range(config.repeats):
         baseline = _run_one_candidate(
-            CandidateSpec("baseline_original", run_baseline, {}),
+            CandidateSpec(
+                name="baseline_original",
+                runner=run_baseline,
+                kwargs={},
+                components=("original_in_place_mutation",),
+                applies_to_sections=(
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss",
+                ),
+                hypothesis="reference behavior and runtime target",
+            ),
             config,
             repeat,
             baseline_records=None,
@@ -121,12 +135,12 @@ def run_experiment(config: FunctionalEvalConfig) -> dict[str, Any]:
 
     summary = {
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "platform": _platform_metadata(device, definitive),
+        "platform": _platform_metadata(device),
         "config": _request_summary(config),
         "candidate_summary": _summarize_runs(runs_with_mean_speedups),
         "runs": [_json_safe(asdict(run)) for run in runs_with_mean_speedups],
     }
-    output_path = _write_summary(summary)
+    output_path = _write_summary(summary, config.run_label)
     summary["output_path"] = str(output_path)
     _print_table(summary)
     return summary
@@ -149,6 +163,12 @@ def _candidate_specs(config: FunctionalEvalConfig) -> list[CandidateSpec]:
             name="functional_sequential",
             runner=sequential_runner,
             kwargs={},
+            components=("functional_call",),
+            applies_to_sections=("parameter_binding", "batch_forward_loss"),
+            hypothesis=(
+                "replace in-place parameter mutation with functional model "
+                "evaluation while preserving the original point and batch loops"
+            ),
             skipped_reason=sequential_skip,
         )
     )
@@ -169,6 +189,17 @@ def _candidate_specs(config: FunctionalEvalConfig) -> list[CandidateSpec]:
                 name=f"vmapped_chunk_{chunk_size}",
                 runner=vmapped_runner,
                 kwargs={"point_chunk_size": chunk_size},
+                components=("functional_call", "vmap", "point_chunking"),
+                applies_to_sections=(
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss",
+                ),
+                hypothesis=(
+                    "stack vmap over functional evaluation to evaluate multiple "
+                    "grid perturbations per dataset batch, with chunk size as "
+                    "the memory/runtime control"
+                ),
                 skipped_reason=vmapped_skip,
             )
         )
@@ -247,7 +278,11 @@ def _run_one_candidate(
             peak_cuda_memory_bytes=normalized["peak_cuda_memory_bytes"],
             validation=validation,
             speedup_vs_baseline=_speedup(baseline_time_s, total_grid_s),
-            metadata={**normalized["metadata"], **spec.kwargs},
+            metadata={
+                **normalized["metadata"],
+                **spec.kwargs,
+                "candidate_taxonomy": _candidate_taxonomy(spec),
+            },
         )
     except RuntimeError as exc:
         if _is_oom(exc):
@@ -348,7 +383,11 @@ def _skipped_run(spec: CandidateSpec, repeat: int) -> CandidateRun:
         peak_cuda_memory_bytes=None,
         validation=None,
         speedup_vs_baseline=None,
-        metadata={**spec.kwargs, "skip_reason": spec.skipped_reason},
+        metadata={
+            **spec.kwargs,
+            "skip_reason": spec.skipped_reason,
+            "candidate_taxonomy": _candidate_taxonomy(spec),
+        },
     )
 
 
@@ -372,9 +411,18 @@ def _failed_run(
         peak_cuda_memory_bytes=None,
         validation=None,
         speedup_vs_baseline=None,
-        metadata=spec.kwargs,
+        metadata={**spec.kwargs, "candidate_taxonomy": _candidate_taxonomy(spec)},
         error=error,
     )
+
+
+def _candidate_taxonomy(spec: CandidateSpec) -> dict[str, Any]:
+    return {
+        "components": list(spec.components),
+        "applies_to_sections": list(spec.applies_to_sections),
+        "hypothesis": spec.hypothesis,
+        "control_params": dict(spec.kwargs),
+    }
 
 
 def _with_mean_baseline_speedup(
@@ -427,6 +475,7 @@ def _summarize_runs(runs: list[CandidateRun]) -> list[dict[str, Any]]:
         summaries.append(
             {
                 "candidate": candidate,
+                "taxonomy": _summary_taxonomy(candidate_runs),
                 "status_counts": _status_counts(candidate_runs),
                 "mean_total_grid_s": _mean(ok_times),
                 "stdev_total_grid_s": _stdev(ok_times),
@@ -437,6 +486,14 @@ def _summarize_runs(runs: list[CandidateRun]) -> list[dict[str, Any]]:
     return summaries
 
 
+def _summary_taxonomy(runs: list[CandidateRun]) -> dict[str, Any] | None:
+    for run in runs:
+        taxonomy = run.metadata.get("candidate_taxonomy")
+        if isinstance(taxonomy, dict):
+            return taxonomy
+    return None
+
+
 def _status_counts(runs: list[CandidateRun]) -> dict[str, int]:
     counts: dict[str, int] = {}
     for run in runs:
@@ -444,11 +501,11 @@ def _status_counts(runs: list[CandidateRun]) -> dict[str, int]:
     return counts
 
 
-def _write_summary(summary: dict[str, Any]) -> Path:
+def _write_summary(summary: dict[str, Any], run_label: str | None = None) -> Path:
     output_dir = Path("outputs") / "functional_eval"
     output_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    output_path = output_dir / f"{timestamp}-summary.json"
+    output_path = output_dir / f"{_filename_label(run_label)}{timestamp}-summary.json"
     summary["output_path"] = str(output_path)
     output_path.write_text(
         json.dumps(_json_safe(summary), indent=2, sort_keys=True),
@@ -462,8 +519,7 @@ def _print_table(summary: dict[str, Any]) -> None:
     print(
         "functional_eval experiment "
         f"backend={platform['device_type']} "
-        f"device={platform.get('device_name') or 'n/a'} "
-        f"definitive={platform['definitive_cuda_t4']}"
+        f"device={platform.get('device_name') or 'n/a'}"
     )
     print(f"summary={summary['output_path']}")
     print("candidate                 status       mean_s   speedup   valid")
@@ -492,6 +548,7 @@ def _request_summary(config: FunctionalEvalConfig) -> dict[str, Any]:
         "rel_tol": config.rel_tol,
         "abs_tol": config.abs_tol,
         "max_memory_fraction": config.max_memory_fraction,
+        "run_label": config.run_label,
         "task": request.task.name,
         "model": request.task.model,
         "dataset_sample_count": request.task.dataset.sample_count,
@@ -503,19 +560,23 @@ def _request_summary(config: FunctionalEvalConfig) -> dict[str, Any]:
     }
 
 
-def _platform_metadata(device: torch.device, definitive: bool) -> dict[str, Any]:
+def _platform_metadata(device: torch.device) -> dict[str, Any]:
     device_name = None
+    cuda = None
     if device.type == "cuda" and torch.cuda.is_available():
         device_name = torch.cuda.get_device_name(device)
+        props = torch.cuda.get_device_properties(device)
+        cuda = {
+            "device_count": int(torch.cuda.device_count()),
+            "current_device": int(torch.cuda.current_device()),
+            "capability": list(torch.cuda.get_device_capability(device)),
+            "total_memory_bytes": int(props.total_memory),
+            "multi_processor_count": int(props.multi_processor_count),
+        }
     return {
         "device_type": device.type,
         "device_name": device_name,
-        "definitive_cuda_t4": definitive,
-        "definitive_note": (
-            "CUDA/T4 benchmark"
-            if definitive
-            else "development run only; definitive results require CUDA/T4"
-        ),
+        "cuda": cuda,
         "torch_version": torch.__version__,
     }
 
@@ -532,12 +593,6 @@ def _resolve_device(device: str) -> torch.device:
             else "cpu"
         )
     )
-
-
-def _is_definitive_backend(device: torch.device) -> bool:
-    if device.type != "cuda" or not torch.cuda.is_available():
-        return False
-    return "t4" in torch.cuda.get_device_name(device).lower()
 
 
 def _per_batch_eval_s(timings: SectionTimings, request: SchedulerRequest) -> float | None:
@@ -589,6 +644,16 @@ def _format_float(value: Any) -> str:
     return "n/a" if value is None else f"{float(value):.4f}"
 
 
+def _filename_label(value: str | None) -> str:
+    if value is None or not value.strip():
+        return ""
+    safe = "".join(
+        char if char.isalnum() or char in ("-", "_") else "-"
+        for char in value.strip().lower()
+    ).strip("-_")
+    return f"{safe}-" if safe else ""
+
+
 def _json_safe(value: Any) -> Any:
     if is_dataclass(value):
         return _json_safe(asdict(value))
@@ -615,6 +680,11 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--sample-count", type=int, default=None)
     parser.add_argument(
+        "--run-label",
+        default=None,
+        help="Optional filename prefix for separating runs from different machines.",
+    )
+    parser.add_argument(
         "--point-chunk-sizes",
         default="2,4,8,16,32,64",
         help="Comma-separated vmapped point chunk sizes.",
@@ -640,6 +710,7 @@ def main() -> None:
             for value in args.point_chunk_sizes.split(",")
             if value.strip()
         ),
+        run_label=args.run_label,
     )
     run_experiment(config)
 
