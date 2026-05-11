@@ -11,7 +11,7 @@ from src.backends.base import (
     build_grid_points,
     prepare_model_and_data,
 )
-from src.system_schema import SchedulerRequest, VanillaMode
+from src.schemas import SchedulerRequest, VanillaMode
 from src.results import synchronize_device
 
 

@@ -28,7 +28,7 @@ from src.functional_eval.memory import (
     reset_cuda_peak_memory,
 )
 from src.results import synchronize_device
-from src.system_schema import SchedulerRequest, VanillaMode
+from src.schemas import SchedulerRequest, VanillaMode
 from src.workloads import WORKLOADS, WorkloadDefinition
 
 

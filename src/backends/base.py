@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import os
 from pathlib import Path
 import random
 import time
@@ -11,7 +12,7 @@ import torch
 from torch.nn.utils import parameters_to_vector, vector_to_parameters
 from torch.utils.data import DataLoader
 
-from src.system_schema import (
+from src.schemas import (
     GridSpec,
     HybridMode,
     SchedulerRequest,
@@ -39,6 +40,18 @@ Surface: TypeAlias = list[tuple[int, int, float]]
 # ------------------------------
 #           COMMON HELPERS
 # ------------------------------
+
+
+def backend_verbose() -> bool:
+    raw = os.environ.get("LGC_VERBOSE_EXPERIMENT_LOGS")
+    if raw is None:
+        return True
+    return raw.strip().lower() not in {"0", "false", "no", "off"}
+
+
+def backend_log(message: str) -> None:
+    if backend_verbose():
+        print(message)
 
 
 def build_grid_points(config: GridSpec):
@@ -115,7 +128,7 @@ def prepare_model_and_data(
     )
 
     preload_s = 0.0
-    print(
+    backend_log(
         "[run] "
         f"workload={request.task.name} "
         f"model={request.task.model} "

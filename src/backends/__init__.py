@@ -1,5 +1,5 @@
 from src.backends import hybrid, vanilla
-from src.system_schema import SchedulerRequest
+from src.schemas import SchedulerRequest
 
 
 def run_backend(

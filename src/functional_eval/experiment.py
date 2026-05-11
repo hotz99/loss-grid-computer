@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import argparse
 import importlib
 import inspect
 import json
@@ -9,26 +8,27 @@ import statistics
 from dataclasses import asdict, dataclass, is_dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Callable
 
 import torch
 
-from src.functional_eval.baseline import run_baseline
+from src.backends.vanilla import run as run_vanilla_backend
 from src.functional_eval.memory import SectionTimings
 from src.functional_eval.validation import compare_surfaces
-from src.system_schema import GridSpec, SchedulerRequest, VanillaMode
+from src.schemas import GridSpec, SchedulerRequest, VanillaMode
 from src.workloads import WORKLOADS
 
 
 Surface = list[tuple[int, int, float]]
 Runner = Callable[..., Any]
+DEFAULT_WORKLOAD_NAME = "cifar10_resnet20_classification"
 
 
 @dataclass(frozen=True)
 class FunctionalEvalConfig:
     request: SchedulerRequest
     seed: int = 1337
-    repeats: int = 3
     point_chunk_sizes: tuple[int, ...] = (2, 4, 8, 16, 32, 64)
     rel_tol: float = 1e-5
     abs_tol: float = 1e-6
@@ -67,13 +67,21 @@ class CandidateRun:
 
 def build_default_request(
     *,
+    workload_name: str = DEFAULT_WORKLOAD_NAME,
     device: str = "auto",
     sample_count: int | None = None,
     batch_size: int = 32,
     resolution: int = 8,
     scale: float = 1.0,
 ) -> SchedulerRequest:
-    definition = WORKLOADS["cifar10_resnet20_classification"]
+    try:
+        definition = WORKLOADS[workload_name]
+    except KeyError as exc:
+        available = ", ".join(sorted(WORKLOADS))
+        raise ValueError(
+            f"unknown functional-eval workload_name {workload_name!r}; "
+            f"available workloads: {available}"
+        ) from exc
     task = definition.spec
     if sample_count is not None:
         task = replace(task, dataset=replace(task.dataset, sample_count=sample_count))
@@ -85,65 +93,82 @@ def build_default_request(
     )
 
 
-def run_experiment(config: FunctionalEvalConfig) -> dict[str, Any]:
+def run_experiment(config: FunctionalEvalConfig, repeat: int = 0) -> dict[str, Any]:
+    """Execute a single measured run of all candidates.
+
+    Warm-up and repeat orchestration belong at the caller level (runner.py /
+    run_platform_suite).  This function runs every candidate exactly once and
+    returns its raw results.  The caller is responsible for discarding warm-up
+    runs and aggregating across repetitions.
+    """
     device = _resolve_device(config.request.device)
     candidate_specs = _candidate_specs(config)
 
-    baseline_runs: list[CandidateRun] = []
-    all_runs: list[CandidateRun] = []
-
-    for repeat in range(config.repeats):
-        baseline = _run_one_candidate(
-            CandidateSpec(
-                name="baseline_original",
-                runner=run_baseline,
-                kwargs={},
-                components=("original_in_place_mutation",),
-                applies_to_sections=(
-                    "perturbation_construction",
-                    "parameter_binding",
-                    "batch_forward_loss",
-                ),
-                hypothesis="reference behavior and runtime target",
-            ),
-            config,
-            repeat,
-            baseline_records=None,
-            baseline_time_s=None,
-        )
-        baseline_runs.append(baseline)
-        all_runs.append(baseline)
-
-        for spec in candidate_specs:
-            all_runs.append(
-                _run_one_candidate(
-                    spec,
-                    config,
-                    repeat,
-                    baseline_records=baseline.records,
-                    baseline_time_s=baseline.total_grid_s,
-                )
-            )
-
-    baseline_mean = _mean(
-        run.total_grid_s for run in baseline_runs if run.status == "ok"
+    baseline_spec = CandidateSpec(
+        name="baseline_original",
+        runner=_run_profiled_vanilla_baseline,
+        kwargs={},
+        components=("original_in_place_mutation",),
+        applies_to_sections=(
+            "perturbation_construction",
+            "parameter_binding",
+            "batch_forward_loss",
+        ),
+        hypothesis="reference behavior and runtime target",
     )
-    runs_with_mean_speedups = [
-        _with_mean_baseline_speedup(run, baseline_mean)
-        for run in all_runs
-    ]
+
+    baseline = _run_one_candidate(
+        baseline_spec,
+        config,
+        repeat,
+        baseline_records=None,
+        baseline_time_s=None,
+    )
+    all_runs: list[CandidateRun] = [baseline]
+
+    for spec in candidate_specs:
+        all_runs.append(
+            _run_one_candidate(
+                spec,
+                config,
+                repeat,
+                baseline_records=baseline.records,
+                baseline_time_s=baseline.total_grid_s,
+            )
+        )
 
     summary = {
         "created_at": datetime.now(timezone.utc).isoformat(),
         "platform": _platform_metadata(device),
         "config": _request_summary(config),
-        "candidate_summary": _summarize_runs(runs_with_mean_speedups),
-        "runs": [_json_safe(asdict(run)) for run in runs_with_mean_speedups],
+        "candidate_summary": _summarize_runs(all_runs),
+        "runs": [_json_safe(asdict(run)) for run in all_runs],
     }
-    output_path = _write_summary(summary, config.run_label)
-    summary["output_path"] = str(output_path)
-    _print_table(summary)
     return summary
+
+
+def _run_profiled_vanilla_baseline(
+    request: SchedulerRequest,
+    *,
+    seed: int = 1337,
+) -> dict[str, Any]:
+    result = run_vanilla_backend(request, seed=seed, profile_sections=True)
+    section_timings = dict(result.runtime_log.get("section_timings") or {})
+    section_timings["total_grid_s"] = result.record.measurement.total_s
+    return {
+        "candidate": "baseline_original",
+        "records": result.records,
+        "timings": SectionTimings(**section_timings),
+        "peak_cpu_memory_bytes": None,
+        "peak_cuda_memory_bytes": None,
+        "metadata": {
+            "wrapped": "canonical vanilla backend",
+            "workload": request.task.name,
+            "device": result.record.device.gpu,
+            "section_timings_available": True,
+            "backend": result.record.backend,
+        },
+    }
 
 
 def _candidate_specs(config: FunctionalEvalConfig) -> list[CandidateSpec]:
@@ -164,10 +189,11 @@ def _candidate_specs(config: FunctionalEvalConfig) -> list[CandidateSpec]:
             runner=sequential_runner,
             kwargs={},
             components=("functional_call",),
-            applies_to_sections=("parameter_binding", "batch_forward_loss"),
+            applies_to_sections=("parameter_binding",),
             hypothesis=(
-                "replace in-place parameter mutation with functional model "
-                "evaluation while preserving the original point and batch loops"
+                "replace in-place parameter mutation with explicit functional "
+                "parameter binding while preserving the original point and "
+                "batch loops; this does not vectorize forward/loss work"
             ),
             skipped_reason=sequential_skip,
         )
@@ -196,9 +222,10 @@ def _candidate_specs(config: FunctionalEvalConfig) -> list[CandidateSpec]:
                     "batch_forward_loss",
                 ),
                 hypothesis=(
-                    "stack vmap over functional evaluation to evaluate multiple "
-                    "grid perturbations per dataset batch, with chunk size as "
-                    "the memory/runtime control"
+                    "use vmap over functional evaluation to evaluate multiple "
+                    "perturbed variants of the original model for the same "
+                    "dataset batch, with chunk size as the memory/runtime "
+                    "control"
                 ),
                 skipped_reason=vmapped_skip,
             )
@@ -425,16 +452,7 @@ def _candidate_taxonomy(spec: CandidateSpec) -> dict[str, Any]:
     }
 
 
-def _with_mean_baseline_speedup(
-    run: CandidateRun,
-    baseline_mean: float | None,
-) -> CandidateRun:
-    if run.candidate == "baseline_original" or run.total_grid_s is None:
-        return run
-    return replace(
-        run,
-        speedup_vs_baseline=_speedup(baseline_mean, run.total_grid_s),
-    )
+_SURFACE_MAX_ABS_BUDGET = 1e-4  # float32 rounding budget per spec
 
 
 def _validation_summary(comparison: Any) -> dict[str, Any]:
@@ -442,6 +460,8 @@ def _validation_summary(comparison: Any) -> dict[str, Any]:
         "point_count": comparison.point_count,
         "mismatch_count": comparison.mismatch_count,
         "max_abs_error": comparison.max_abs_error,
+        "max_abs_within_budget": comparison.max_abs_error <= _SURFACE_MAX_ABS_BUDGET,
+        "surface_budget": _SURFACE_MAX_ABS_BUDGET,
         "rmse": comparison.rmse,
         "allclose": comparison.allclose,
         "rel_tol": comparison.rel_tol,
@@ -543,15 +563,26 @@ def _request_summary(config: FunctionalEvalConfig) -> dict[str, Any]:
     request = config.request
     return {
         "seed": config.seed,
-        "repeats": config.repeats,
         "point_chunk_sizes": list(config.point_chunk_sizes),
         "rel_tol": config.rel_tol,
         "abs_tol": config.abs_tol,
         "max_memory_fraction": config.max_memory_fraction,
         "run_label": config.run_label,
-        "task": request.task.name,
+        "workload_name": request.task.name,
+        "task_name": request.task.name,
+        "task": request.task.task,
         "model": request.task.model,
+        "model_family": request.task.model,
+        "loss": request.task.loss,
+        "dataset": {
+            "name": request.task.dataset.name,
+            "path": request.task.dataset.path,
+            "input_shape": list(request.task.dataset.input_shape),
+            "sample_count": request.task.dataset.sample_count,
+        },
+        "dataset_name": request.task.dataset.name,
         "dataset_sample_count": request.task.dataset.sample_count,
+        "checkpoint_path": request.task.checkpoint_path,
         "grid_resolution": request.grid.resolution,
         "grid_scale": request.grid.scale,
         "mode": request.mode._tag,
@@ -668,33 +699,26 @@ def _json_safe(value: Any) -> Any:
     return str(value)
 
 
-def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Run the functional evaluation benchmark harness.",
-    )
-    parser.add_argument("--device", choices=("auto", "cpu", "mps", "cuda"), default="auto")
-    parser.add_argument("--seed", type=int, default=1337)
-    parser.add_argument("--repeats", type=int, default=3)
-    parser.add_argument("--resolution", type=int, default=8)
-    parser.add_argument("--scale", type=float, default=1.0)
-    parser.add_argument("--batch-size", type=int, default=32)
-    parser.add_argument("--sample-count", type=int, default=None)
-    parser.add_argument(
-        "--run-label",
-        default=None,
-        help="Optional filename prefix for separating runs from different machines.",
-    )
-    parser.add_argument(
-        "--point-chunk-sizes",
-        default="2,4,8,16,32,64",
-        help="Comma-separated vmapped point chunk sizes.",
-    )
-    return parser.parse_args()
+def build_config(**overrides: Any) -> SimpleNamespace:
+    defaults = {
+        "device": "auto",
+        "seed": 1337,
+        "resolution": 8,
+        "scale": 1.0,
+        "batch_size": 32,
+        "sample_count": None,
+        "workload_name": DEFAULT_WORKLOAD_NAME,
+        "run_label": None,
+        "point_chunk_sizes": [2, 4, 8, 16, 32, 64],
+    }
+    defaults.update(overrides)
+    return SimpleNamespace(**defaults)
 
 
 def main() -> None:
-    args = _parse_args()
+    args = build_config()
     request = build_default_request(
+        workload_name=args.workload_name,
         device=args.device,
         sample_count=args.sample_count,
         batch_size=args.batch_size,
@@ -704,12 +728,7 @@ def main() -> None:
     config = FunctionalEvalConfig(
         request=request,
         seed=args.seed,
-        repeats=args.repeats,
-        point_chunk_sizes=tuple(
-            int(value)
-            for value in args.point_chunk_sizes.split(",")
-            if value.strip()
-        ),
+        point_chunk_sizes=tuple(args.point_chunk_sizes),
         run_label=args.run_label,
     )
     run_experiment(config)

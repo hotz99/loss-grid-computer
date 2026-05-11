@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from src.backends.base import GridPoint
 from src.functional_eval.validation import compare_surfaces
 from src.functional_eval.vmapped import evaluate_vmapped_points
+from src.models.row_gru import RowGRUClassifier
 
 
 class FunctionalEvalVmappedTest(unittest.TestCase):
@@ -99,6 +100,65 @@ class FunctionalEvalVmappedTest(unittest.TestCase):
         )
         comparison = compare_surfaces(result.records, expected)
         self.assertTrue(comparison.allclose, comparison)
+
+    def test_mse_surface_handles_point_batched_predictions(self) -> None:
+        torch.manual_seed(13)
+        device = torch.device("cpu")
+        model = _Regressor().to(device).eval()
+        loader = DataLoader(
+            TensorDataset(
+                torch.randn(4, 2),
+                torch.linspace(-0.5, 0.5, 4),
+            ),
+            batch_size=4,
+            shuffle=False,
+        )
+        base = parameters_to_vector(model.parameters()).detach().clone()
+
+        result = evaluate_vmapped_points(
+            model=model,
+            data_loader=loader,
+            device=device,
+            points=_points(),
+            base_vector=base,
+            direction_a=torch.full_like(base, 0.01),
+            direction_b=torch.full_like(base, -0.02),
+            loss_name="mse",
+            point_chunk_size=4,
+        )
+
+        self.assertTrue(result.succeeded, result.error)
+        self.assertEqual(4, len(result.records))
+
+    def test_row_gru_surface_uses_vmap_compatible_forward(self) -> None:
+        torch.manual_seed(17)
+        device = torch.device("cpu")
+        model = RowGRUClassifier(hidden_size=8).to(device).eval()
+        loader = DataLoader(
+            TensorDataset(
+                torch.randn(3, 3, 32, 32),
+                torch.tensor([0, 1, 2], dtype=torch.long),
+            ),
+            batch_size=2,
+            shuffle=False,
+        )
+        points = _points()[:2]
+        base = parameters_to_vector(model.parameters()).detach().clone()
+
+        result = evaluate_vmapped_points(
+            model=model,
+            data_loader=loader,
+            device=device,
+            points=points,
+            base_vector=base,
+            direction_a=torch.full_like(base, 0.001),
+            direction_b=torch.full_like(base, -0.001),
+            loss_name="cross_entropy",
+            point_chunk_size=2,
+        )
+
+        self.assertTrue(result.succeeded, result.error)
+        self.assertEqual(len(points), len(result.records))
 
     def test_rejects_invalid_point_chunk_size(self) -> None:
         model = _Classifier().eval()

@@ -24,7 +24,7 @@ from src.functional_eval.memory import (
     process_memory_snapshot,
     reset_cuda_peak_memory,
 )
-from src.system_schema import SchedulerRequest
+from src.schemas import SchedulerRequest
 
 
 @dataclass(frozen=True)
@@ -110,7 +110,7 @@ def evaluate_vmapped_points(
     loss_name: str,
     point_chunk_size: int,
 ) -> VmappedEvalResult:
-    """Evaluate a surface by vectorizing each data batch over perturbation states."""
+    """Evaluate a surface by vectorizing each data batch over perturbed model variants."""
     if point_chunk_size < 1:
         raise ValueError(f"point_chunk_size must be >= 1, got {point_chunk_size}")
 
@@ -275,7 +275,8 @@ def _loss_for_params(
     if loss_name == "mse":
         predictions = logits_or_predictions.squeeze(-1)
         targets = targets.to(dtype=predictions.dtype)
-        return F.mse_loss(predictions, targets, reduction="mean")
+        diff = predictions - targets
+        return (diff * diff).mean()
     raise ValueError(f"unsupported vmapped functional loss: {loss_name}")
 
 

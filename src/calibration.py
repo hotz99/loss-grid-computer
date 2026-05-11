@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Literal, Optional
 
 from src.backends import run_backend
-from src.system_schema import (
+from src.schemas import (
     HybridMode,
     RunMode,
     RunRequest,
@@ -165,7 +165,7 @@ def run_calibration(
     retry: int,
     seed: int = 1337,
     gpu_slowdown_factor: float = 1.0,
-) -> VanillaMode | HybridMode:
+) -> tuple[VanillaMode | HybridMode, float | None]:
     assert isinstance(request.mode, HybridMode)
     records: list[tuple[float, HybridMode]] = []
     min_total_across_worker_counts = baseline_total_s
@@ -221,5 +221,5 @@ def run_calibration(
 
     records.sort(key=lambda record: record[0])
     if not records or records[0][0] >= baseline_total_s:
-        return VanillaMode(request.mode.gpu_batch_size)
-    return records[0][1]
+        return VanillaMode(request.mode.gpu_batch_size), None
+    return records[0][1], records[0][0]

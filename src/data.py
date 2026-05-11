@@ -9,11 +9,15 @@ import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
 from torchvision.datasets import CIFAR10
+from torchvision.datasets import MNIST
 from sklearn.datasets import fetch_california_housing
 
 CIFAR10_NORMALIZE_MEAN = (0.4914, 0.4822, 0.4465)
 CIFAR10_NORMALIZE_STD = (0.2470, 0.2435, 0.2616)
 CIFAR10_DIRNAME = "cifar-10-batches-py"
+MNIST_NORMALIZE_MEAN = (0.1307,)
+MNIST_NORMALIZE_STD = (0.3081,)
+MNIST_DIRNAME = "MNIST"
 
 
 class Cifar10Dataset(Dataset):
@@ -43,6 +47,42 @@ class Cifar10Dataset(Dataset):
                     ]
                 ),
             )
+        self.limit = (
+            min(int(subset_size), len(self.dataset))
+            if subset_size > 0
+            else len(self.dataset)
+        )
+
+    def __len__(self) -> int:
+        return self.limit
+
+    def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        features, label = self.dataset[index]
+        return features, torch.tensor(label, dtype=torch.long)
+
+
+class MnistDataset(Dataset):
+    def __init__(self, root: Path, subset_size: int):
+        mnist_root = (
+            root.parent
+            if root.name == MNIST_DIRNAME and root.exists()
+            else root
+        )
+        mnist_dir = mnist_root / MNIST_DIRNAME
+        if not mnist_dir.exists():
+            raise FileNotFoundError(f"MNIST root does not exist: {mnist_dir}")
+
+        self.dataset = MNIST(
+            root=str(mnist_root),
+            train=False,
+            download=False,
+            transform=transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                    transforms.Normalize(MNIST_NORMALIZE_MEAN, MNIST_NORMALIZE_STD),
+                ]
+            ),
+        )
         self.limit = (
             min(int(subset_size), len(self.dataset))
             if subset_size > 0

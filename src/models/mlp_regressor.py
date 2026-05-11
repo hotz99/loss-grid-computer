@@ -6,7 +6,7 @@ from pathlib import Path
 import torch
 from torch import nn
 
-from src.system_schema import MLTaskSpec
+from src.schemas import MLTaskSpec
 
 
 class MLPRegressor(nn.Module):
@@ -28,7 +28,7 @@ def _load_checkpoint(model: nn.Module, checkpoint_path: str) -> None:
     path = Path(checkpoint_path)
     if not path.exists():
         raise FileNotFoundError(f"Checkpoint does not exist: {path}")
-    state_dict = torch.load(path, map_location="cpu")
+    state_dict = torch.load(path, map_location="cpu", weights_only=False)
     if not isinstance(state_dict, dict):
         raise ValueError(f"Unsupported checkpoint format in {path}")
     cleaned = OrderedDict()

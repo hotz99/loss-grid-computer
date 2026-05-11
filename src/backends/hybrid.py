@@ -10,6 +10,7 @@ from torch.nn.utils import vector_to_parameters
 
 from src.backends.base import (
     apply_gpu_slowdown,
+    backend_log,
     build_grid_points,
     build_output_dir,
     evaluate_points_on_device,
@@ -18,7 +19,7 @@ from src.backends.base import (
     resolve_device,
     throughput,
 )
-from src.system_schema import HybridMode, SchedulerRequest
+from src.schemas import HybridMode, SchedulerRequest
 from src.results import (
     DeviceRecord,
     ExperimentResult,
@@ -116,7 +117,7 @@ def _execute_worker_queue(
         chunk_count += 1
         if chunk_count % 8 == 0:
             elapsed_s = time.perf_counter() - wall_start
-            print(
+            backend_log(
                 f"[{worker_label}] progress "
                 f"device={device.type} "
                 f"chunks={chunk_count} points={claimed_points} "
@@ -125,7 +126,7 @@ def _execute_worker_queue(
 
     synchronize_device(device)
     total_wall_s = time.perf_counter() - wall_start
-    print(
+    backend_log(
         f"[{worker_label}] device={device.type} "
         f"wall={total_wall_s:.4f}s chunks={chunk_count}"
     )
@@ -171,10 +172,7 @@ def _chunk_points(points: Sequence[GridPoint], chunk_size: int):
 
 
 def _resolve_gpu_device(request: SchedulerRequest):
-    gpu_device = resolve_device(request.device)
-    if gpu_device.type == "cpu":
-        raise RuntimeError("hybrid backend requires a GPU device")
-    return gpu_device
+    return resolve_device(request.device)
 
 
 def _build_task_queue(ctx, chunks, num_workers: int):
@@ -214,6 +212,9 @@ def _spawn_workers(
         )
         process.start()
         workers.append(process)
+
+    if gpu_device.type == "cpu":
+        return workers
 
     process = ctx.Process(
             target=_worker_main,
@@ -263,20 +264,30 @@ def _summarize_payloads(
             ),
         }
 
-    gpu_log = worker_log["gpu_0"]
     cpu_logs = {
         label: log for label, log in worker_log.items() if label.startswith("cpu_")
     }
     cpu_points = sum(log["points_processed"] for log in cpu_logs.values())
     cpu_wall_time = max((log["wall_time_s"] for log in cpu_logs.values()), default=0.0)
     cpu_throughput = throughput(cpu_points, cpu_wall_time)
-
-    print(
-        f"[gpu_worker] preload={gpu_log['preload_s']:.4f}s "
-        f"wall={gpu_log['wall_time_s']:.4f}s "
-        f"eval={gpu_log['wall_time_s']:.4f}s "
-        f"points={gpu_log['points_processed']}"
+    gpu_log = worker_log.get(
+        "gpu_0",
+        {
+            "device": "none",
+            "points_processed": 0,
+            "wall_time_s": 0.0,
+            "preload_s": 0.0,
+            "throughput_points_per_s": 0.0,
+        },
     )
+
+    if gpu_log["points_processed"] > 0:
+        backend_log(
+            f"[gpu_worker] preload={gpu_log['preload_s']:.4f}s "
+            f"wall={gpu_log['wall_time_s']:.4f}s "
+            f"eval={gpu_log['wall_time_s']:.4f}s "
+            f"points={gpu_log['points_processed']}"
+        )
 
     measurement = Measurement(
         total_s=max(gpu_log["wall_time_s"], cpu_wall_time),
@@ -319,7 +330,7 @@ def _summarize_payloads(
         ],
     }
 
-    print(
+    backend_log(
         "[hybrid_metrics] "
         f"grid_time={measurement.total_s:.4f}s "
         f"throughput={measurement.get_points_per_s:.4f}pts/s "
@@ -336,20 +347,25 @@ def run(
 ):
     assert isinstance(request.mode, HybridMode)
     gpu_device = _resolve_gpu_device(request)
+    if gpu_device.type == "cpu" and int(request.mode.cpu_workers or 0) < 1:
+        raise RuntimeError("CPU-only hybrid execution requires at least one CPU worker")
 
     points = build_grid_points(request.grid)
     chunks = _chunk_points(points, 1)
-    print(
+    backend_log(
         "[hybrid] allocation "
         f"total_points={len(points)} "
-        f"gpu_device={gpu_device.type} "
+        f"gpu_device={gpu_device.type if gpu_device.type != 'cpu' else 'none'} "
         f"cpu_workers={request.mode.cpu_workers} "
         "chunk_size=1"
     )
 
     ctx = mp.get_context("spawn")
     result_queue = ctx.Queue()
-    tasks = _build_task_queue(ctx, chunks, 1 + int(request.mode.cpu_workers or 0))
+    worker_count = int(request.mode.cpu_workers or 0)
+    if gpu_device.type != "cpu":
+        worker_count += 1
+    tasks = _build_task_queue(ctx, chunks, worker_count)
     workers = _spawn_workers(
         ctx,
         request,

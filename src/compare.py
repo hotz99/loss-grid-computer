@@ -67,6 +67,7 @@ def compare_surfaces(
     mismatch_count = 0
     finite_squared_error_sum = 0.0
     finite_error_count = 0
+    max_abs_error = 0.0
     for lhs_record, rhs_record in zip(lhs_sorted, rhs_sorted):
         lhs_row, lhs_col, lhs_value = lhs_record
         rhs_row, rhs_col, rhs_value = rhs_record
@@ -77,8 +78,11 @@ def compare_surfaces(
         if math.isnan(lhs_value) and math.isnan(rhs_value):
             continue
         if math.isfinite(lhs_value) and math.isfinite(rhs_value):
-            finite_squared_error_sum += (lhs_value - rhs_value) ** 2
+            abs_err = abs(lhs_value - rhs_value)
+            finite_squared_error_sum += abs_err ** 2
             finite_error_count += 1
+            if abs_err > max_abs_error:
+                max_abs_error = abs_err
         if not math.isclose(lhs_value, rhs_value, rel_tol=rtol, abs_tol=atol):
             allclose = False
             mismatch_count += 1
@@ -100,6 +104,7 @@ def compare_surfaces(
         "allclose": allclose,
         "mismatch_count": mismatch_count,
         "rmse": rmse,
+        "max_abs_error": max_abs_error,
         "atol": atol,
         "rtol": rtol,
         "lhs_total_s": lhs_total_s,

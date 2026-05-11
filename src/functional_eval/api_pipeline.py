@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-import argparse
 import json
 import random
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Literal
 
 
 DeviceName = Literal["auto", "cpu", "mps", "cuda"]
+DEFAULT_WORKLOAD_NAME = "cifar10_resnet20_classification"
 
 
 def _json_safe(value: Any) -> Any:
@@ -355,10 +356,54 @@ def _check_batchnorm_handling(
     )
 
 
-def _asset_status() -> dict[str, Any]:
+def build_tiny_workload_request(
+    workload_name: str = DEFAULT_WORKLOAD_NAME,
+    *,
+    device: DeviceName | str = "cpu",
+    sample_count: int = 4,
+    batch_size: int = 2,
+    resolution: int = 2,
+    scale: float = 0.1,
+) -> Any:
+    from src.schemas import GridSpec, SchedulerRequest, VanillaMode
     from src.workloads import WORKLOADS
 
-    definition = WORKLOADS["cifar10_resnet20_classification"]
+    if workload_name not in WORKLOADS:
+        known = ", ".join(sorted(WORKLOADS))
+        raise ValueError(f"unknown workload '{workload_name}'; known workloads: {known}")
+
+    definition = WORKLOADS[workload_name]
+    task = replace(
+        definition.spec,
+        dataset=replace(definition.spec.dataset, sample_count=sample_count),
+    )
+    return SchedulerRequest(
+        task=task,
+        grid=GridSpec(resolution=resolution, scale=scale),
+        mode=VanillaMode(gpu_batch_size=batch_size),
+        device=device,
+    )
+
+
+def _request_metadata(request: Any) -> dict[str, Any]:
+    return {
+        "workload": request.task.name,
+        "model": request.task.model,
+        "task": request.task.task,
+        "loss": request.task.loss,
+        "dataset": request.task.dataset.name,
+        "sample_count": request.task.dataset.sample_count,
+        "checkpoint_path": request.task.checkpoint_path,
+        "grid_resolution": request.grid.resolution,
+        "grid_scale": request.grid.scale,
+        "batch_size": request.mode.gpu_batch_size,
+    }
+
+
+def _asset_status(workload_name: str = DEFAULT_WORKLOAD_NAME) -> dict[str, Any]:
+    from src.workloads import WORKLOADS
+
+    definition = WORKLOADS[workload_name]
     dataset_path = Path(definition.spec.dataset.path)
     checkpoint_path = (
         Path(definition.spec.checkpoint_path)
@@ -380,12 +425,12 @@ def _check_tiny_workload(
     skipped: list[dict[str, Any]],
     errors: list[dict[str, Any]],
     seed: int,
+    workload_name: str = DEFAULT_WORKLOAD_NAME,
 ) -> None:
     try:
         from torch.utils.data import DataLoader
 
         from src.backends.base import build_grid_points, build_direction_vectors
-        from src.system_schema import GridSpec, SchedulerRequest, VanillaMode
         from src.workloads import WORKLOADS
     except Exception as exc:
         _append_event(
@@ -395,7 +440,7 @@ def _check_tiny_workload(
         )
         return
 
-    assets = _asset_status()
+    assets = _asset_status(workload_name)
     missing = [
         key
         for key, exists in (
@@ -409,22 +454,14 @@ def _check_tiny_workload(
             skipped,
             "tiny_workload",
             detail=f"missing assets: {', '.join(missing)}",
+            workload=workload_name,
             **assets,
         )
         return
 
     try:
-        definition = WORKLOADS["cifar10_resnet20_classification"]
-        task = replace(
-            definition.spec,
-            dataset=replace(definition.spec.dataset, sample_count=4),
-        )
-        request = SchedulerRequest(
-            task=task,
-            grid=GridSpec(resolution=2, scale=0.1),
-            mode=VanillaMode(gpu_batch_size=2),
-            device=device.type,
-        )
+        request = build_tiny_workload_request(workload_name, device=device.type)
+        definition = WORKLOADS[request.task.name]
 
         _seed_torch(torch, device, seed)
         model = definition.build_model(request.task).float().to(device)
@@ -453,30 +490,44 @@ def _check_tiny_workload(
             point_params[name] = perturbed[offset : offset + numel].view_as(current)
             offset += numel
 
-        with torch.no_grad():
-            for batch in loader:
-                inputs, targets = batch
-                inputs = inputs.to(device, dtype=torch.float32)
-                targets = targets.to(device)
-                logits = torch.func.functional_call(
+        class FunctionalProbeModule(torch.nn.Module):
+            def forward(self, *args: Any, **kwargs: Any) -> Any:
+                return torch.func.functional_call(
                     model,
                     (point_params, buffers),
-                    (inputs,),
+                    args,
+                    kwargs,
                 )
-                loss = torch.nn.CrossEntropyLoss()(logits, targets)
-                batch_size = int(targets.shape[0])
+
+        functional_model = FunctionalProbeModule()
+        functional_model.eval()
+
+        with torch.no_grad():
+            for batch in loader:
+                loss, batch_size = definition.compute_loss(
+                    functional_model,
+                    batch,
+                    device,
+                )
                 total_loss += float(loss.detach().cpu()) * batch_size
                 total_examples += batch_size
         _synchronize(torch, device)
         _append_event(
             passed,
             "tiny_workload",
+            **_request_metadata(request),
             grid_points=len(points),
             examples=total_examples,
             first_point_loss=total_loss / max(1, total_examples),
         )
     except FileNotFoundError as exc:
-        _append_event(skipped, "tiny_workload", detail=str(exc), **assets)
+        _append_event(
+            skipped,
+            "tiny_workload",
+            detail=str(exc),
+            workload=workload_name,
+            **assets,
+        )
     except RuntimeError as exc:
         message = str(exc)
         if "not implemented" in message.lower() or "unsupported" in message.lower():
@@ -484,14 +535,29 @@ def _check_tiny_workload(
                 skipped,
                 "tiny_workload",
                 detail=f"backend unsupported for tiny workload: {message}",
+                workload=workload_name,
             )
             return
-        _append_event(errors, "tiny_workload", detail=f"RuntimeError: {message}")
+        _append_event(
+            errors,
+            "tiny_workload",
+            detail=f"RuntimeError: {message}",
+            workload=workload_name,
+        )
     except Exception as exc:
-        _append_event(errors, "tiny_workload", detail=f"{type(exc).__name__}: {exc}")
+        _append_event(
+            errors,
+            "tiny_workload",
+            detail=f"{type(exc).__name__}: {exc}",
+            workload=workload_name,
+        )
 
 
-def run_pipeline(requested_device: DeviceName, seed: int = 1337) -> dict[str, Any]:
+def run_pipeline(
+    requested_device: DeviceName,
+    seed: int = 1337,
+    workload_names: tuple[str, ...] = (DEFAULT_WORKLOAD_NAME,),
+) -> dict[str, Any]:
     passed: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
     errors: list[dict[str, Any]] = []
@@ -521,7 +587,16 @@ def run_pipeline(requested_device: DeviceName, seed: int = 1337) -> dict[str, An
     _check_functional_vmap(torch, device, model, params, buffers, passed, skipped, errors)
     _check_inference_mode(torch, device, passed, skipped, errors)
     _check_batchnorm_handling(model, passed, skipped)
-    _check_tiny_workload(torch, device, passed, skipped, errors, seed)
+    for workload_name in workload_names:
+        _check_tiny_workload(
+            torch,
+            device,
+            passed,
+            skipped,
+            errors,
+            seed,
+            workload_name,
+        )
 
     return {
         "backend": backend,
@@ -531,27 +606,17 @@ def run_pipeline(requested_device: DeviceName, seed: int = 1337) -> dict[str, An
     }
 
 
-def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Run platform-agnostic functional evaluation API probes.",
-    )
-    parser.add_argument(
-        "--device",
-        choices=("auto", "cpu", "mps", "cuda"),
-        default="auto",
-        help="Device backend to use for probes.",
-    )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=1337,
-        help="Random seed for deterministic probe inputs where supported.",
-    )
-    return parser.parse_args()
+def build_config(**overrides: Any) -> SimpleNamespace:
+    defaults = {
+        "device": "auto",
+        "seed": 1337,
+    }
+    defaults.update(overrides)
+    return SimpleNamespace(**defaults)
 
 
 def main() -> None:
-    args = _parse_args()
+    args = build_config()
     result = run_pipeline(args.device, seed=args.seed)
     print(json.dumps(result, indent=2, sort_keys=True))
 

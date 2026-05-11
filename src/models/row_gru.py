@@ -6,7 +6,7 @@ from pathlib import Path
 import torch
 from torch import nn
 
-from src.system_schema import MLTaskSpec
+from src.schemas import MLTaskSpec
 
 
 class RowGRUClassifier(nn.Module):
@@ -18,15 +18,43 @@ class RowGRUClassifier(nn.Module):
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         batch_size = inputs.shape[0]
         rows = inputs.permute(0, 2, 1, 3).reshape(batch_size, 32, 96)
-        _, hidden = self.gru(rows)
-        return self.classifier(hidden[-1])
+        hidden = self._manual_gru(rows)
+        return self.classifier(hidden)
+
+    def _manual_gru(self, rows: torch.Tensor) -> torch.Tensor:
+        hidden_size = self.gru.hidden_size
+        hidden = rows.new_zeros(rows.shape[0], hidden_size)
+        weight_ih = self.gru.weight_ih_l0
+        weight_hh = self.gru.weight_hh_l0
+        bias_ih = self.gru.bias_ih_l0
+        bias_hh = self.gru.bias_hh_l0
+
+        for row_index in range(rows.shape[1]):
+            input_gates = torch.nn.functional.linear(
+                rows[:, row_index, :],
+                weight_ih,
+                bias_ih,
+            )
+            hidden_gates = torch.nn.functional.linear(
+                hidden,
+                weight_hh,
+                bias_hh,
+            )
+            input_reset, input_update, input_new = input_gates.chunk(3, dim=1)
+            hidden_reset, hidden_update, hidden_new = hidden_gates.chunk(3, dim=1)
+            reset = torch.sigmoid(input_reset + hidden_reset)
+            update = torch.sigmoid(input_update + hidden_update)
+            new = torch.tanh(input_new + reset * hidden_new)
+            hidden = (1.0 - update) * new + update * hidden
+
+        return hidden
 
 
 def _load_checkpoint(model: nn.Module, checkpoint_path: str) -> None:
     path = Path(checkpoint_path)
     if not path.exists():
         raise FileNotFoundError(f"Checkpoint does not exist: {path}")
-    state_dict = torch.load(path, map_location="cpu")
+    state_dict = torch.load(path, map_location="cpu", weights_only=False)
     if not isinstance(state_dict, dict):
         raise ValueError(f"Unsupported checkpoint format in {path}")
     cleaned = OrderedDict()
