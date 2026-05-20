@@ -92,30 +92,37 @@ class FunctionalEvalExperimentsTest(unittest.TestCase):
         )
 
     def test_best_valid_candidate_info_ignores_invalid_and_baseline_rows(self) -> None:
+        # Multiple repeats per candidate are required for a 95% CI to be
+        # computable; _best_valid_candidate_info now requires the lower CI
+        # bound to exceed 1.0 (claim_status == "speedup") in addition to
+        # surface validity.
+        repeats = (0, 1, 2)
         summary = {
             "candidate_summary": [
                 {
                     "candidate": "baseline_original",
-                    "status_counts": {"ok": 1},
+                    "status_counts": {"ok": len(repeats)},
                 },
                 {
                     "candidate": "vmapped_chunk_32",
-                    "status_counts": {"ok": 1},
+                    "status_counts": {"ok": len(repeats)},
                 },
                 {
                     "candidate": "vmapped_chunk_64",
-                    "status_counts": {"ok": 1},
+                    "status_counts": {"ok": len(repeats)},
                 },
                 {
                     "candidate": "functional_sequential",
-                    "status_counts": {"ok": 1},
+                    "status_counts": {"ok": len(repeats)},
                 },
             ],
             "runs": [
-                _run("baseline_original", 0, 10.0),
-                _run("vmapped_chunk_32", 0, 9.5, True),
-                _run("vmapped_chunk_64", 0, 9.2, True),
-                _run("functional_sequential", 0, 8.0, False, False),
+                *[_run("baseline_original", r, 10.0) for r in repeats],
+                *[_run("vmapped_chunk_32", r, 9.5, True) for r in repeats],
+                *[_run("vmapped_chunk_64", r, 9.2, True) for r in repeats],
+                # functional_sequential is faster on average but fails surface
+                # validation, so it must be excluded regardless of speedup.
+                *[_run("functional_sequential", r, 8.0, False, False) for r in repeats],
             ],
         }
 
@@ -123,10 +130,9 @@ class FunctionalEvalExperimentsTest(unittest.TestCase):
 
         self.assertIsNotNone(best)
         self.assertEqual("vmapped_chunk_64", best["candidate"])
-        self.assertGreater(
-            best["paired_speedup_mean"],
-            1.0,
-        )
+        self.assertEqual("speedup", best["claim_status"])
+        self.assertGreater(best["paired_speedup_mean"], 1.0)
+        self.assertGreater(best["paired_speedup_ci_95_lo"], 1.0)
 
     def test_build_platform_scenarios_includes_requested_shape(self) -> None:
         scenarios = build_platform_scenarios(

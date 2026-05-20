@@ -135,6 +135,33 @@ def _hybrid_table(experiments: dict) -> tuple[list[dict] | None, str | None]:
     return rows, None
 
 
+def _calibration_workload_summary(workload_record: dict) -> dict:
+    speedup = workload_record.get("session_speedup_vs_vanilla")
+    return {
+        "session_speedup_vs_vanilla": speedup,
+        "speedup_exceeds_one": bool(speedup > 1.0) if speedup is not None else None,
+        "break_even_n": workload_record.get("break_even_n"),
+        "break_even_unavailable_reason": workload_record.get("break_even_unavailable_reason"),
+        "amortized_calibration_per_variant_s": workload_record.get(
+            "amortized_calibration_per_variant_s"
+        ),
+        "vanilla_per_variant_s": workload_record.get("vanilla_per_variant_s"),
+        "hybrid_per_variant_grid_s": workload_record.get("hybrid_per_variant_grid_s"),
+        "hybrid_without_cache_penalty_vs_vanilla": workload_record.get(
+            "hybrid_without_cache_penalty_vs_vanilla"
+        ),
+        "selected_mode": workload_record.get("selected_policy"),
+        "calibration_s": workload_record.get("calibration_s"),
+        "calibration_grid_resolution": workload_record.get("calibration_grid_resolution"),
+        "session_grid_resolution": workload_record.get("session_grid_resolution"),
+        "variant_count": workload_record.get("variant_count"),
+        "mode_selections_by_variant": workload_record.get("mode_selections_by_variant"),
+        "session_total_s_vanilla": workload_record.get("session_total_s_vanilla"),
+        "session_total_s_with_cache": workload_record.get("session_total_s_with_cache"),
+        "session_total_s_without_cache": workload_record.get("session_total_s_without_cache"),
+    }
+
+
 def _calibration_summary(experiments: dict) -> tuple[dict | None, str | None]:
     exp = experiments.get("experiment_c_calibration_cache") or {}
     status = exp.get("status")
@@ -143,30 +170,13 @@ def _calibration_summary(experiments: dict) -> tuple[dict | None, str | None]:
     if status != "completed":
         return None, f"status={status or 'missing'}"
     record = (exp.get("record")) or {}
-    t_with = record.get("session_total_s_with_cache")
-    t_without = record.get("session_total_s_without_cache")
-    cache_savings = (
-        round(t_without - t_with, 4)
-        if t_with is not None and t_without is not None
-        else None
-    )
+    workload_records = record.get("workloads") or {}
+    if not workload_records:
+        return None, "no workload records in experiment_c result"
     return {
-        "selected_mode": record.get("selected_policy"),
-        "calibration_s": record.get("calibration_s"),
-        "calibration_grid_resolution": record.get("calibration_grid_resolution"),
-        "session_total_s_with_cache": t_with,
-        "session_total_s_without_cache": t_without,
-        "cache_savings_s": cache_savings,
-        "cache_saves_time": (
-            bool(t_without > t_with)
-            if t_with is not None and t_without is not None
-            else None
-        ),
-        "best_hybrid_minus_gpu_only_s": record.get("best_hybrid_minus_gpu_only_s"),
-        "variant_count": record.get("variant_count"),
-        "mode_selections_by_variant": record.get("mode_selections_by_variant"),
-        "mode_selection_consistent": record.get("mode_selection_consistent"),
-        "time_saved_s": record.get("time_saved_s"),
+        name: _calibration_workload_summary(wr)
+        for name, wr in workload_records.items()
+        if (wr.get("status")) == "completed"
     }, None
 
 

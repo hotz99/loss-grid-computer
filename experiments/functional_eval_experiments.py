@@ -163,6 +163,7 @@ def run_platform_suite(
 
         # Every candidate is always reported — validity flags are informational
         # only and never suppress a result.
+        section_timings = _section_timing_summary(merged)
         record: dict[str, Any] = {
             "scenario": scenario.name,
             "workload": scenario.workload_name,
@@ -170,6 +171,7 @@ def run_platform_suite(
             "validation_status": validation["status"],
             "all_validations_passed": validation["all_validations_passed"],
             "candidate_status_counts": candidate_statuses,
+            "section_timings": section_timings,
             "candidates": [
                 {
                     "candidate": m["candidate"],
@@ -183,6 +185,7 @@ def run_platform_suite(
                     "all_validations_passed": m["all_validations_passed"],
                     "all_within_budget": m["all_within_budget"],
                     "surface_budget": m["surface_budget"],
+                    "claim_status": m["claim_status"],
                 }
                 for m in paired_metrics
             ],
@@ -199,7 +202,7 @@ def run_platform_suite(
                 "platform": merged.get("platform"),
                 "config": merged.get("config"),
                 "candidate_summary": merged.get("candidate_summary", []),
-                "section_timings": _section_timing_summary(merged),
+                "section_timings": section_timings,
                 "paired_candidate_metrics": paired_metrics,
                 "best_valid_candidate": best,
                 "best_valid_vmap_chunk_size": _best_valid_vmap_chunk_size_info(best),
@@ -450,22 +453,21 @@ def _merge_run_summaries(run_summaries: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _best_valid_candidate_info(summary: dict[str, Any]) -> dict[str, Any] | None:
-    """Return the fastest candidate that passes the surface budget, for informational display only.
+    """Return the candidate with the highest paired speedup that *also* clears
+    the paired-CI rejection rule (CI_lo > 1.0) and the surface budget.
 
-    This result is included in output so the reader has a convenient summary,
-    but it is never used to suppress or gate other candidates' metrics.
+    A row failing surface validation, or whose 95% CI includes 1.0, is not a
+    supported speedup and is excluded. The result is informational only and
+    does not suppress any candidate's individual metrics.
     """
     candidates = _paired_candidate_metrics(summary)
     if not candidates:
         return None
-    # Fall back to allclose when budget flag is absent (older result format).
     valid = [
         row
         for row in candidates
-        if (
-            row.get("all_within_budget", row["all_validations_passed"]) is True
-        )
-        and row["paired_speedup_mean"] is not None
+        if row.get("claim_status") == "speedup"
+        and row.get("paired_speedup_mean") is not None
     ]
     if not valid:
         return None
@@ -549,20 +551,38 @@ def _validation_status(summary: dict[str, Any]) -> dict[str, Any]:
 
 
 _SURFACE_MAX_ABS_BUDGET = 1e-4  # float32 rounding budget per spec
-_T_CRIT_95_DF4 = 2.776  # two-tailed t critical value, α=0.05, df=4 (R=5 runs)
+
+# Two-tailed 95% Student-t critical values keyed by df = n - 1. Used so the CI
+# rejection rule (CI_lo > 1 ⇒ speedup) is correct for any R, not only R = 5.
+_T_CRIT_95: dict[int, float] = {
+    1: 12.706,
+    2: 4.303,
+    3: 3.182,
+    4: 2.776,
+    5: 2.571,
+    6: 2.447,
+    7: 2.365,
+    8: 2.306,
+    9: 2.262,
+}
 
 
 def _t_interval_95(values: list[float]) -> tuple[float, float] | None:
     """Return (lower, upper) 95% t-interval for the mean of values.
 
-    Uses Student's t with df = n-1.  Requires at least 2 observations.
-    The constant 2.776 is the two-tailed critical value at α=0.05, df=4.
+    Uses Student's t with df = n - 1. Requires at least 2 observations.
+    Dispatches to the df-specific critical value so T4 (R=3, df=2, t=4.303)
+    is not under-widened by an R=5 (df=4) constant.
     """
-    if len(values) < 2:
+    n = len(values)
+    if n < 2:
+        return None
+    t_crit = _T_CRIT_95.get(n - 1)
+    if t_crit is None:
         return None
     mean = statistics.fmean(values)
     sd = statistics.stdev(values)
-    half_width = _T_CRIT_95_DF4 * sd / len(values) ** 0.5
+    half_width = t_crit * sd / n ** 0.5
     return mean - half_width, mean + half_width
 
 
@@ -610,6 +630,9 @@ def _paired_candidate_metrics(summary: dict[str, Any]) -> list[dict[str, Any]]:
         # budget (≤ 1e-4). Reported as-is; never used to suppress speedup output.
         all_within_budget = all(within_budget_flags) if within_budget_flags else None
 
+        ci_lo = ci[0] if ci is not None else None
+        ci_hi = ci[1] if ci is not None else None
+        all_validations_passed = all(validations) if validations else None
         metrics.append(
             {
                 "candidate": row["candidate"],
@@ -619,7 +642,7 @@ def _paired_candidate_metrics(summary: dict[str, Any]) -> list[dict[str, Any]]:
                 "summary_mean_speedup_vs_baseline": row.get(
                     "mean_speedup_vs_baseline"
                 ),
-                "all_validations_passed": all(validations) if validations else None,
+                "all_validations_passed": all_validations_passed,
                 "all_within_budget": all_within_budget,
                 "surface_budget": _SURFACE_MAX_ABS_BUDGET,
                 "paired_speedups": paired_speedups,
@@ -627,15 +650,45 @@ def _paired_candidate_metrics(summary: dict[str, Any]) -> list[dict[str, Any]]:
                 "paired_speedup_min": min(paired_speedups) if paired_speedups else None,
                 "paired_speedup_max": max(paired_speedups) if paired_speedups else None,
                 "paired_speedup_stdev": _stdev(paired_speedups),
-                "paired_speedup_ci_95_lo": ci[0] if ci is not None else None,
-                "paired_speedup_ci_95_hi": ci[1] if ci is not None else None,
+                "paired_speedup_ci_95_lo": ci_lo,
+                "paired_speedup_ci_95_hi": ci_hi,
                 "all_repeats_beat_baseline": (
                     all(speedup >= 1.0 for speedup in paired_speedups)
                     if paired_speedups else None
                 ),
+                "claim_status": _claim_status(
+                    ci_lo=ci_lo,
+                    ci_hi=ci_hi,
+                    all_validations_passed=all_validations_passed,
+                    all_within_budget=all_within_budget,
+                ),
             }
         )
     return metrics
+
+
+def _claim_status(
+    *,
+    ci_lo: float | None,
+    ci_hi: float | None,
+    all_validations_passed: bool | None,
+    all_within_budget: bool | None,
+) -> str:
+    """Categorize a candidate row against the paired-CI rejection rule.
+
+    Returns one of: "speedup", "inconclusive", "regression", "invalid_surface",
+    "insufficient_data". Surface validity is a precondition: a row that fails
+    surface validation is reported as "invalid_surface" regardless of timing.
+    """
+    if all_validations_passed is False or all_within_budget is False:
+        return "invalid_surface"
+    if ci_lo is None or ci_hi is None:
+        return "insufficient_data"
+    if ci_lo > 1.0:
+        return "speedup"
+    if ci_hi < 1.0:
+        return "regression"
+    return "inconclusive"
 
 
 def _print_suite_table(suite: dict[str, Any]) -> None:

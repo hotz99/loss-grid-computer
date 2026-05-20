@@ -54,12 +54,13 @@ VERBOSE_EXPERIMENT_LOGS = False
 SEED = 1337
 SAMPLE_COUNT = 1024
 GRID_RESOLUTION = 8
+EXPERIMENT_C_SESSION_GRID_RESOLUTION = 40
 GRID_SCALE = 1.0
 GPU_BATCH_SIZE = 64
 ATOL = 1e-6
 RTOL = 1e-5
 
-MEASURE_WITHOUT_CACHE = False
+MEASURE_WITHOUT_CACHE = True
 
 CALIBRATION_RETRY = 3
 MAX_CPU_WORKER_CANDIDATE: int | None = None
@@ -118,18 +119,11 @@ EXPERIMENT_REGISTRY: dict[str, dict[str, Any]] = {
         "run": hybrid_applicability.run,
     },
     # Experiment C: calibration selection and same-family cache amortization.
+    # Runs all workloads with 4 variant checkpoints (see calibration_cache.VARIANT_PATHS).
     "experiment_c_calibration_cache": {
         "enabled": True,
         "title": "Experiment C: Calibration Cache",
-        "run": lambda config, output_dir, shared_state: calibration_cache.run(
-            config,
-            output_dir,
-            shared_state,
-            variant_paths=[
-                str(ROOT / "assets" / f"cifar10-resnet20-{seed}.pkl")
-                for seed in [0, 123, 2023, 123456]
-            ],
-        ),
+        "run": calibration_cache.run_all,
     },
     # Statistical analysis: synthesize A/B/C results into paper-ready CI tables.
     "statistical_analysis": {
@@ -197,6 +191,7 @@ def _config_from_globals() -> SimpleNamespace:
         seed=SEED,
         sample_count=SAMPLE_COUNT,
         grid_resolution=GRID_RESOLUTION,
+        experiment_c_session_grid_resolution=EXPERIMENT_C_SESSION_GRID_RESOLUTION,
         grid_scale=GRID_SCALE,
         gpu_batch_size=GPU_BATCH_SIZE,
         atol=ATOL,
@@ -389,9 +384,28 @@ def _precompute_shared_nodes(
 def run_aio_suite(config: SimpleNamespace | None = None) -> dict[str, Any]:
     config = _config_from_globals() if config is None else config
     output_dir = _output_dir(config.output_dir, config.run_label)
+    summary_path = output_dir / f"{_filename_label(config.run_label)}summary.json"
     experiments: dict[str, Any] = {}
     records: dict[str, Any] = {}
     shared_state: dict[str, Any] = {}
+
+    def persist_summary(status: str) -> dict[str, Any]:
+        return _write_suite_summary(
+            summary_path,
+            status=status,
+            config=config,
+            shared_state=shared_state,
+            records=records,
+            experiments=experiments,
+        )
+
+    def save_intermediate_payload(stem: str, payload: dict[str, Any]) -> str:
+        output_path = _experiment_payload_path(output_dir, stem, config.run_label)
+        _write_experiment_payload(output_path, payload)
+        return str(output_path)
+
+    shared_state["_save_intermediate_payload"] = save_intermediate_payload
+    persist_summary("running")
 
     _vanilla_full_grid_consumers = {"experiment_a_profiling", "experiment_b_hybrid_applicability"}
     if any(
@@ -399,8 +413,14 @@ def run_aio_suite(config: SimpleNamespace | None = None) -> dict[str, Any]:
         for name in _vanilla_full_grid_consumers
     ):
         _precompute_shared_nodes(config, shared_state)
+        persist_summary("running")
 
     for name, entry in EXPERIMENT_REGISTRY.items():
+        output_path = _experiment_payload_path(
+            output_dir,
+            str(entry.get("child_stem") or name),
+            config.run_label,
+        )
         if not bool(entry["enabled"]):
             _banner(name, "finish")
             experiments[name] = {
@@ -408,11 +428,18 @@ def run_aio_suite(config: SimpleNamespace | None = None) -> dict[str, Any]:
                 "record": {"status": "disabled"},
             }
             records[name] = _metric_record(name, experiments[name], None)
+            records[name]["output_path"] = str(output_path)
+            experiments[name]["output_path"] = str(output_path)
+            experiments[name]["record"] = records[name]
+            shared_state.setdefault("_experiments", {})[name] = experiments[name]
+            _write_experiment_payload(output_path, experiments[name])
+            persist_summary("running")
             continue
 
         runner = _runner(entry["run"])
         _banner(name, "start")
         start = time.perf_counter()
+        raise_after_persist: Exception | None = None
         try:
             experiments[name] = _run_quietly(
                 runner,
@@ -420,14 +447,13 @@ def run_aio_suite(config: SimpleNamespace | None = None) -> dict[str, Any]:
                 output_dir,
                 shared_state,
             )
-            shared_state.setdefault("_experiments", {})[name] = experiments[name]
         except Exception as exc:
             experiments[name] = {
                 "status": "error",
                 "error": f"{type(exc).__name__}: {exc}",
             }
             if config.fail_fast:
-                raise
+                raise_after_persist = exc
         duration_s = round(time.perf_counter() - start, 6)
         experiments[name]["duration_s"] = duration_s
         records[name] = _metric_record(name, experiments[name], duration_s)
@@ -439,14 +465,31 @@ def run_aio_suite(config: SimpleNamespace | None = None) -> dict[str, Any]:
         records[name]["output_path"] = str(output_path)
         experiments[name]["output_path"] = str(output_path)
         experiments[name]["record"] = records[name]
+        shared_state.setdefault("_experiments", {})[name] = experiments[name]
         _write_experiment_payload(
             output_path,
             experiments[name],
         )
+        persist_summary("error" if raise_after_persist else "running")
         _banner(name, "finish")
+        if raise_after_persist is not None:
+            raise raise_after_persist
 
-    summary = {
+    return persist_summary("completed")
+
+
+def _build_suite_summary(
+    *,
+    status: str,
+    config: SimpleNamespace,
+    shared_state: dict[str, Any],
+    records: dict[str, Any],
+    experiments: dict[str, Any],
+    summary_path: Path,
+) -> dict[str, Any]:
+    return {
         "schema_version": "platform-experiment-suite-v1",
+        "status": status,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "platform": _platform_summary(config.device, resolve_device(config.device)),
         "config": dict(vars(config)),
@@ -457,13 +500,28 @@ def run_aio_suite(config: SimpleNamespace | None = None) -> dict[str, Any]:
         "shared_state": _shared_state_summary(shared_state),
         "records": records,
         "experiments": experiments,
+        "output_path": str(summary_path),
     }
-    summary_path = output_dir / f"{_filename_label(config.run_label)}summary.json"
-    summary_path.write_text(
-        json.dumps(_json_safe(summary), indent=2, sort_keys=True),
-        encoding="utf-8",
+
+
+def _write_suite_summary(
+    path: Path,
+    *,
+    status: str,
+    config: SimpleNamespace,
+    shared_state: dict[str, Any],
+    records: dict[str, Any],
+    experiments: dict[str, Any],
+) -> dict[str, Any]:
+    summary = _build_suite_summary(
+        status=status,
+        config=config,
+        shared_state=shared_state,
+        records=records,
+        experiments=experiments,
+        summary_path=path,
     )
-    summary["output_path"] = str(summary_path)
+    _write_json_payload(path, summary)
     return summary
 
 
@@ -492,11 +550,20 @@ def _write_experiment_payload(
     path: Path,
     payload: dict[str, Any],
 ) -> Path:
-    path.write_text(
-        json.dumps(_json_safe(payload), indent=2, sort_keys=True),
-        encoding="utf-8",
-    )
+    _write_json_payload(path, payload)
     return path
+
+
+def _write_json_payload(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    encoded = json.dumps(_json_safe(payload), indent=2, sort_keys=True)
+    tmp_path = path.with_name(f".{path.name}.tmp")
+    with tmp_path.open("w", encoding="utf-8") as handle:
+        handle.write(encoded)
+        handle.flush()
+        os.fsync(handle.fileno())
+    tmp_path.replace(path)
+    json.loads(path.read_text(encoding="utf-8"))
 
 
 def _run_not_implemented(

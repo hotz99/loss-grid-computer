@@ -241,6 +241,22 @@ def _evaluate_ratio_regime(
     )
     speedup = surface["speedup_rhs_vs_lhs_baseline"]
     surface_valid = bool(surface["allclose"])
+    selected_policy = _mode_kind(selected_mode)
+    hybrid_wins = (
+        isinstance(selected_mode, HybridMode)
+        and surface_valid
+        and speedup is not None
+        and speedup > 1.0
+    )
+    # StarPU-style proportional-placement prediction: the optimal CPU fraction
+    # at parity equals r / (1 + r). Reported alongside the empirical split so
+    # the affinity-proportional prediction is falsifiable from the record.
+    predicted_cpu_fraction = (
+        None if achieved_ratio is None else achieved_ratio / (1.0 + achieved_ratio)
+    )
+    vanilla_parity_baseline_derived_from = (
+        "unslowed_multiplied_by_s" if slowdown != 1.0 else "native_unslowed"
+    )
     return {
         "target_cpu_gpu_inference_ratio": target_ratio,
         "unslowed_cpu_gpu_inference_ratio": unslowed["cpu_gpu_inference_ratio"],
@@ -249,22 +265,22 @@ def _evaluate_ratio_regime(
         "ratio_error_abs": None
         if achieved_ratio is None
         else abs(achieved_ratio - target_ratio),
+        "slowdown_distance_from_unity": (
+            None if achieved_ratio is None else abs(achieved_ratio - 1.0)
+        ),
+        "predicted_cpu_fraction": predicted_cpu_fraction,
         "slowdown": slowdown,
         "status": "completed",
-        "selected_policy": _mode_kind(selected_mode),
+        "selected_policy": selected_policy,
         "selected_mode": asdict(selected_mode),
         "vanilla_runtime_s": measurement_total_s(fixed_vanilla),
+        "vanilla_parity_baseline_derived_from": vanilla_parity_baseline_derived_from,
         "slowed_gpu_throughput_points_per_s": slowed_gpu_throughput,
         "cpu_throughput_points_per_s": cpu_throughput,
         "selected_runtime_s": measurement_total_s(selected_result),
         "calibration_candidate_count": len(calibration_runs),
         "speedup_vs_vanilla": speedup,
-        "hybrid_wins": (
-            isinstance(selected_mode, HybridMode)
-            and surface_valid
-            and speedup is not None
-            and speedup > 1.0
-        ),
+        "hybrid_wins": hybrid_wins,
         "surface_valid": surface_valid,
         "surface_validation": {
             "allclose": surface["allclose"],
@@ -275,7 +291,37 @@ def _evaluate_ratio_regime(
             "max_abs_error": surface.get("max_abs_error"),
         },
         "worker_throughput_split": _worker_split(selected_result),
+        "claim_status": _parity_claim_status(
+            selected_policy=selected_policy,
+            speedup=speedup,
+            surface_valid=surface_valid,
+            unslowed_ratio=unslowed.get("cpu_gpu_inference_ratio"),
+        ),
     }
+
+
+def _parity_claim_status(
+    *,
+    selected_policy: str,
+    speedup: float | None,
+    surface_valid: bool,
+    unslowed_ratio: float | None,
+) -> str:
+    """Categorize the parity probe against the predictor + scheduler claim.
+
+    Returns one of: "hybrid_wins", "hybrid_loses_at_parity",
+    "predictor_invalid", "invalid_surface", "insufficient_data".
+    """
+    if not surface_valid:
+        return "invalid_surface"
+    if speedup is None:
+        return "insufficient_data"
+    if selected_policy == "gpu_cpu_hybrid" and speedup > 1.0:
+        return "hybrid_wins"
+    # Predictor falsified: r_native ≥ 1 (CPU-dominant) but hybrid did not win.
+    if unslowed_ratio is not None and unslowed_ratio >= 1.0 and speedup <= 1.0:
+        return "predictor_invalid"
+    return "hybrid_loses_at_parity"
 
 
 def _slowdown_adjusted_vanilla_result(result: Any, slowdown: float) -> Any:
@@ -330,15 +376,21 @@ def _parity_probe(
         "target_ratio": 1.0,
         "slowdown_used": slowdown,
         "achieved_ratio": regime["achieved_cpu_gpu_inference_ratio"],
+        "slowdown_distance_from_unity": regime["slowdown_distance_from_unity"],
+        "predicted_cpu_fraction": regime["predicted_cpu_fraction"],
         "selected_policy": regime["selected_policy"],
         "selected_mode": regime["selected_mode"],
         "vanilla_runtime_s": regime["vanilla_runtime_s"],
+        "vanilla_parity_baseline_derived_from": regime[
+            "vanilla_parity_baseline_derived_from"
+        ],
         "selected_runtime_s": regime["selected_runtime_s"],
         "speedup_vs_vanilla": regime["speedup_vs_vanilla"],
         "hybrid_wins": regime["hybrid_wins"],
         "surface_valid": regime["surface_valid"],
         "surface_validation": regime["surface_validation"],
         "worker_throughput_split": regime["worker_throughput_split"],
+        "claim_status": regime["claim_status"],
     }
 
 
@@ -380,8 +432,22 @@ def _workload_result(
     unslowed["gpu_baseline_source"] = vanilla_source
     unslowed_ratio = unslowed["cpu_gpu_inference_ratio"]
     slowdown = 1.0 if unslowed_ratio is None or unslowed_ratio >= 1.0 else 1.0 / unslowed_ratio
+    # regime_predictor is the SoTA-aligned name: r_native classifies the
+    # workload's CPU/GPU regime and is the *predictor* under test, not a
+    # comparison condition. The unslowed_ratio key is kept for downstream
+    # consumers (statistical_analysis, results.md projection).
+    regime_predictor = {
+        "r_native": unslowed_ratio,
+        "predicted_cpu_fraction": (
+            None if unslowed_ratio is None else unslowed_ratio / (1.0 + unslowed_ratio)
+        ),
+        "cpu_throughput_points_per_s": unslowed.get("cpu_throughput_points_per_s"),
+        "gpu_throughput_points_per_s": unslowed.get("gpu_throughput_points_per_s"),
+        "gpu_baseline_source": unslowed.get("gpu_baseline_source"),
+    }
     return {
         "unslowed_ratio": unslowed,
+        "regime_predictor": regime_predictor,
         "parity_probe": _parity_probe(
             task=task,
             grid=grid,
@@ -446,30 +512,44 @@ def collect(config: SimpleNamespace, shared_state: dict[str, Any] | None = None)
 
         result = item.get("result") or {}
         unslowed = result.get("unslowed_ratio") or {}
+        predictor = result.get("regime_predictor") or {}
         parity = result.get("parity_probe") or {}
         compact[name] = {
             "status": item.get("status"),
+            # Backward-compat keys (statistical_analysis, results.md).
             "unslowed_inference_ratio": unslowed.get("cpu_gpu_inference_ratio"),
             "gpu_throughput_points_per_s": unslowed.get("gpu_throughput_points_per_s"),
             "cpu_throughput_points_per_s": unslowed.get("cpu_throughput_points_per_s"),
             "gpu_baseline_source": unslowed.get("gpu_baseline_source"),
+            # SoTA-aligned predictor block: r_native + StarPU prediction.
+            "regime_predictor": predictor,
             "parity_probe": {
                 "slowdown_used": parity.get("slowdown_used"),
                 "achieved_ratio": parity.get("achieved_ratio"),
+                "slowdown_distance_from_unity": parity.get(
+                    "slowdown_distance_from_unity"
+                ),
+                "predicted_cpu_fraction": parity.get("predicted_cpu_fraction"),
                 "selected_policy": parity.get("selected_policy"),
                 "speedup": parity.get("speedup_vs_vanilla"),
                 "vanilla_runtime_s": parity.get("vanilla_runtime_s"),
+                "vanilla_parity_baseline_derived_from": parity.get(
+                    "vanilla_parity_baseline_derived_from"
+                ),
                 "selected_runtime_s": parity.get("selected_runtime_s"),
                 "surface_valid": parity.get("surface_valid"),
                 "hybrid_wins": parity.get("hybrid_wins"),
                 "worker_throughput_split": parity.get("worker_throughput_split"),
                 "max_abs_error": (parity.get("surface_validation") or {}).get("max_abs_error"),
+                "claim_status": parity.get("claim_status"),
             },
         }
     return {
         "schema_version": "experiment-b-hybrid-applicability-v2",
         "control": {
             "calibration_retry": config.calibration_retry,
+        },
+        "system": {
             "cpu_workers": cpu_workers,
         },
         "workloads": workloads,

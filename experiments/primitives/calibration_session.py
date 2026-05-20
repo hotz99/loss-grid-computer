@@ -164,10 +164,15 @@ def main(
     execution_s = sum(grid_processing_runtimes)
     variants = len(variant_tasks)
     with_cache_session = {
+        "source": "empirical",
+        "variants": variants,
         "baseline_s": round(baseline_s, 3),
         "calibration_s": round(calibration_s, 3),
         "execution_mode": asdict(execution_mode),
         "execution_s": round(execution_s, 3),
+        "per_variant_grid_s": [
+            round(runtime, 3) for runtime in grid_processing_runtimes
+        ],
         "first_variant_total_s": round(
             baseline_s + calibration_s + grid_processing_runtimes[0], 3
         ),

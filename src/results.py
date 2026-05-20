@@ -44,9 +44,8 @@ def synchronize_device(device: torch.device):
             and hasattr(torch.mps, "synchronize")
         ):
             torch.mps.synchronize()
-    except Exception:
-        print("failed to sync torch device")
-        exit()
+    except Exception as exc:
+        raise RuntimeError("failed to sync torch device") from exc
 
 
 @dataclass(frozen=True)
