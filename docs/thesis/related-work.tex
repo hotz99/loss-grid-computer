@@ -15,16 +15,15 @@ to a 2D loss grid with filter-normalized perturbation directions,
 the algorithm taken here as the baseline; the official
 implementation~\cite{goldstein_loss_landscape_repo} runs it under
 MPI on a multi-node cluster. LossLens~\cite{xie2025losslens,losslens_repo}
-assembled landscape diagnostics into a visual-analytics
-workflow over multiple checkpoints, the interactive use case
-that motivates the single-machine constraint here.
+integrated this construct into an interactive analytics
+workflow over model modes/checkpoints.
 
 \subsection{Adaptive and progressive loss-grid
 sampling}\label{rw-adaptive-sampling}
 
-An orthogonal line of work to our thesis replaces the canonical full grid with an
-adaptive sampler that evaluates loss only at points predicted
-to carry visual information. Prakash, Wang, and Balestriero
+Another line of work replaces the canonical full grid with
+an adaptive sampler that evaluates loss only at points predicted
+to carry visual information. Prakash et al.
 apply this to loss-landscape visualization directly, replacing
 regular $\alpha,\beta$ sampling with an adaptive algorithm
 focused on ``interesting'' regions and comparing it against a
@@ -33,39 +32,29 @@ sampler~\cite{prakash2024adaptive}. Their reported outcome is
 mixed: adaptive sampling beats the GradVis-style baseline but
 loses to the vectorized uniform sampler due to selection
 overhead, and their user-preference comparison is
-inconclusive~\cite{prakash2024adaptive}. Our thesis focuses
-on optimizing \emph{how} the canonical grid is computed rather
-than \emph{what} is sampled. The two directions are
-complementary and composable, but composition is out of scope.
+inconclusive~\cite{prakash2024adaptive}.
 
-\subsection{Heterogeneous CPU/GPU task
-scheduling}\label{rw-scheduling}
+\subsection{Heterogeneous compute and ML inference
+throughput}\label{rw-scheduling}
 
 Task-parallel heterogeneous scheduling assigns whole
-independent tasks across devices.
-StarPU~\cite{augonnet2011starpu} is the canonical
-heterocompute scheduling system, supporting a class of
-policies including HEFT-style priority models, work-stealing,
-and history-based performance models. This thesis uses the
-simpler dynamic self-scheduling variant of that class,
-originating with Polychronopoulos and
-Kuck~\cite{polychronopoulos1987gss}: idle workers poll a
-shared queue and claim one task at a time, with no per-device
-performance model required. The simpler variant is sufficient
-because loss-grid is embarrassingly parallel with uniform
-per-task work, removing the load-imbalance and
-heterogeneous-task-cost problems that motivate the richer
-StarPU policies. Gallet and
-Gowanlock~\cite{gallet2021heterogeneous} provide the
-applicability-side counterpart for a CPU--GPU epsilon grid
-join, identifying the CPU/GPU throughput ratio as the core
-variable that determines whether heterogeneous execution
-beats device-only: static and dynamic partitioning yield a
+independent tasks across devices. Dynamic self-scheduling,
+introduced by Polychronopoulos and
+Kuck~\cite{polychronopoulos1987gss}, is the simplest variant:
+idle workers poll a shared queue and claim one task at a time,
+requiring no per-device performance model. Richer policies in
+the same family include HEFT-style cost-model scheduling and
+priority-based work-stealing, exemplified by
+StarPU~\cite{augonnet2011starpu}; these address load
+imbalance and per-task cost variance. Gallet and
+Gowanlock~\cite{gallet2021heterogeneous} identify the
+CPU/GPU throughput ratio as an applicability variable for
+heterogeneous task scheduling, demonstrated on a CPU--GPU
+epsilon grid join: static and dynamic partitioning yield a
 speedup over GPU-only execution only above a workload-dependent
-ratio threshold, and regress below it. This thesis inherits
-the variable; the threshold itself is workload-specific.
+ratio threshold, and regress below it.
 
-A complementary axis splits a single computation across
+An orthogonal approach splits a single computation across
 devices, with per-device stages exchanging intermediate data
 along a pipeline. OpenVINO's HETERO execution mode is a
 production example at the intersection of heterogeneous
@@ -73,75 +62,68 @@ compute and ML inference~\cite{openvino_hetero}: with
 pipeline-parallel \texttt{model\_distribution\_policy}, the
 inference model is divided into stages, each stage is assigned
 to a device, and the output of one stage is fed as input to
-the next. This makes it closer to this thesis's problem domain
-than generic heterogeneous-compute scheduling alone: both
-execute neural-network inference on mixed devices. Where the
-task-parallel axis exploits inter-task independence,
-model-parallel heterogeneous execution exploits intra-task
-phase boundaries between parts of one computation that suit
-different devices.
+the next.
+
+Production ML inference systems also pursue throughput
+through request-level batching. OpenVINO's automatic
+batching~\cite{openvino_auto_batching,openvino_auto_batching_src}
+groups concurrent batch-1 inference requests at runtime to
+improve device utilization on supported devices and
+throughput-oriented modes. At implementation level,
+auto-batching operates on the input/request batch dimension
+of one fixed compiled model: requests are packed into slices
+of a larger input/output tensor and executed by a reshaped
+batched model.
 
 \subsection{Autotune-and-cache patterns}\label{rw-autotuning}
 
-ATLAS~\cite{whaley1998atlas} introduces an
-autotune-and-cache pattern: empirically tune the inner loops
-of BLAS routines (GEMM, DAXPY, etc.) for the target machine's
-cache and register hierarchy; cache the selected configuration
-by (machine, BLAS-op) signature; reuse it across every
-subsequent matching call. The pattern is four-part: tune once
-per machine, cache by signature, reuse across matching
-invocations, per-machine scoping. RQ3 inherits the four-part
-shape and lifts the signature from op-level to workload-level
-(architecture + dataset + loss + grid spec); whether the
-pattern's amortization claim survives that signature lift is
-the essence of RQ3.
-OpenTuner~\cite{ansel2014opentuner} canonized bounded
-autotuning search with explicit stopping criteria as the
-discipline-level departure from ATLAS-style exhaustive
-search; RQ3 inherits an instance of that discipline
-(Section~\ref{methods-calibration}).
+ATLAS~\cite{whaley1998atlas} introduces an autotune-and-cache
+pattern: empirically tune the inner loops of BLAS routines
+(GEMM, DAXPY, etc.) for the target machine's cache and
+register hierarchy; cache the selected configuration by
+(machine, BLAS-op) signature; reuse it across every
+subsequent matching call. The pattern is four-part: tune
+once per machine, cache by signature, reuse across matching
+invocations, per-machine scoping. OpenTuner~\cite{ansel2014opentuner}
+canonized bounded autotuning search with explicit stopping
+criteria as the discipline-level departure from ATLAS-style
+exhaustive search.
 
 \subsection{Where this thesis sits}\label{rw-placement}
 
-Prior work supplies the canonical
-algorithm~\cite{li2018losslandscape,goldstein_loss_landscape_repo},
-the dynamic self-scheduling
-primitive~\cite{polychronopoulos1987gss} as the simpler variant
-of the StarPU class~\cite{augonnet2011starpu}, the
-throughput-ratio applicability
+Prior work provides the core
+algorithm~\cite{li2018losslandscape,goldstein_loss_landscape_repo}
+and its interactive checkpoint-comparison use
+case~\cite{xie2025losslens,losslens_repo}, the dynamic
+self-scheduling
+primitive~\cite{polychronopoulos1987gss} and the broader
+heterocompute-scheduler family~\cite{augonnet2011starpu},
+the throughput-ratio applicability
 variable~\cite{gallet2021heterogeneous} from a different
-workload, the production model-parallel
-counterpart~\cite{openvino_hetero}, the
-autotune-and-cache pattern~\cite{whaley1998atlas} with
-its bounded-search
-discipline~\cite{ansel2014opentuner}, and the adjacent
-adaptive-sampling direction~\cite{prakash2024adaptive}.
+workload, the production model-parallel and request-batching
+counterparts in ML
+inference~\cite{openvino_hetero,openvino_auto_batching}, the
+autotune-and-cache pattern~\cite{whaley1998atlas} with its
+bounded-search discipline~\cite{ansel2014opentuner}, and the
+adjacent adaptive-sampling
+direction~\cite{prakash2024adaptive}.
 
-This thesis sits on the task-parallel axis of heterogeneous
-execution applied to ML-inference loss-grid; the
-model-parallel/pipeline axis is complementary and out of
-scope. RQ1 tests whether the
-\texttt{functional\_call}+\texttt{vmap} pattern documented for
-model ensembling, \texttt{torch.compile} on the
-per-grid-point evaluation path, and the composition of the
-two transfer to the loss-grid workload pattern — with an
-intra-axis composition verdict on whether \texttt{vmap} and
-\texttt{torch.compile} multiply, are redundant, or interfere
-destructively. RQ2 tests Gallet's throughput-ratio variable in
-the ML-inference regime using the simpler dynamic
-self-scheduling variant of the StarPU class.
+The gap is the combination of workload, deployment target, and
+optimization question. Existing loss-landscape work defines the
+canonical grid and motivates interactive checkpoint comparison,
+but does not evaluate commodity single-machine optimization of
+the grid-construction runtime. Adaptive samplers change which
+grid points are evaluated; this thesis keeps the canonical grid
+fixed. Heterogeneous task-scheduling work supplies the
+CPU/GPU-throughput-ratio variable, but from a different workload
+with different task granularity and kernels. Production ML
+inference systems are closer in domain, but optimize adjacent
+axes: HETERO partitions one compiled model's operation graph
+across devices, automatic batching groups concurrent inference
+requests along the input/request batch dimension, and PyTorch's
+\texttt{functional\_call}+\texttt{vmap} pattern vectorizes a
+stack of parameter states on one device. None of these directly
+targets the loss-grid workload shape: one model family, many
+perturbations of one checkpoint, shared data, and finite CPU,
+GPU, RAM, and VRAM on a commodity machine.
 
-RQ3 adapts the pattern of ATLAS: keeps the tune/cache/reuse flow and
-per-machine scope, but changes the unit of reuse from a
-BLAS operation to a workload signature
-(ML architecture + dataset + loss + grid spec). The cached
-artifact is a configuration tuple. We claim
-that this workload-level cache amortizes over the
-LossLens-scoped session size.
-
-The contribution is
-an applicability study on a commodity single-machine (free-tier cloud GPU and consumer laptop), a realistic
-deployment surface for interactive
-use~\cite{xie2025losslens,losslens_repo}: when do these mechanisms reduce loss-grid runtime,
-when do they regress, and how cheaply can the right policy be
-chosen at runtime?

@@ -97,27 +97,15 @@ conditions; Section~\ref{conclusions} answers the RQs.
 
 \subsection{Contributions}\label{contributions}
 
-NOTE: inspired by LossLens; should we drop this ?
-
-(RQ1)~Whether the \texttt{functional\_call} + \texttt{vmap}
-pattern from PyTorch's model-ensembling
-tutorial~\cite{pytorch_ensembling} transfers to loss-grid
-construction (a workload with the same outer-loop shape but
-different semantics (one model, many perturbations)) across
-architectures and backends.
-(RQ2)~The conditions under which idle CPU cores reduce grid
-time, tied to the CPU/GPU inference throughput ratio that
-Gallet and Gowanlock~\cite{gallet2021heterogeneous} identified
-as the core variable of heterogeneous CPU/GPU scheduling
-applicability for a different workload (set operations) and
-that this thesis tests in the ML-inference regime.
-(RQ3)~Whether reusing the hybrid scheduler's calibrated policy
-across $N=4$ related checkpoints, motivated by LossLens-style
-checkpoint comparison, amortizes the upfront calibration cost
-(measured as net cumulative session speedup, with the
-break-even session size reported as a diagnostic. Cases
-favoring the baseline are reported as primary findings
-alongside the optimization wins).
+(RQ1)~An applicability study of PyTorch stateless and
+vectorized evaluation primitives for loss-grid construction
+across architectures and backends.
+(RQ2)~An empirical test of when idle CPU cores help
+single-machine loss-grid computation, using the CPU/GPU
+throughput ratio as the main explanatory variable.
+(RQ3)~An evaluation of whether calibrated hybrid-scheduler
+policies can be reused across related checkpoint-comparison
+sessions to amortize calibration cost.
 
 
 \input{related-work}
@@ -140,7 +128,7 @@ alter parameter binding have limited room to improve total runtime,
 whereas vectorizing repeated forward/loss work can matter when the
 backend handles the transformed workload efficiently.
 
-The sequential \texttt{functional\_call} candidate is therefore a
+The sequential \texttt{functional\_call} candidate functions as a
 binding-semantics control rather than a full algorithmic redesign. In
 the measured rows, its effects are modest and sometimes inconclusive.
 The chunked \texttt{vmap} candidates show the opposite pattern: they
@@ -148,7 +136,7 @@ produce large speedups for several GRU and MLP rows, but they also
 regress on the ResNet20 rows. The result is not a general endorsement
 of \texttt{vmap}; it is evidence that vectorized point evaluation is
 useful only for workloads and backends where the transformed tensor
-program is actually favorable.
+program is favorable for that workload/backend pair.
 
 \subsection{RQ2: Hybrid Scheduling Conditions}\label{rq2-hybrid-scheduling-conditions}
 
@@ -193,7 +181,7 @@ representativeness.
 
 For Experiment B, correctness is evaluated by relative agreement rather
 than absolute error magnitude. Extreme-loss grid points can make
-absolute differences uninformative, so scheduler rows are accepted using
+absolute differences uninformative; scheduler rows are accepted using
 the recorded surface check: zero mismatches at
 $r_{\mathrm{tol}}=10^{-5}$.
 
@@ -289,6 +277,16 @@ of Using GPUs''. NVIDIA documentation, accessed May 21, 2026.
 Intel, Heterogeneous Execution (HETERO). OpenVINO documentation,
 accessed May 22, 2026.
 \url{https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes/hetero-execution.html}
+
+\bibitem{openvino_auto_batching}
+Intel, Automatic Batching. OpenVINO 2023.3 documentation,
+accessed May 25, 2026.
+\url{https://docs.openvino.ai/2023.3/openvino_docs_OV_UG_Automatic_Batching.html}
+
+\bibitem{openvino_auto_batching_src}
+Intel, OpenVINO auto-batch plugin source code. GitHub repository,
+version 2023.3.0, accessed May 25, 2026.
+\url{https://github.com/openvinotoolkit/openvino/tree/2023.3.0/src/plugins/auto_batch/src}
 
 \bibitem{goldstein_loss_landscape_repo}
 T. Goldstein et al. loss-landscape: Code for visualizing the loss

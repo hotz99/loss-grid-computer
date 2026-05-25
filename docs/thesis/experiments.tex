@@ -20,7 +20,7 @@ which it regresses, and the cost of selecting the right policy
 at runtime. The design has five elements: a preflight that
 exercises the platform and functional-API surface
 (Section~\ref{preflight}); a motivation step that decomposes
-the baseline so candidate effects can be interpreted
+the baseline, allowing candidate effects to be interpreted
 (Section~\ref{motivation-section-decomposition}); three
 experiments, one per RQ, each the smallest design that answers
 its question under the single-machine constraint
@@ -104,8 +104,8 @@ platform-inventory pipeline that subsequent experiments
 consume and probes the
 \texttt{functional\_call}~\cite{pytorch_functional_call} and
 \texttt{vmap}~\cite{pytorch_vmap} surface on each platform
-before the RQ1 candidates are run, so that any backend
-incompatibility surfaces as a planning error rather than a
+before the RQ1 candidates are run, surfacing any backend
+incompatibility as a planning error rather than a
 mid-experiment failure.
 
 \subsection{Motivation: Baseline Section
@@ -226,10 +226,12 @@ composed deployed stack.
 \textbf{Hypothesis.} Hybrid CPU/GPU execution reduces
 $T_{\text{grid}}$ versus the slowdown-matched
 \texttt{gpu\_only} baseline at the achieved CPU/GPU
-throughput ratio. Gallet's ratio $r =
-\mathrm{throughput}_{\text{CPU}} /
-\mathrm{throughput}_{\text{GPU}}$~\cite{gallet2021heterogeneous}
-predicts where hybrid applies.
+throughput ratio. Following the ratio-threshold pattern
+observed by Gallet and
+Gowanlock~\cite{gallet2021heterogeneous}, Experiment B treats
+achieved CPU/GPU throughput ratio as the predictor and tests
+whether the same qualitative pattern transfers from epsilon-grid
+joins to ML loss-grid evaluation.
 
 \textbf{Design.}
 \begin{enumerate}
@@ -274,13 +276,13 @@ predictor~\cite{gallet2021heterogeneous};
 \item achieved CPU/GPU ratio under slowdown, with
 $\text{slowdown\_distance\_from\_unity} = \lvert
 \text{achieved\_ratio} - 1.0 \rvert$ quantifying how close
-the parity setup actually reached parity;
+the parity setup came to its target;
 \item selected policy $\in \{\texttt{gpu\_only},
 \texttt{gpu\_cpu\_hybrid}\}$ chosen by calibration —
 \texttt{gpu\_only} at the achieved ratio is a negative
 result for the predictor;
 \item worker-throughput split (CPU fraction of grid points
-actually executed on CPU).
+executed on CPU).
 \end{itemize}
 
 \textbf{Falsification.} A CI containing $1.0$ at the achieved
@@ -313,7 +315,7 @@ ATLAS's op-level signature to a workload-level signature
 \textbf{Native operating regime.} Experiment C runs natively
 on the real machine. The claim is whether bounded calibration
 plus cache reuse reduces the session total in the regime a
-LossLens-style workflow actually uses.
+LossLens-style workflow uses.
 
 \textbf{Workload/session selection.} For each
 (workload $\times$ platform) pair with $N=4$ same-family
@@ -328,15 +330,15 @@ LossLens~\cite{xie2025losslens,losslens_repo} reports a
 participant study in which model-comparison sessions involve
 a small number of related trained variants compared
 side-by-side; their case study finds that similar conclusions
-hold at four models as at one hundred. The headline is
-therefore read at $N = 4$ same-family checkpoints. The
+hold at four models as at one hundred. The headline uses
+$N = 4$ same-family checkpoints. The
 experiment makes no claim at $N > 4$. A same-family checkpoint
 shares architecture, dataset, loss, and grid spec; only
 trained weights differ (e.g.\ a different seed).
 
 \textbf{Design.} Two sessions are compared
 (Table~\ref{tab:exp-c-sessions}). The system has no
-per-checkpoint recalibration mode, so there is no third
+per-checkpoint recalibration mode, leaving no third
 ``no-cache'' session to measure; the cache's value is read
 from the comparison between the two real sessions.
 

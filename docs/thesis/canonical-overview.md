@@ -68,6 +68,9 @@
     r = T_cpu/T_gpu as core variable of heterocompute applicability)
   - scheduler policy → polychronopoulos1987gss (dynamic
     self-scheduling — work pulled by whichever device is free)
+  - scheduler-family defense → augonnet2011starpu (richer policies —
+    HEFT cost-model scheduling, priority-based work-stealing — are
+    not candidates because loss-grid's per-task work is uniform)
   - task granularity → grid-point-as-task (the natural unit of
     the embarrassingly-parallel algorithm; no aggregation needed
     because per-point work is uniform)
@@ -96,9 +99,8 @@
     hetero-config tuple on top of A's winner is non-trivially
     different from calibrating it on top of vanilla — once A
     shrinks GPU time, the break-even for adding CPU workers shifts,
-    so C's calibrated tuple is conditioned on which A is configured.
-    This is why C's cache is keyed on
-    (machine, workload) — the same key A is keyed on.
+    conditioning C's calibrated tuple on which A is configured.
+    C's cache uses (machine, workload), the same key A uses.
   - autotune+cache pattern → whaley1998atlas (the canonical
     tune/cache/reuse pattern; RQ3 adapts it from BLAS-op reuse to
     workload-family reuse)
@@ -152,13 +154,13 @@
     Different implementations of the same nominal float32
     computation produce different numeric outputs in practice
     (op reordering, kernel/fusion choice, hybrid CPU/GPU
-    split), so the gate is a relative-equivalence criterion
+    split); the gate is a relative-equivalence criterion
     rather than bitwise equality. Three parts: (i) grid point
     count and coordinates match the baseline exactly;
     (ii) paired NaNs at matching coordinates count as
     agreement; (iii) finite losses satisfy
     `|a − b| ≤ 1e-5 · max(|a|, |b|)` (rtol = 1e-5 follows
-    torch.allclose's default [pytorch_allclose]; atol = 0, so
+    torch.allclose's default [pytorch_allclose]; with atol = 0,
     equivalence requires proportionally small drift rather
     than an absolute floor).
 
@@ -259,90 +261,82 @@ target vocabulary, and correctness gate are shared.
 
 - Prakash, Wang, Balestriero — adaptive vs. uniform [prakash2024adaptive]
 
-## Heterogeneous CPU/GPU scheduling (rw-scheduling)
+## Heterogeneous compute and ML inference throughput (rw-scheduling)
 
-- Para 1 — task-parallel axis:
+- Para 1 — task-parallel hetero scheduling:
   - Polychronopoulos & Kuck 1987 [polychronopoulos1987gss]
-    canonical dynamic self-scheduling family (this thesis's policy)
+    dynamic self-scheduling — simplest variant of the
+    heterocompute-scheduler family
+  - Augonnet et al. — StarPU [augonnet2011starpu]
+    richer scheduler family (HEFT-style cost-model scheduling,
+    priority-based work-stealing) addressing load imbalance and
+    per-task cost variance
   - Gallet & Gowanlock 2021 [gallet2021heterogeneous]
-    empirical identification of throughput ratio as the core
-    variable of heterocompute applicability (this thesis's variable)
-  - Augonnet et al. 2011 (StarPU) [augonnet2011starpu]
-    canonical heterocompute scheduling system; this thesis's
-    scheduler is the simpler dynamic-self-scheduling variant of
-    the StarPU class, sufficient because loss-grid is embarrassingly
-    parallel with uniform per-task work
-- Para 2 — model-parallel/pipeline axis (orthogonal):
+    throughput ratio as applicability variable, demonstrated on
+    a CPU--GPU epsilon grid join (different workload)
+- Para 2 — model-parallel/pipeline axis:
   - OpenVINO HETERO [openvino_hetero]
+    production model-parallel hetero execution for ML inference;
+    `model_distribution_policy` divides the inference model into
+    stages assigned to devices
+- Para 3 — request-level production batching:
+  - OpenVINO automatic batching [openvino_auto_batching,
+    openvino_auto_batching_src]
+    runtime grouping of concurrent batch-1 inference requests on
+    the input/request batch dimension of one fixed compiled model
 
 ## Autotuning (rw-autotuning)
 
 - Whaley & Dongarra — ATLAS [whaley1998atlas]
-  canonical autotune-and-cache pattern: at install time, empirically
-  tunes the inner loops of BLAS routines (GEMM, DAXPY, etc.) for the
-  target machine's cache and register hierarchy; caches the selection
-  by (machine, BLAS-op) signature; reuses across every subsequent
-  matching call. RQ3 inherits the four-part pattern shape (tune once
-  per machine, cache by signature, reuse across matching invocations,
-  per-machine scoping) and lifts the signature from op-level (BLAS op)
-  to workload-level (architecture + dataset + loss + grid spec).
+  canonical autotune-and-cache pattern: empirically tune the
+  inner loops of BLAS routines (GEMM, DAXPY, etc.) for the
+  target machine's cache and register hierarchy; cache by
+  (machine, BLAS-op) signature; reuse across matching calls.
+  Four-part: tune once per machine, cache by signature, reuse
+  across matching invocations, per-machine scoping.
 - Ansel et al. — OpenTuner [ansel2014opentuner]
   canonical framework for bounded autotuning search with explicit
   stopping criteria; the discipline-level departure from
-  ATLAS-style exhaustive search. RQ3 inherits an instance of that
-  discipline (implementation details in methods).
+  ATLAS-style exhaustive search.
+
+(RQ3 instantiation — signature lift from BLAS-op to workload-level
+key, OpenTuner-style patience rule — lives in MECHANISMS / methods,
+not in rw-autotuning.)
 
 # WHERE THIS THESIS SITS (closing of related work)
 
-- task-parallel axis on ML-inference loss-grid
-- same-domain orthogonal axis: OpenVINO HETERO (out of scope)
-- RQ1 stance:
-  PyTorch documents the functional_call+vmap idiom on model
-  ensembling (independently-trained models). Loss-grid has the same
-  outer-loop shape but a different semantic (one model, many
-  perturbations). torch.compile is an orthogonal intra-device
-  optimization on the same per-grid-point work, documented for
-  general PyTorch programs but with no canonical composition
-  alongside vmap on the loss-grid pattern. RQ1 tests three
-  candidates: vmap alone, torch.compile alone, and the composition.
-  The semantic-gap test applies to each candidate independently;
-  the intra-axis composition test asks whether the two mechanisms
-  multiply, are redundant, or destructively interfere on this
-  workload pattern.
-- RQ2 stance:
-  Gallet on set ops identifies the throughput ratio as the
-  applicability variable for heterocompute hybrid scheduling. This
-  thesis inherits the variable and pairs it with dynamic self-
-  scheduling [polychronopoulos1987gss] as the policy — the simpler
-  variant of the StarPU-class heterocompute scheduling system
-  [augonnet2011starpu], sufficient because loss-grid is embarrassingly
-  parallel with uniform per-task work. The RQ2 test is whether r
-  gates applicability on ML-inference loss-grid. Gallet's policies,
-  device-specific algorithms, and workload domain are not inherited.
-- RQ3 stance:
-  ATLAS [whaley1998atlas] is the pattern source for RQ3, not an
-  implementation model. RQ3 keeps the tune/cache/reuse idea and
-  per-machine scoping, but changes the unit of reuse from a BLAS op
-  to a same-family workload signature (architecture + dataset + loss
-  + grid spec). The calibrated object is also different: a
-  hetero-config tuple configured on top of RQ1's selected
-  intra-device policy, found with a bounded OpenTuner-style search
-  rule [ansel2014opentuner] and evaluated as experiment-time
-  calibration rather than install-time library generation.
+§rw-placement = citation roster + gap paragraph. No per-RQ stance
+paragraph in related work — RQ-level instantiation lives in
+MECHANISMS / methods; the high-level RQ contributions live in
+CONTRIBUTIONS.
 
-  RQ3's falsifiable claim: the autotune-and-cache pattern's
-  amortization survives the signature lift — the cached hetero-config tuple
-  (on top of A's RQ1 winner) stays valid across same-family
-  checkpoints (cumulative T_session speedup positive at the
-  LossLens-scoped session size) and break-even N falls within that
-  scope.
+Gap (synthesis across the landscape):
+- Loss-landscape work [li2018losslandscape, xie2025losslens,
+  losslens_repo] defines the canonical grid and motivates
+  interactive checkpoint comparison, but does not evaluate
+  single-machine optimization of grid-construction runtime
+- Adaptive samplers [prakash2024adaptive] change which grid points
+  are evaluated; this thesis keeps the canonical grid fixed
+- Heterogeneous task-scheduling work [gallet2021heterogeneous]
+  supplies the CPU/GPU throughput-ratio variable but from a
+  different workload, with different task granularity and kernels
+- Production ML inference is closer in domain but optimizes
+  adjacent axes:
+  - HETERO [openvino_hetero] partitions one compiled model's
+    operation graph across devices
+  - automatic batching [openvino_auto_batching] groups concurrent
+    inference requests along the input/request batch dimension
+  - functional_call+vmap [pytorch_ensembling] vectorizes a stack
+    of parameter states on one device
+- None of these directly targets the loss-grid workload shape: one
+  model family, many perturbations of one checkpoint, shared data,
+  and finite CPU/GPU/RAM/VRAM on a commodity machine
 
-- The empirical study exercises a commodity single-machine envelope
-  (free-tier cloud GPU at one end, consumer laptop at the other) so
-  applicability findings sit on a realistic deployment surface for
-  interactive use [xie2025losslens]. The specific hardware tiers and
-  per-tier verdicts are reported in the discussion; the canon makes
-  no hardware-pinned claims.
+Deployment envelope (covered in introduction, not in placement):
+- Commodity single-machine (free-tier cloud GPU + consumer laptop).
+  Applicability findings scoped to a realistic deployment surface
+  for interactive use [xie2025losslens]. Hardware-tier verdicts in
+  discussion; canon makes no hardware-pinned claims.
 
 # CONTRIBUTIONS (intro)
 

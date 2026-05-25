@@ -17,7 +17,7 @@ Section~\ref{experiments}.
 
 The thesis takes Li et al., \emph{Visualizing the Loss
 Landscape of Neural Nets}~\cite{li2018losslandscape}, as the
-canonical method. It is the de-facto reference in subsequent
+canonical core algorithm. It is the de-facto reference in subsequent
 work~\cite{xie2025losslens,losslens_repo} and the algorithm
 shipped to end-users~\cite{goldstein_loss_landscape_repo};
 alternative formulations (e.g.\ trajectory sampling) probe a
@@ -167,9 +167,9 @@ slices per data batch
 The predicted mechanism, if the pattern transfers, is dispatch
 amortization and improved use of backend batching rules;
 actual kernel behavior is backend- and architecture-dependent.
-Full-grid vectorization may exceed memory, so the candidate
-evaluates chunks of $K$ grid points at a time and sweeps $K$
-for breadth.
+Because full-grid vectorization may exceed memory, the
+candidate evaluates chunks of $K$ grid points at a time and
+sweeps $K$ for breadth.
 
 \subsubsection{\texorpdfstring{Graph Capture with
 \texttt{torch.compile}}{Graph Capture with torch.compile}}\label{graph-capture-with-torch.compile}
@@ -184,30 +184,25 @@ loop structure is unchanged. The \texttt{compiled\_vmapped}
 candidate applies \texttt{torch.compile} to the
 \texttt{vmapped} candidate's batched function, testing
 whether graph capture and \texttt{vmap}'s batching multiply on
-the same work or interfere. PyTorch documents no canonical
+the same work or interfere. With no documented canonical
 composition of \texttt{torch.compile} with \texttt{vmap} on
-the loss-grid pattern, so the composition verdict is
-empirical.
+the loss-grid pattern, the composition verdict is empirical.
 
 \subsection{Multi-Device Heterogeneous Scheduling
 (RQ2)}\label{methods-scheduling}
 
 The second approach evaluates heterogeneous CPU/GPU scheduling
-for parallel grid-point evaluation. Its premise inherits the
-CPU/GPU throughput ratio as the core variable of
-heterogeneous CPU/GPU scheduling applicability, identified by
-Gallet and Gowanlock~\cite{gallet2021heterogeneous} for set
-operations: near or above parity, the CPU can absorb a
-non-trivial share of tasks; far below parity, the GPU-only
-baseline is already near-optimal. The scheduling mechanism is
-dynamic self-scheduling of Polychronopoulos and
-Kuck~\cite{polychronopoulos1987gss}, the simpler variant of
-the StarPU class of heterocompute
-schedulers~\cite{augonnet2011starpu}. The simpler variant is
-sufficient because loss-grid is embarrassingly parallel with
-uniform per-task work, removing the load-imbalance and
-heterogeneous-task-cost problems that motivate the richer
-StarPU policies.
+for parallel grid-point evaluation. The scheduling mechanism
+is dynamic self-scheduling~\cite{polychronopoulos1987gss}:
+idle workers poll a shared queue and claim one task at a time.
+Richer scheduler-family policies (HEFT-style cost-model
+scheduling, priority-based work-stealing in
+StarPU~\cite{augonnet2011starpu}) are not candidates because
+loss-grid's per-task work is uniform. The predictor variable
+is the CPU/GPU throughput
+ratio~\cite{gallet2021heterogeneous}: near or above parity,
+the CPU can absorb a non-trivial share of tasks; far below
+parity, the GPU-only baseline is already near-optimal.
 
 The scheduler is eager: GPU and CPU workers poll a shared
 queue, one grid point per task, with the same
@@ -219,11 +214,11 @@ task is the natural unit of the embarrassingly-parallel
 algorithm; no aggregation is needed because per-point work is
 uniform.
 
-Real hardware fixes the native ratio, so the method exposes
-an optional \texttt{gpu\_slowdown\_factor} that injects a
-controlled post-kernel delay on the GPU worker, moving the
-operating point along the ratio axis so the
-ratio-versus-speedup relationship can be measured across
+To study ratios beyond the native operating point, the method
+exposes an optional \texttt{gpu\_slowdown\_factor} that
+injects a controlled post-kernel delay on the GPU worker. The
+delay moves the operating point along the ratio axis, allowing
+the ratio-versus-speedup relationship to be measured across
 regimes the native workload set does not span. This is the
 software analog of the GPU-throughput-sweep methodology
 established by Mei and Chu~\cite{mei2017gpudvfs} (where the
@@ -276,8 +271,8 @@ a configuration input. Composition with RQ1 happens at the
 deployed-stack level, not the sweep level: the session
 runtime assembles RQ1's winner with RQ3's calibrated
 hetero-config tuple. The cache key (machine, workload)
-matches RQ1's key so the composition is well-defined and the
-amortization claim is keyed on the same identity.
+matches RQ1's key, making the composition well-defined and
+the amortization claim keyed on the same identity.
 
 \textbf{Calibration probe.} Calibration uses the smallest
 square grid satisfying $r^2 \geq 4 \times (1 + p_{\max})$,
@@ -296,16 +291,14 @@ configuration is the lowest-runtime valid one, or
 the GPU-only baseline.
 
 \textbf{Cache reuse.} For a related-checkpoint session, the
-selected tuple is plausibly stable across checkpoints, so
-the calibration cost paid by the first checkpoint is reused
-for the rest. This instantiates the autotune-and-cache
-pattern of ATLAS~\cite{whaley1998atlas} with the signature
-lifted from op-level to workload-level: ATLAS keys on
-(machine, BLAS op), RQ3 keys on (machine, workload =
-architecture + dataset + loss + grid spec). The cached value
-is the hetero-config tuple selection. Cache reuse is
-invalid if the selected mode is not stable across the
-session.
+selected tuple is assumed stable across checkpoints, allowing
+the calibration cost paid by the first checkpoint to be reused
+for the rest. This adapts the autotune-and-cache pattern of
+ATLAS~\cite{whaley1998atlas} from a BLAS-operation key to a
+workload-level key. The cache key is (machine, workload =
+architecture + dataset + loss + grid spec); the cached value
+is the hetero-config tuple selection. Cache reuse is invalid
+if the selected mode is not stable across the session.
 
 \textbf{Session comparison.} RQ3 is measured in the native
 operating regime of the machine. The calibrated tuple is used
@@ -369,8 +362,8 @@ baseline on the same (workload $\times$ backend $\times$
 checkpoint). Different implementations of the same nominal
 float32 computation produce different numeric outputs in
 practice (op reordering, kernel/fusion choice, hybrid
-CPU/GPU split), so the gate is a relative-equivalence
-criterion rather than bitwise equality. Three parts:
+CPU/GPU split); the gate is a relative-equivalence criterion
+rather than bitwise equality. Three parts:
 \begin{enumerate}
 \item grid-point count and coordinates match the baseline
 exactly;
@@ -378,7 +371,7 @@ exactly;
 \item finite losses satisfy $|a-b| \leq 1\mathrm{e}{-5}
 \cdot \max(|a|,|b|)$ — $\text{rtol} = 1\mathrm{e}{-5}$
 follows the \texttt{torch.allclose}
-default~\cite{pytorch_allclose}; $\text{atol} = 0$, so
+default~\cite{pytorch_allclose}; with $\text{atol} = 0$,
 equivalence requires proportionally small drift rather than
 an absolute floor.
 \end{enumerate}
