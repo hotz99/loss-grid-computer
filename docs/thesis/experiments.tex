@@ -1,0 +1,433 @@
+\section{EXPERIMENTS}\label{experiments}
+
+This section states the experimental goal, the workload set
+and platforms, and the experiment-specific surface of each
+design. The shared protocol — timing primitive, runtime-target
+vocabulary, repetition discipline, verdict rule, and
+surface-validation gate — is defined in
+Section~\ref{methods-benchmarking} and not duplicated here;
+each experiment names only its own knobs (workload set,
+platforms, pairing scheme, trial order, repetitions, and
+surface-validation threshold).
+
+\subsection{Experimental Design
+Rationale}\label{experimental-design-rationale}
+
+The goal is to determine, for each approach in
+Section~\ref{methods}, the workload and hardware conditions
+under which it reduces loss-grid runtime, the conditions under
+which it regresses, and the cost of selecting the right policy
+at runtime. The design has five elements: a preflight that
+exercises the platform and functional-API surface
+(Section~\ref{preflight}); a motivation step that decomposes
+the baseline so candidate effects can be interpreted
+(Section~\ref{motivation-section-decomposition}); three
+experiments, one per RQ, each the smallest design that answers
+its question under the single-machine constraint
+(Sections~\ref{experiment-a-algorithm}--\ref{experiment-c-cache});
+and a synthesis that assembles the per-axis verdicts into an
+applicability table (Section~\ref{synthesis}).
+
+Each experiment is paired with exactly one method. Composition
+between axes happens at the deployed-stack level at RQ3, not
+at sweep time: RQ1 is consumed by RQ3 as a configuration
+input (Section~\ref{methods-calibration}).
+
+\subsection{Workload Set, Platforms, and Grid
+Sizing}\label{workload-set-and-platforms}
+
+\textbf{Platforms.} The two platforms in
+Table~\ref{tab:platforms} expose different operating points
+for RQ2: Apple~M4 has unified memory, a large CPU-core count,
+and a modest discrete-GPU throughput; NVIDIA~Tesla~T4 has
+discrete VRAM, two CPU logical cores, and higher per-GPU
+throughput. The native CPU/GPU ratio differs by close to an
+order of magnitude, making platform-conditional results
+visible rather than averaged away.
+
+\begin{table}[t]
+  \caption{Platform Characterization}
+  \label{tab:platforms}
+  \centering
+  \resizebox{\columnwidth}{!}{%
+  \begin{tabular}{lll}
+    \toprule
+    Property & Apple M4 & NVIDIA Tesla T4 \\
+    \midrule
+    GPU & Apple M4 & NVIDIA Tesla T4 \\
+    VRAM & 16\,GiB (unified) & 14.6\,GiB (discrete) \\
+    CPU logical cores available & 10 & 2 \\
+    RAM & 16\,GiB (unified) & 12.7\,GiB \\
+    PyTorch version & 2.11.0 & 2.10.0+cu128 \\
+    PyTorch backend & \texttt{mps} & \texttt{cuda} \\
+    Python & 3.12.13 & 3.12.13 \\
+    OS / arch & macOS Darwin 25.4.0 arm64 & Linux 6.6.122+ x86\_64 \\
+    \bottomrule
+  \end{tabular}%
+  }
+\end{table}
+
+\textbf{Workload set.} Four workloads span common architecture
+and task classes: (i) \texttt{cifar10\_resnet20}, the
+canonical loss-landscape
+benchmark~\cite{li2018losslandscape,goldstein_loss_landscape_repo};
+(ii) \texttt{cifar10\_row\_gru}, a row-wise GRU
+classifier~\cite{cho2014gru,chung2014gru} included as a
+sequential model with a different dispatch profile than the
+convolutional one~\cite{holmes2019grnn}; (iii)
+\texttt{california\_mlp}, a feed-forward MLP regressor on
+California Housing, exercising the small-parameter tabular
+regime where per-point compute is too cheap to amortize GPU
+launches; (iv) \texttt{mnist\_mlp}, a dense MLP on MNIST as a
+textbook anchor. The set is small enough to be feasible and
+heterogeneous enough to expose architecture-dependent
+regressions of any single candidate.
+
+\textbf{Grid and data subset.} Experiments A and B use an
+$8\times 8$ grid with scale $1.0$, 1024 evaluation samples per
+point, and batch size $64$. The 64 grid points cover the
+$K=32$ and $K=64$ chunk paths in Experiment A (two chunks and
+one chunk respectively) and provide enough queued tasks for
+the Experiment B dynamic self-scheduler to express
+work-placement signal without starvation. Experiment C uses a
+denser $40\times 40$ grid for the cached-comparison session
+(matching the LossLens-scoped
+workflow~\cite{xie2025losslens,losslens_repo,li2018losslandscape})
+and a small worker-count-sized probe grid for hetero-config
+calibration (Section~\ref{experiment-c-cache}).
+
+\subsection{Preflight: Platform Inventory and Functional-API
+Probe}\label{preflight}
+
+The preflight is not tied to any RQ. It exercises the
+platform-inventory pipeline that subsequent experiments
+consume and probes the
+\texttt{functional\_call}~\cite{pytorch_functional_call} and
+\texttt{vmap}~\cite{pytorch_vmap} surface on each platform
+before the RQ1 candidates are run, so that any backend
+incompatibility surfaces as a planning error rather than a
+mid-experiment failure.
+
+\subsection{Motivation: Baseline Section
+Decomposition}\label{motivation-section-decomposition}
+
+The motivation step substantiates the WHY by measuring, per
+workload, where vanilla baseline time is spent:
+$T_{\text{grid}} = T_{\text{perturb}} + T_{\text{bind}} +
+T_{\text{eval}} + T_{\text{collect}} + \text{residual}$. The
+same caller-side wall-time primitive
+(Section~\ref{methods-benchmarking}) is reused on each
+section; the decomposition is explanatory, not a separate
+timing mechanism. The output identifies which section
+dominates per workload and which sections each RQ1 candidate
+can attack, and it produces the shared baseline
+$T_{\text{grid}}$ artifact that is reused as the comparator in
+RQ1 and as the baseline measurement in RQ2.
+
+\subsection{Experiment A: Algorithm-Level Optimization
+(RQ1)}\label{experiment-a-algorithm}
+
+\textbf{Hypothesis.} Per-candidate: at least one of
+\texttt{vmapped}, \texttt{compiled}, and
+\texttt{compiled\_vmapped} produces a speedup whose 95\% CI
+excludes $1.0$ on some workload. Intra-axis composition: the
+ratio of \texttt{compiled\_vmapped}'s speedup to the product
+of the two individual speedups distinguishes a multiplicative,
+redundant, or destructive composition on this workload
+pattern (Section~\ref{methods-redesign}).
+
+\textbf{Design.}
+\begin{enumerate}
+\tightlist
+\item Run baseline, \texttt{vmapped}, \texttt{compiled}, and
+\texttt{compiled\_vmapped} (Table~\ref{tab:opt-map}) across
+the workload set on both platforms, with all four candidates
+paired within each repeat under identical workload, data
+subset, grid, and seed.
+\item For \texttt{vmap}-bearing candidates
+(\texttt{vmapped} and \texttt{compiled\_vmapped}), sweep
+$K \in \{32, 64\}$ as a sub-parameter and record peak CPU and
+CUDA memory; the per-candidate headline reports the $K$ with
+the highest $\text{CI}_{\text{low}}$, and the full per-$K$
+curve is retained as a diagnostic.
+\item Report per-candidate $T_{\text{grid}}$ speedup with
+effect-size CI against the paired
+baseline~\cite{kalibera2020effect}, and the intra-axis
+composition ratio
+$\mathrm{speedup}(\texttt{compiled\_vmapped}) /
+[\mathrm{speedup}(\texttt{vmapped}) \cdot
+\mathrm{speedup}(\texttt{compiled})]$ with effect-size CI under
+the same rule.
+\end{enumerate}
+
+\textbf{Repetitions and pairing.} $R=5$ paired repeats per
+(workload $\times$ platform); $\nu = R-1 = 4$ degrees of
+freedom on the paired ratio, unified across platforms. Trial
+order cycles through permutations of $\{\text{baseline},
+\texttt{vmapped}, \texttt{compiled},
+\texttt{compiled\_vmapped}\}$ across repeats to avoid
+fixed-order benchmarks.
+
+\textbf{Diagnostics.} (no verdict role)
+\begin{itemize}
+\tightlist
+\item baseline section share
+(Section~\ref{motivation-section-decomposition}) localizes
+which section each candidate can attack and explains
+workload-dependent payoff;
+\item per-$K$ speedup curve identifies the chunk-size optimum
+and exposes failure modes (out-of-memory at large $K$,
+dispatch-dominated at small $K$);
+\item peak CPU and CUDA memory per candidate, since chunking
+and graph capture both trade memory for dispatch
+amortization;
+\item compile cold-start cost
+(\texttt{compile\_cold\_start\_s}), measured once per repeat
+as the wall-time delta around the triggering call and reported
+separately from $T_{\text{grid}}$ because the baseline pays no
+equivalent cost;
+\item \texttt{torch.\_dynamo} recompile-event counter during
+the measured region; a non-zero count invalidates the
+steady-state $T_{\text{grid}}$ assumption for that row.
+\end{itemize}
+
+\textbf{Intra-axis composition verdict.} Following the
+CHARACTER taxonomy
+(Section~\ref{methods-redesign}), the per-repeat composition
+ratio's CI maps to one of $\{\text{multiplicative},
+\text{redundant}, \text{destructive}, \text{inconclusive}\}$:
+$\text{CI}$ not bounded above by $1.0$ (contains $1.0$ or
+$\text{CI}_{\text{low}} > 1.0$) with both individual
+candidates also applicable
+$\Rightarrow$ \emph{multiplicative}; $\text{CI}_{\text{high}}
+< 1.0$ with the composed candidate still beating baseline
+$\Rightarrow$ \emph{redundant}; $\text{CI}_{\text{high}} <
+1.0$ with the composed candidate itself below baseline
+$\Rightarrow$ \emph{destructive}; otherwise
+\emph{inconclusive}.
+
+\textbf{Falsification.} A row whose surface fails the
+validation gate (Section~\ref{methods-benchmarking}) is
+suppressed from the headline column regardless of measured
+speedup; tolerances are not relaxed. A row whose recompile
+counter is non-zero is excluded from the composition verdict.
+Per-candidate CIs are not narrowed post hoc by increasing
+$R$.
+
+\textbf{Hand-off to RQ3.} The per-(workload $\times$ platform)
+\texttt{winner\_candidate} — the candidate with the highest
+$\text{CI}_{\text{low}}$ above $1.0$, or \texttt{baseline} if
+none qualifies — is consumed by RQ3 as A's winner for the
+composed deployed stack.
+
+\subsection{Experiment B: Hybrid Scheduler Applicability
+(RQ2)}\label{experiment-b-hybrid}
+
+\textbf{Hypothesis.} Hybrid CPU/GPU execution reduces
+$T_{\text{grid}}$ versus the slowdown-matched
+\texttt{gpu\_only} baseline at the achieved CPU/GPU
+throughput ratio. Gallet's ratio $r =
+\mathrm{throughput}_{\text{CPU}} /
+\mathrm{throughput}_{\text{GPU}}$~\cite{gallet2021heterogeneous}
+predicts where hybrid applies.
+
+\textbf{Design.}
+\begin{enumerate}
+\tightlist
+\item Measure $r_{\text{native}}$ per (workload $\times$
+platform) without slowdown. The unslowed measurement is a
+diagnostic that locates each workload on the swept axis; it
+is not a comparison condition and does not contribute to the
+headline speedup column.
+\item Sweep $r$ across regimes the native workload set does
+not span using the GPU-throughput-sweep instrument
+(Section~\ref{methods-scheduling}): the slowdown factor $s$
+targets parity, $s = 1/r_{\text{native}}$ when
+$r_{\text{native}} < 1$, else $s = 1.0$.
+\item At each swept $r$, run the dynamic self-scheduling
+hybrid against a slowdown-matched \texttt{vanilla\_baseline}
+within the same repeat, with the same workload, grid, seed,
+and slowdown factor. Both conditions share the same surface
+gate.
+\item Report per-$r$ $T_{\text{grid}}$ speedup with
+effect-size CI~\cite{kalibera2020effect}, alongside $r$ as the
+predictor.
+\end{enumerate}
+
+\textbf{Repetitions and pairing.} $R=5$ paired repeats per
+(workload $\times$ platform $\times r$); $\nu = R-1 = 4$
+degrees of freedom on the paired ratio, unified across
+platforms. Hybrid and vanilla trial order alternates across
+repeats.
+
+\textbf{GPU-side configuration.} B's GPU-side implementation
+is \emph{vanilla}, not RQ1's winner. RQ2 measures B's
+effect — the contribution of CPU workers around a fixed GPU
+path. Pre-mixing RQ1's winner here would conflate B's effect
+with A's.
+
+\textbf{Diagnostics.} (no verdict role)
+\begin{itemize}
+\tightlist
+\item $r_{\text{native}}$ — regime
+predictor~\cite{gallet2021heterogeneous};
+\item achieved CPU/GPU ratio under slowdown, with
+$\text{slowdown\_distance\_from\_unity} = \lvert
+\text{achieved\_ratio} - 1.0 \rvert$ quantifying how close
+the parity setup actually reached parity;
+\item selected policy $\in \{\texttt{gpu\_only},
+\texttt{gpu\_cpu\_hybrid}\}$ chosen by calibration —
+\texttt{gpu\_only} at the achieved ratio is a negative
+result for the predictor;
+\item worker-throughput split (CPU fraction of grid points
+actually executed on CPU).
+\end{itemize}
+
+\textbf{Falsification.} A CI containing $1.0$ at the achieved
+ratio is inconclusive; $\text{CI}_{\text{high}} < 1.0$ is a
+regression and is explained via $r_{\text{native}}$ and the
+worker split. \texttt{selected\_policy} $=
+\texttt{gpu\_only}$ at the achieved ratio is a negative result
+for the predictor even when $\text{achieved\_ratio} \approx
+1.0$. A $\text{slowdown\_distance\_from\_unity} > 0.25$ weakens
+the parity interpretation; the claim is scoped to the
+achieved ratio rather than to ``parity''. A workload with
+$r_{\text{native}} \geq 1.0$ whose native ($s = 1$) hybrid CI
+does not exceed $1.0$ is a negative result for the predicted
+direction, reported with a candidate mechanism (memory
+bandwidth, queue overhead). Surface-gate failure suppresses
+the row from the headline column.
+
+\subsection{Experiment C: Calibration Cache Amortization
+(RQ3)}\label{experiment-c-cache}
+
+\textbf{Hypothesis.} One-time hetero-config tuple
+calibration on the first checkpoint, configured on top of
+RQ1's winner and reused across the remaining checkpoints,
+reduces $T_{\text{session}}$ versus running per-checkpoint
+\texttt{vanilla} on the same session. The autotune-and-cache
+pattern's amortization survives the signature lift from
+ATLAS's op-level signature to a workload-level signature
+(Section~\ref{methods-calibration}).
+
+\textbf{Native operating regime.} Experiment C runs natively
+on the real machine. The claim is whether bounded calibration
+plus cache reuse reduces the session total in the regime a
+LossLens-style workflow actually uses.
+
+\textbf{Workload/session selection.} For each
+(workload $\times$ platform) pair with $N=4$ same-family
+checkpoints available, RQ3 runs the native session comparison.
+Rows where calibration selects \texttt{gpu\_only}, or where
+the calibrated tuple is not faster per checkpoint than
+\texttt{vanilla}, are retained as negative cache-amortization
+results.
+
+\textbf{Session size.}
+LossLens~\cite{xie2025losslens,losslens_repo} reports a
+participant study in which model-comparison sessions involve
+a small number of related trained variants compared
+side-by-side; their case study finds that similar conclusions
+hold at four models as at one hundred. The headline is
+therefore read at $N = 4$ same-family checkpoints. The
+experiment makes no claim at $N > 4$. A same-family checkpoint
+shares architecture, dataset, loss, and grid spec; only
+trained weights differ (e.g.\ a different seed).
+
+\textbf{Design.} Two sessions are compared
+(Table~\ref{tab:exp-c-sessions}). The system has no
+per-checkpoint recalibration mode, so there is no third
+``no-cache'' session to measure; the cache's value is read
+from the comparison between the two real sessions.
+
+\begin{table}[t]
+\caption{Experiment C sessions.}
+\label{tab:exp-c-sessions}
+\centering
+\small
+\begin{tabular}{@{}p{0.27\linewidth}p{0.22\linewidth}p{0.36\linewidth}@{}}
+\toprule
+Session & Role & How obtained \\
+\midrule
+\texttt{vanilla\_reference} & denominator & $N$ \texttt{vanilla} $40\times 40$ grid runs, one per checkpoint, native \\[4pt]
+\texttt{composed\_with\_cache} & numerator & one hetero-config calibration on checkpoint $0$ with RQ1's winner configured GPU-side, then $N$ grid runs under (RQ1's winner $+$ cached hetero-config tuple), native \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Calibration probe grid.} A square grid of side $m$,
+smallest $m$ such that $m^2 \geq 4 \times (1 + p_{\max})$
+where $p_{\max}$ is the largest CPU worker count probed. Four
+tasks per compute unit is the minimum queue depth for the
+dynamic self-scheduler to expose work-placement signal during
+calibration (the side variable is named $m$ to avoid
+collision with Gallet's $r$). The sweep terminates after
+$P = 3$ consecutive non-improvements — bounded autotuning
+search~\cite{ansel2014opentuner} — and $P$ is the explicit
+cost/exhaustiveness knob.
+
+\textbf{Repetitions and pairing.} Each session is measured
+once; $T_{\text{session}}$ is descriptive evidence, not a CI
+claim. A follow-up that repeats full sessions could promote
+the verdict to the shared
+rule~\cite{kalibera2020effect}. Both sessions run on the same
+machine in a fixed, disclosed order, with cache state reset
+between sessions.
+
+\textbf{Headline and diagnostics.} The headline is the
+descriptive cumulative session speedup
+\[
+\text{session\_speedup\_vs\_vanilla} =
+\frac{\text{vanilla\_reference\_session\_total\_s}}{\text{composed\_with\_cache\_session\_total\_s}}
+\]
+read at $N = 4$, where
+$\text{composed\_with\_cache\_session\_total\_s} =
+\text{calibration\_s} + \sum_i T_{\text{grid}}^{p}(i)$ per
+the $T_{\text{session}}$ definition that includes any
+one-time calibration the measured arm performs
+(Section~\ref{methods-benchmarking}); the vanilla reference
+excludes calibration because that arm performs none.
+$\text{break\_even\_N} = \lceil \text{calibration\_s} /
+(T_v - T_p) \rceil$ when $T_v > T_p$, and is absent
+otherwise, locating the crossover of the cumulative session
+curves. The validation figure plots cumulative
+$T_{\text{session}}$ versus $n \in [1..N]$ for both sessions,
+annotated with the workload, platform, native CPU/GPU ratio,
+RQ1 winner, $T_v$, $T_p$, $\text{calibration\_s}$,
+$\text{session\_speedup\_vs\_vanilla}$,
+$\text{break\_even\_N}$, and the selected hetero-config tuple.
+
+\textbf{Falsification.} $T_v \leq T_p$ (the composed stack
+not faster per checkpoint than vanilla) means
+$\text{break\_even\_N}$ is absent and the row is reported as
+no amortization for this (workload $\times$ platform);
+calibration is not retried with looser stopping to force a
+hybrid selection. $\text{session\_speedup\_vs\_vanilla} \leq
+1$ at $N = 4$ is a negative result for the LossLens-scoped
+workflow, reported with $\text{break\_even\_N}$ and
+the selected hetero-config tuple as context. Surface-gate
+failure on any checkpoint suppresses the session from the
+headline.
+
+\subsection{Synthesis: Applicability
+Table}\label{synthesis}
+
+The per-experiment outcomes assemble into an applicability
+table indexed by axis $\times$ workload (and, for RQ2, by
+swept $r$). Each cell carries the timing verdict from the
+shared rule (Section~\ref{methods-benchmarking}) plus the
+preconditions: $\{\text{applies}, \text{regression},
+\text{inconclusive}\}$ from the effect-size CI on the named
+runtime target ($T_{\text{grid}}$ for RQ1 and RQ2,
+$T_{\text{session}}$ for RQ3 when full sessions are
+repeated, descriptive otherwise);
+$\{\text{invalid-surface}, \text{insufficient-data}\}$ as
+preconditions that gate the timing categories. Axis A cells
+additionally carry the intra-axis composition verdict
+$\in \{\text{multiplicative}, \text{redundant},
+\text{destructive}, \text{inconclusive}\}$; RQ3 rows carry
+the break-even diagnostic. Baseline-wins
+(regressions) are reported as primary findings alongside
+optimization wins, since the applicability question is
+symmetric: each axis is documented where it applies and
+where it does not.

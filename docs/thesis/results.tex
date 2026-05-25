@@ -1,0 +1,146 @@
+\section{RESULTS}\label{results}
+
+\subsection{Experiment A: Algorithm Redesign}\label{results-experiment-a-algorithm-redesign}
+
+\begin{table}[H]
+  \caption{Section time shares}
+  \label{tab:profile}
+  \centering
+  \resizebox{\columnwidth}{!}{%
+  \begin{tabular}{llrrrr}
+    \toprule
+    Platform & Workload & Total (s) & Perturb. (\%) & Binding (\%) & Batch eval. (\%) \\
+    \midrule
+    MPS & cifar10\_resnet20 &  7.82 & 2.03 & 0.17 & 97.8 \\
+        & cifar10\_row\_gru  &  9.21 & 0.33 & 0.03 & 99.6 \\
+        & california\_mlp   &  0.75 & 4.27 & 0.35 & 95.3 \\
+        & mnist\_mlp        &  2.60 & 5.14 & 0.11 & 94.7 \\
+    \midrule
+    T4  & cifar10\_resnet20 & 26.46 & 0.03 & 0.29 & 99.6 \\
+        & cifar10\_row\_gru  & 35.96 & 0.02 & 0.03 & 99.9 \\
+        & california\_mlp   &  1.63 & 0.39 & 0.68 & 98.3 \\
+        & mnist\_mlp        & 17.21 & 0.13 & 0.08 & 99.7 \\
+    \bottomrule
+  \end{tabular}%
+  }
+\end{table}
+
+\begin{table}[H]
+  \caption{Candidate speedup relative to baseline, MPS}
+  \label{tab:speedup-mps}
+  \centering
+  \resizebox{\columnwidth}{!}{%
+  \begin{tabular}{llrrl}
+    \toprule
+    Workload & Candidate & Mean speedup & SD & 95\% CI \\
+    \midrule
+    cifar10\_resnet20
+      & functional\_sequential & 0.876 & 0.015 & [0.858, 0.894] \\
+      & vmapped\_chunk\_32     & 0.486 & 0.001 & [0.485, 0.488] \\
+      & vmapped\_chunk\_64     & 0.488 & 0.003 & [0.484, 0.492] \\
+    \midrule
+    cifar10\_row\_gru
+      & functional\_sequential & 1.030 & 0.002 & [1.027, 1.033] \\
+      & vmapped\_chunk\_32     & 7.627 & 0.055 & [7.559, 7.695] \\
+      & vmapped\_chunk\_64     & 7.669 & 0.085 & [7.564, 7.774] \\
+    \midrule
+    california\_mlp
+      & functional\_sequential & 0.918 & 0.081 & [0.818, 1.018] \\
+      & vmapped\_chunk\_32     & 23.312 & 2.454 & [20.265, 26.359] \\
+      & vmapped\_chunk\_64     & 51.350 & 3.972 & [46.419, 56.281] \\
+    \midrule
+    mnist\_mlp
+      & functional\_sequential & 1.074 & 0.008 & [1.064, 1.084] \\
+      & vmapped\_chunk\_32     & 6.653 & 0.078 & [6.557, 6.750] \\
+      & vmapped\_chunk\_64     & 8.138 & 0.085 & [8.033, 8.244] \\
+    \bottomrule
+  \end{tabular}
+  }
+\end{table}
+
+\begin{table}[H]
+  \caption{Candidate speedup relative to baseline, T4}
+  \label{tab:speedup-t4}
+  \centering
+  \resizebox{\columnwidth}{!}{%
+  \begin{tabular}{llrrl}
+    \toprule
+    Workload & Candidate & Mean speedup & SD & 95\% CI \\
+    \midrule
+    cifar10\_resnet20
+      & functional\_sequential & 1.027 & 0.041 & [0.962, 1.093] \\
+      & vmapped\_chunk\_32     & 0.914 & 0.010 & [0.899, 0.929] \\
+      & vmapped\_chunk\_64     & 0.927 & 0.009 & [0.913, 0.941] \\
+    \midrule
+    cifar10\_row\_gru
+      & functional\_sequential & 1.124 & 0.017 & [1.097, 1.150] \\
+      & vmapped\_chunk\_32     & 21.830 & 2.969 & [17.072, 26.589] \\
+      & vmapped\_chunk\_64     & 41.203 & 4.370 & [34.199, 48.207] \\
+    \midrule
+    california\_mlp
+      & functional\_sequential & 0.934 & 0.261 & [0.516, 1.352] \\
+      & vmapped\_chunk\_32     & 18.630 & 6.586 & [8.074, 29.185] \\
+      & vmapped\_chunk\_64     & 33.876 & 13.441 & [12.334, 55.418] \\
+    \midrule
+    mnist\_mlp
+      & functional\_sequential & 1.118 & 0.030 & [1.070, 1.166] \\
+      & vmapped\_chunk\_32     & 23.214 & 0.561 & [22.315, 24.112] \\
+      & vmapped\_chunk\_64     & 37.019 & 1.027 & [35.372, 38.665] \\
+    \bottomrule
+  \end{tabular}
+  }
+\end{table}
+
+\subsection{Experiment B: Hybrid Scheduler Applicability}\label{results-experiment-b-hybrid-scheduler-applicability}
+
+\begin{table}[H]
+  \caption{Hybrid scheduler applicability}
+  \label{tab:hybrid-ratio-check}
+  \centering
+  \resizebox{\columnwidth}{!}{%
+  \begin{tabular}{llrrrrr}
+    \toprule
+    Platform & Workload & Native CPU/GPU & Slowdown & Achieved CPU/GPU & Speedup & CPU tasks (\%) \\
+    \midrule
+    MPS & cifar10\_resnet20 & 0.357 & 2.802 & 1.000 & 1.421 & 48.4 \\
+        & cifar10\_row\_gru  & 2.149 & 1.000 & 2.149 & 4.060 & 79.7 \\
+        & california\_mlp   & 3.128 & 1.000 & 3.128 & 7.789 & 93.8 \\
+        & mnist\_mlp        & 0.445 & 2.249 & 1.000 & 3.630 & 78.1 \\
+    \midrule
+    T4  & cifar10\_resnet20 & 0.128 & 7.842 & 0.968 & 1.923 & 73.4 \\
+        & cifar10\_row\_gru  & 0.247 & 4.057 & 0.971 & 3.789 & 85.9 \\
+        & california\_mlp   & 0.194 & 5.146 & 1.232 & 5.172 & 98.4 \\
+        & mnist\_mlp        & 0.480 & 2.083 & 0.976 & 1.879 & 71.9 \\
+    \bottomrule
+  \end{tabular}%
+  }
+\end{table}
+
+\subsection{Experiment C: Calibration Cache Amortization}\label{results-experiment-c-calibration-cache-amortization}
+
+\begin{table}[H]
+  \caption{Calibration cache amortization, $N=4$ checkpoint session
+           (\texttt{cifar10\_resnet20})}
+  \label{tab:calib}
+  \centering
+  \begin{tabular}{lcc}
+    \toprule
+    Metric & MPS & T4 \\
+    \midrule
+    Selected policy                              & --   & -- \\
+    Calibration grid resolution                  & --   & -- \\
+    Session grid resolution                      & --   & -- \\
+    Baseline probe, 1 checkpoint (s)             & --   & -- \\
+    Calibration time, 1 checkpoint (s)           & --   & -- \\
+    Checkpoint count                             & --   & -- \\
+    \midrule
+    Session total, baseline (s)                  & --   & -- \\
+    Session total, hybrid with cache (s)         & --   & -- \\
+    Session total, hybrid without cache (s)      & --   & -- \\
+    \midrule
+    Session speedup vs.\ baseline                & --   & -- \\
+    Break-even $N^{*}$                           & --   & -- \\
+    Amortized calibration per checkpoint (s)     & --   & -- \\
+    \bottomrule
+  \end{tabular}
+\end{table}

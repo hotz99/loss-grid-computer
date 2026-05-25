@@ -1,0 +1,391 @@
+\section{METHODS}\label{methods}
+
+This section defines the canonical loss-grid algorithm and the
+three optimization approaches mapped to the research questions:
+algorithm-level optimization candidates
+(Section~\ref{methods-redesign}, RQ1), multi-device
+heterogeneous scheduling (Section~\ref{methods-scheduling},
+RQ2), and adaptive calibration with cache reuse
+(Section~\ref{methods-calibration}, RQ3). It also states the
+shared benchmarking, surface-validation, and uncertainty
+protocol. Terminology is defined in
+Section~\ref{introduction}; experimental procedures in
+Section~\ref{experiments}.
+
+\subsection{Canonical Loss-Grid Algorithm
+(Baseline)}\label{methods-canonical-algorithm}
+
+The thesis takes Li et al., \emph{Visualizing the Loss
+Landscape of Neural Nets}~\cite{li2018losslandscape}, as the
+canonical method. It is the de-facto reference in subsequent
+work~\cite{xie2025losslens,losslens_repo} and the algorithm
+shipped to end-users~\cite{goldstein_loss_landscape_repo};
+alternative formulations (e.g.\ trajectory sampling) probe a
+different aspect and are not the cost driver in
+LossLens-style workflows.
+
+For one grid point the algorithm picks coordinates
+$(\alpha,\beta)$, perturbs parameters via $w(\alpha,\beta) =
+w_0 + \alpha\,d_1 + \beta\,d_2$, evaluates loss over the
+dataset subset, and writes the scalar into the surface; this
+repeats until the grid is complete. Here $w_0$ is the trained
+parameter vector and $d_1, d_2$ are filter-normalized
+directions following the upstream default \texttt{weights}
+mode~\cite{li2018losslandscape,goldstein_loss_landscape_repo}.
+
+The thesis adopts the procedure as a controlled single-machine
+comparison baseline with two adjustments to align with the
+research questions. First, the baseline uses one GPU, matching
+the problem framing in Section~\ref{problem-statement} and
+leaving RQ2 to measure CPU--GPU scheduling rather than
+GPU--GPU distribution. Second, the baseline performs no CPU
+helper execution, because hybrid execution is itself the RQ2
+candidate; including it in the baseline would make that
+comparison circular. Because the baseline is single-GPU, the
+implementation runs in a single process rather than through
+the public MPI/distributed path. The only omission relative
+to the public MPI
+reference~\cite{goldstein_loss_landscape_repo} is distributed
+execution. The per-grid-point semantics are preserved, but
+grid points are evaluated sequentially. All comparisons in
+Section~\ref{results} are relative to this baseline. A
+perturbed setting $w(\alpha,\beta)$ is a \emph{perturbation}
+of a checkpoint; \emph{checkpoint} is reserved for a distinct
+trained model from a separate run.
+
+\subsection{Algorithm-Level Optimization Candidates
+(RQ1)}\label{methods-redesign}
+
+The canonical loop evaluates one perturbed parameter state per
+grid point against the same data subset. This is the same
+outer-loop shape that PyTorch's model-ensembling
+tutorial~\cite{pytorch_ensembling} addresses for stacks of
+independently trained models, via the composition of
+\texttt{functional\_call}~\cite{pytorch_functional_call} and
+\texttt{vmap}~\cite{pytorch_vmap}.
+\texttt{torch.compile}~\cite{pytorch_compile} is an orthogonal
+intra-device mechanism — ahead-of-time graph capture, kernel
+fusion, and dispatch elision — on the same per-grid-point
+work. RQ1 tests three candidates against the baseline
+(Table~\ref{tab:opt-map}): \texttt{vmap} composed with
+\texttt{functional\_call} (the documented ensembling pattern),
+\texttt{torch.compile} on the baseline evaluation path, and
+the composition of both.
+\texttt{functional\_call} is a prerequisite primitive rather
+than a standalone candidate: it makes no independent
+optimization claim, and the candidates that build on it
+subsume its observable runtime contribution.
+
+The per-candidate verdict is the effect-size CI on the
+$T_{\text{grid}}$ speedup ratio
+(Section~\ref{methods-benchmarking}). It is paired with an
+\emph{intra-axis composition verdict}
+$\in \{\text{multiplicative}, \text{redundant},
+\text{destructive}, \text{inconclusive}\}$, derived by
+comparing \texttt{compiled\_vmapped}'s observed speedup to the
+product of \texttt{vmapped}'s and \texttt{compiled}'s
+individual speedups under the same effect-size CI rule on the
+ratio.
+
+\begin{table}[t]
+\caption{Algorithm-level optimization candidates.}
+\label{tab:opt-map}
+\centering
+\small
+\begin{tabular}{@{}p{0.27\linewidth}p{0.27\linewidth}p{0.36\linewidth}@{}}
+\toprule
+Candidate & Components & Method role \\
+\midrule
+baseline & in-place mutation + sequential loop & reference implementation \\[4pt]
+\texttt{vmapped} & \texttt{functional\_call} + \texttt{vmap} + chunking & vectorized forward/loss over perturbations \\[4pt]
+\texttt{compiled} & \texttt{torch.compile} on baseline eval path & graph capture and kernel fusion on per-grid-point work \\[4pt]
+\texttt{compiled\_vmapped} & \texttt{torch.compile} over the \texttt{vmapped} candidate & intra-axis composition: graph capture over vectorized point evaluation \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{\texorpdfstring{Vectorized Point Evaluation with
+\texttt{torch.vmap}}{Vectorized Point Evaluation with torch.vmap}}\label{vectorized-point-evaluation-with-torch.vmap}
+
+Loss-grid computation has the same outer-loop shape as model
+ensembling: a stack of parameter states evaluated against the
+same data. The model-ensembling
+tutorial~\cite{pytorch_ensembling} composes
+\texttt{vmap}~\cite{pytorch_vmap} with
+\texttt{functional\_call}~\cite{pytorch_functional_call} to
+evaluate that stack in one batched call.
+\texttt{functional\_call} replaces in-place parameter mutation
+with a stateless invocation: the perturbed parameter mapping
+is supplied to the model call for that invocation, leaving
+the module object unrewritten. \texttt{vmap} then applies the
+loss computation across a leading batch dimension over the
+stacked parameter tensors. The \texttt{vmapped} candidate
+instantiates this composition: it stacks the perturbed
+parameter tensors for $K$ grid points into batched tensors of
+shape $(K,S)$ and applies the loss computation across the $K$
+slices per data batch
+(Figure~\ref{fig:point-evaluation-paths}).
+
+\begin{figure}[t]
+\centering
+\begin{minipage}{0.96\linewidth}
+\small
+\textbf{Functional parameter application for grid point $i$}
+\begin{algorithmic}[1]
+\Statex \textbf{Baseline path}
+\State $\mathit{model}.\mathit{parameters} \gets \mathit{params}_i$
+\State $\mathit{loss}_i \gets \mathit{model}(\mathit{batch})$
+\Statex
+\Statex \textbf{Functional path}
+\State $f_i \gets \textsc{FunctionalCall}(\mathit{model}, \mathit{params}_i)$
+\State $\mathit{loss}_i \gets f_i(\mathit{batch})$
+\end{algorithmic}
+
+\vspace{0.6em}
+
+\textbf{Vectorized point evaluation over the grid}
+\begin{algorithmic}[1]
+\Statex \textbf{Baseline path}
+\For{$\mathit{point} \in \mathit{grid}$}
+  \For{$\mathit{batch} \in \mathit{data}$}
+    \State $\mathit{loss}(\mathit{point}, \mathit{batch})$
+  \EndFor
+\EndFor
+\Statex
+\Statex \textbf{Vmapped path}
+\For{$\mathit{point\_chunk} \in \mathit{grid\_chunks}$}
+  \For{$\mathit{batch} \in \mathit{data}$}
+    \State $\mathit{losses}(\mathit{point\_chunk}, \mathit{batch})$
+  \EndFor
+\EndFor
+\end{algorithmic}
+\end{minipage}
+\caption{Baseline, functional, and vmapped point-evaluation paths.}
+\label{fig:point-evaluation-paths}
+\end{figure}
+
+The predicted mechanism, if the pattern transfers, is dispatch
+amortization and improved use of backend batching rules;
+actual kernel behavior is backend- and architecture-dependent.
+Full-grid vectorization may exceed memory, so the candidate
+evaluates chunks of $K$ grid points at a time and sweeps $K$
+for breadth.
+
+\subsubsection{\texorpdfstring{Graph Capture with
+\texttt{torch.compile}}{Graph Capture with torch.compile}}\label{graph-capture-with-torch.compile}
+
+\texttt{torch.compile}~\cite{pytorch_compile} captures the
+forward/loss path as an ahead-of-time graph, fuses kernels
+where the backend permits, and elides Python-level dispatch.
+The \texttt{compiled} candidate applies \texttt{torch.compile}
+to the baseline per-grid-point evaluation path, isolating the
+graph-capture/fusion mechanism from any batching effect; the
+loop structure is unchanged. The \texttt{compiled\_vmapped}
+candidate applies \texttt{torch.compile} to the
+\texttt{vmapped} candidate's batched function, testing
+whether graph capture and \texttt{vmap}'s batching multiply on
+the same work or interfere. PyTorch documents no canonical
+composition of \texttt{torch.compile} with \texttt{vmap} on
+the loss-grid pattern, so the composition verdict is
+empirical.
+
+\subsection{Multi-Device Heterogeneous Scheduling
+(RQ2)}\label{methods-scheduling}
+
+The second approach evaluates heterogeneous CPU/GPU scheduling
+for parallel grid-point evaluation. Its premise inherits the
+CPU/GPU throughput ratio as the core variable of
+heterogeneous CPU/GPU scheduling applicability, identified by
+Gallet and Gowanlock~\cite{gallet2021heterogeneous} for set
+operations: near or above parity, the CPU can absorb a
+non-trivial share of tasks; far below parity, the GPU-only
+baseline is already near-optimal. The scheduling mechanism is
+dynamic self-scheduling of Polychronopoulos and
+Kuck~\cite{polychronopoulos1987gss}, the simpler variant of
+the StarPU class of heterocompute
+schedulers~\cite{augonnet2011starpu}. The simpler variant is
+sufficient because loss-grid is embarrassingly parallel with
+uniform per-task work, removing the load-imbalance and
+heterogeneous-task-cost problems that motivate the richer
+StarPU policies.
+
+The scheduler is eager: GPU and CPU workers poll a shared
+queue, one grid point per task, with the same
+surface-validation contract as the baseline. Both devices run
+the same forward+loss code, keeping the CPU/GPU throughput
+ratio interpretable as RQ2's predictor. CPU workers are
+bounded by the available logical cores. One grid point per
+task is the natural unit of the embarrassingly-parallel
+algorithm; no aggregation is needed because per-point work is
+uniform.
+
+Real hardware fixes the native ratio, so the method exposes
+an optional \texttt{gpu\_slowdown\_factor} that injects a
+controlled post-kernel delay on the GPU worker, moving the
+operating point along the ratio axis so the
+ratio-versus-speedup relationship can be measured across
+regimes the native workload set does not span. This is the
+software analog of the GPU-throughput-sweep methodology
+established by Mei and Chu~\cite{mei2017gpudvfs} (where the
+native knob is DVFS); the sweep instrument is methodological,
+not a scheduling mechanism. Native and achieved CPU/GPU
+ratios are reported alongside each measurement.
+
+The delay-injection knob is not a competing approach to
+hardware-faithful GPU characterization. Validated
+simulators~\cite{khairy2020accelsim}, kernel
+sampling~\cite{avalos2021pka}, and model-driven throughput
+predictions~\cite{gabbay2022dnnmemory} attribute runtime to
+architectural causes inside the device; here the GPU is
+treated as a black box and a controllable offset is added
+to traverse the ratio axis without modeling kernel-level
+contention. The purpose is to reach regimes the native
+workload set does not span, not to explain why a given
+throughput is observed.
+
+\subsection{Adaptive Calibration with Cache Reuse
+(RQ3)}\label{methods-calibration}
+
+The hybrid scheduler (Section~\ref{methods-scheduling})
+requires a per-machine calibration step to select its
+hetero-config tuple: a policy choice $\in
+\{\texttt{gpu\_only}, \texttt{gpu\_cpu\_hybrid}\}$ together
+with GPU batch size, CPU worker count, and CPU batch size
+when hybrid is selected. This calibration is the
+unconditional upfront cost paid before any per-checkpoint
+savings can be realized. A single-checkpoint user pays that
+cost without reusing the selected tuple and loses; the cache
+changes the unit of cost from per-checkpoint to per-session by
+paying calibration once and reusing the selected tuple across
+$N$ related checkpoints on the same machine. Loss-landscape
+analysis is
+rarely a single run: users compare related
+checkpoints~\cite{xie2025losslens,losslens_repo}. A
+\emph{related checkpoint} shares architecture, dataset, loss,
+and grid spec but differs in learned weights (e.g.\ a
+different seed).
+
+\textbf{Composition with RQ1.} The GPU-side implementation
+inside the hetero-config tuple is configured as RQ1's
+per-(machine, workload) winner for the same workload; RQ1's
+choices apply to the GPU worker only, since \texttt{vmap}-
+and \texttt{torch.compile}-style transforms over the small
+per-task CPU slices are out of scope. RQ1 is not in RQ3's
+sweep — its winner is established by RQ1 and consumed here as
+a configuration input. Composition with RQ1 happens at the
+deployed-stack level, not the sweep level: the session
+runtime assembles RQ1's winner with RQ3's calibrated
+hetero-config tuple. The cache key (machine, workload)
+matches RQ1's key so the composition is well-defined and the
+amortization claim is keyed on the same identity.
+
+\textbf{Calibration probe.} Calibration uses the smallest
+square grid satisfying $r^2 \geq 4 \times (1 + p_{\max})$,
+where $1 + p_{\max}$ is the total compute-unit count (one
+GPU plus $p_{\max}$ CPU workers). The factor $4$ keeps the
+per-unit task count large enough that scheduler granularity
+is not the limiting factor of the probe. The probe sweeps
+GPU batch size, CPU worker count, and CPU batch size with
+patience-based
+termination after \texttt{calibration\_retry}$=R$
+consecutive non-improvements, inheriting OpenTuner's bounded
+autotuning-search discipline~\cite{ansel2014opentuner} as the
+departure from ATLAS-style exhaustive search. The selected
+configuration is the lowest-runtime valid one, or
+\texttt{gpu\_only} fallback if no hybrid configuration beats
+the GPU-only baseline.
+
+\textbf{Cache reuse.} For a related-checkpoint session, the
+selected tuple is plausibly stable across checkpoints, so
+the calibration cost paid by the first checkpoint is reused
+for the rest. This instantiates the autotune-and-cache
+pattern of ATLAS~\cite{whaley1998atlas} with the signature
+lifted from op-level to workload-level: ATLAS keys on
+(machine, BLAS op), RQ3 keys on (machine, workload =
+architecture + dataset + loss + grid spec). The cached value
+is the hetero-config tuple selection. Cache reuse is
+invalid if the selected mode is not stable across the
+session.
+
+\textbf{Session comparison.} RQ3 is measured in the native
+operating regime of the machine. The calibrated tuple is used
+for every checkpoint in the composed session, and the
+reference session runs the vanilla per-checkpoint path. The
+reported quantities are the one-time calibration cost, the
+cached per-checkpoint grid time, cumulative
+$T_{\text{session}}$, and the break-even session size.
+
+\subsection{Benchmarking, Surface Validation, and
+Uncertainty}\label{methods-benchmarking}
+
+\textbf{Timing primitive.} Elapsed time is measured at the
+caller with \texttt{time.perf\_counter\_ns} as specified by
+PEP 418~\cite{python_perf_counter_ns}: a portable monotonic
+high-resolution clock that captures host-observed wall time
+including Python orchestration, framework dispatch, backend
+execution, parameter binding, dataloader iteration, result
+collection, and synchronization. Asynchronous backend
+completion is forced through the framework backend
+abstraction before stopping the timer; no
+CUDA-event-specific dependency is introduced. PyTorch Timer
+and CUDA events are not root canon for this thesis.
+
+\textbf{Runtime targets.} Two targets are named separately:
+$T_{\text{grid}}$ is the wall time for one loss-grid after
+inputs are ready (the RQ1 and RQ2 target), and
+$T_{\text{session}}$ is the wall time for a multi-checkpoint
+session, including any one-time calibration the measured arm
+performs (the RQ3 target). Every speedup claim names the
+target it uses. $T_{\text{grid}}$ is also reported in a
+section decomposition $T_{\text{grid}} = T_{\text{perturb}} +
+T_{\text{bind}} + T_{\text{eval}} + T_{\text{collect}} +
+\text{residual}$ using the same wall-time primitive on each
+section. The decomposition is explanatory only; it is not a
+separate timing mechanism.
+
+\textbf{Repeats and uncertainty.} Repetition and stopping
+budget follow Kalibera and
+Jones~\cite{kalibera2013rigorous}: repeated runs after
+warm-up, variation estimates per arm, and a stopping budget
+that bounds total experiment time. The speedup ratio is
+reported with an effect-size confidence interval following
+Kalibera and Jones~\cite{kalibera2020effect}. The verdict
+rule is: $\text{CI}_{\text{low}} > 1.0 \Rightarrow$
+supported speedup; $\text{CI}_{\text{high}} < 1.0 \Rightarrow$
+supported regression; otherwise inconclusive. The same rule
+applies across RQ1, RQ2, and — when full sessions are
+repeated — RQ3; RQ3 is descriptive session evidence
+otherwise.
+
+\textbf{Trial order and pairing.} Baseline and candidate are
+evaluated within the same repeat under identical workload,
+seed, and grid; trial order rotates across repeats to avoid
+fixed-order benchmarks. The pairing scheme is disclosed per
+experiment.
+
+\textbf{Surface-validation gate.} A candidate's timing claim
+is conditional on producing the same loss surface as the
+baseline on the same (workload $\times$ backend $\times$
+checkpoint). Different implementations of the same nominal
+float32 computation produce different numeric outputs in
+practice (op reordering, kernel/fusion choice, hybrid
+CPU/GPU split), so the gate is a relative-equivalence
+criterion rather than bitwise equality. Three parts:
+\begin{enumerate}
+\item grid-point count and coordinates match the baseline
+exactly;
+\item paired NaNs at matching coordinates count as agreement;
+\item finite losses satisfy $|a-b| \leq 1\mathrm{e}{-5}
+\cdot \max(|a|,|b|)$ — $\text{rtol} = 1\mathrm{e}{-5}$
+follows the \texttt{torch.allclose}
+default~\cite{pytorch_allclose}; $\text{atol} = 0$, so
+equivalence requires proportionally small drift rather than
+an absolute floor.
+\end{enumerate}
+This gate is stricter than the visual-equivalence convention
+used by canonical loss-landscape
+implementations~\cite{li2018losslandscape,goldstein_loss_landscape_repo},
+which validate landscape topology by inspection rather than
+by per-point tolerance.
+A surface that fails the gate disqualifies the timing claim
+regardless of measured speedup.

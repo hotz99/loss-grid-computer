@@ -1,0 +1,295 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{hyperref}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\newcommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+\begin{document}
+
+\title{Single-Machine Optimization of Perturbation-Based Loss-Grid Computation\\
+\thanks{This thesis was prepared in partial fulfilment of the requirements for the Degree of Bachelor of Computer Science, Maastricht University. Supervisor(s): Max Sondag, Georgios Stamoulis}
+}
+
+\author{\IEEEauthorblockN{Given Name Surname}
+\IEEEauthorblockA{\textit{Department of Advanced Computing Sciences} \\
+\textit{Faculty of Science and Engineering}\\
+\textit{Maastricht University}\\
+Maastricht, The Netherlands}
+}
+
+\maketitle
+
+\input{abstract}
+
+\section{INTRODUCTION}\label{introduction}
+
+\subsection{Motivation and Scope}\label{motivation-and-scope}
+
+A loss landscape is a 2D
+scalar field made by perturbing a trained parameter vector
+along two directions and evaluating the loss at each
+point~\cite{li2018losslandscape}, supporting
+generalization analysis and interactive
+checkpoint-comparison tools~\cite{xie2025losslens,losslens_repo}.
+
+Computationally, the landscape is represented as an array of
+scalar loss evaluations indexed by grid coordinates. Each entry
+evaluates the model at the corresponding perturbed parameter
+vector on data. One landscape can require hundreds to thousands
+of such
+evaluations~\cite{li2018losslandscape,goldstein_loss_landscape_repo}.
+In interactive checkpoint comparison, this repeated work can
+dominate latency on commodity hardware.
+
+\subsection{Problem Statement}\label{problem-statement}
+
+The problem is to evaluate candidate single-machine optimization
+mechanisms for perturbation-based loss-grid computation under the
+constraint of one GPU, the available CPU cores, and finite RAM
+and VRAM. The optimization target is the construction of the
+loss grid itself: the perturbed model evaluations that fill the
+grid. The thesis studies this target through two mechanisms:
+faster grid-point evaluation on one device, and CPU/GPU
+distribution on one machine. Because both mechanisms depend on
+hardware and workload, the study determines where each produces
+statistically supported runtime reductions, where it regresses or
+becomes impractical, and whether it preserves the numerical
+equivalence of the resulting loss surface.
+
+\subsection{Research Questions}\label{research-questions}
+
+\texttt{RQ1.} Do PyTorch's stateless evaluation APIs reduce
+perturbation-based loss-grid runtime, and for which architecture types?
+
+\texttt{RQ2.} Under what conditions do idle CPU cores reduce total
+loss-grid time, and how is the CPU/GPU inference throughput ratio
+associated with those conditions?
+
+\texttt{RQ3.} Does reusing the hybrid scheduler's calibrated
+policy across a related checkpoint session amortize the
+upfront calibration cost?
+
+\subsection{Structure of the Report}\label{structure-of-the-report}
+
+Section~\ref{related-work} frames the thesis with respect to prior work.
+Section~\ref{methods} defines the baseline and the three
+optimization approaches (one per RQ).
+Section~\ref{experiments} gives the experimental design,
+workloads, platforms, and measurement protocol.
+Section~\ref{results} reports measurements;
+Section~\ref{discussion} interprets them as applicability
+conditions; Section~\ref{conclusions} answers the RQs.
+
+\subsection{Contributions}\label{contributions}
+
+(RQ1)~Whether the \texttt{functional\_call} + \texttt{vmap}
+pattern from PyTorch's model-ensembling
+tutorial~\cite{pytorch_ensembling} transfers to loss-grid
+construction --- a workload with the same outer-loop shape but
+different semantics (one model, many perturbations) --- across
+architectures and backends.
+(RQ2)~The conditions under which idle CPU cores reduce grid
+time, tied to the CPU/GPU inference throughput ratio that
+Gallet and Gowanlock~\cite{gallet2021heterogeneous} identified
+as the core variable of heterogeneous CPU/GPU scheduling
+applicability for a different workload (set operations) and
+that this thesis tests in the ML-inference regime.
+(RQ3)~Whether reusing the hybrid scheduler's calibrated policy
+across $N=4$ related checkpoints, motivated by LossLens-style
+checkpoint comparison, amortizes the upfront calibration cost
+--- measured as net cumulative session speedup, with the
+break-even session size reported as a diagnostic. Cases
+favoring the baseline are reported as primary findings
+alongside the optimization wins.
+
+
+\input{related-work}
+
+\input{methods}
+
+\input{experiments}
+
+\section{RESULTS}\label{results}
+
+WIP
+
+\section{DISCUSSION}\label{discussion}
+
+WIP
+
+\section{CONCLUSIONS}\label{conclusions}
+
+WIP
+
+\section{REFERENCES}\label{references}
+
+\begin{thebibliography}{00}
+
+\bibitem{goodfellow2015qualitative}
+I. J. Goodfellow, O. Vinyals, and A. M. Saxe, Qualitatively
+Characterizing Neural Network Optimization Problems.
+International Conference on Learning Representations (ICLR),
+2015. arXiv:1412.6544.
+\url{https://arxiv.org/abs/1412.6544}
+
+\bibitem{li2018losslandscape}
+H. Li, Z. Xu, G. Taylor, C. Studer, and T. Goldstein,
+Visualizing the Loss Landscape of Neural Nets. Advances in
+Neural Information Processing Systems 31 (NeurIPS), 2018.
+arXiv:1712.09913.
+\url{https://papers.nips.cc/paper/7875-visualizing-the-loss-landscape-of-neural-nets}
+
+\bibitem{xie2025losslens}
+T. Xie, J. Chen, Y. Yang, C. Geniesse, G. Shi, A. J. Chaudhari, J. K.
+Cava, M. W. Mahoney, T. Perciano, G. H. Weber, and R. Maciejewski,
+LossLens: Diagnostics for Machine Learning Through Loss Landscape
+Visual Analytics. IEEE Computer Graphics and Applications, 2025.
+arXiv:2412.13321.
+\url{https://doi.org/10.1109/MCG.2024.3509374}
+
+\bibitem{losslens_repo}
+T. Xie et al., LossLens: A Visual Analytics System for Diagnosing
+Machine Learning Models via Loss Landscape Analysis. GitHub
+repository, accessed May 22, 2026.
+\url{https://github.com/VADERASU/loss-lens-CGA}
+
+\bibitem{prakash2024adaptive}
+A. Prakash, K. Wang, and R. Balestriero,
+Visualizing Loss Landscapes with Adaptive Sampling and
+Gradient Free Slicing. Brown University CS 237 Course
+Proceedings, 2024.
+\url{https://cs.brown.edu/courses/cs237/2025/proceedings2024.pdf}
+
+\bibitem{polychronopoulos1987gss}
+C. D. Polychronopoulos and D. J. Kuck, Guided Self-Scheduling: A
+Practical Scheduling Scheme for Parallel Supercomputers. IEEE
+Transactions on Computers, C-36(12), 1425--1439, 1987.
+\url{https://doi.org/10.1109/TC.1987.5009495}
+
+\bibitem{bora2022tinytasks}
+S. Bora, B. Walker, and M. Fidler, The Tiny-Tasks Granularity
+Trade-Off: Balancing overhead vs. performance in parallel systems.
+arXiv:2202.11464, 2022.
+\url{https://doi.org/10.48550/arXiv.2202.11464}
+
+\bibitem{gallet2021heterogeneous}
+B. Gallet and M. Gowanlock, Heterogeneous CPU-GPU Epsilon Grid
+Joins: Static and Dynamic Work Partitioning Strategies. Data Science
+and Engineering, 2021.
+\url{https://doi.org/10.1007/s41019-020-00145-x}
+
+\bibitem{khairy2020accelsim}
+M. Khairy, Z. Shen, T. M. Aamodt, and T. Rogers, Accel-Sim: An
+Extensible Simulation Framework for Validated GPU Modeling. Proceedings
+of the 47th Annual International Symposium on Computer Architecture
+(ISCA), 2020. \url{https://doi.org/10.1109/ISCA45697.2020.00047}
+
+\bibitem{avalos2021pka}
+C. Avalos, M. Khairy, R. Green, M. Payer, and T. Rogers,
+Principal Kernel Analysis: A Tractable Methodology to Simulate
+Scaled GPU Workloads. Proceedings of the 54th Annual IEEE/ACM
+International Symposium on Microarchitecture (MICRO), 2021.
+\url{https://doi.org/10.1145/3466752.3480100}
+
+\bibitem{gabbay2022dnnmemory}
+F. Gabbay, R. Lev Aharoni, and O. Schweitzer, Deep Neural Network
+Memory Performance and Throughput Modeling and Simulation Framework.
+Mathematics, 2022. \url{https://doi.org/10.3390/math10214144}
+
+\bibitem{nvidia_cuda_guide}
+NVIDIA, CUDA C++ Programming Guide, section 1.1, ``The Benefits
+of Using GPUs''. NVIDIA documentation, accessed May 21, 2026.
+\url{https://docs.nvidia.com/cuda/archive/11.1.1/cuda-c-programming-guide/index.html}
+
+\bibitem{openvino_hetero}
+Intel, Heterogeneous Execution (HETERO). OpenVINO documentation,
+accessed May 22, 2026.
+\url{https://docs.openvino.ai/2024/openvino-workflow/running-inference/inference-devices-and-modes/hetero-execution.html}
+
+\bibitem{goldstein_loss_landscape_repo}
+T. Goldstein et al. loss-landscape: Code for visualizing the loss
+landscape of neural nets. GitHub repository, accessed May 21, 2026.
+\url{https://github.com/tomgoldstein/loss-landscape}
+
+\bibitem{pytorch_functional_call}
+PyTorch, torch.func.functional\_call API documentation. PyTorch
+documentation, accessed May 21, 2026.
+\url{https://docs.pytorch.org/docs/stable/generated/torch.func.functional_call.html}
+
+\bibitem{pytorch_vmap}
+PyTorch, torch.vmap API documentation. PyTorch documentation,
+accessed May 21, 2026.
+\url{https://docs.pytorch.org/docs/stable/generated/torch.vmap.html}
+
+\bibitem{pytorch_ensembling}
+PyTorch, Model ensembling tutorial. PyTorch documentation,
+accessed May 21, 2026.
+\url{https://docs.pytorch.org/tutorials/intermediate/ensembling.html}
+
+\bibitem{cho2014gru}
+K. Cho, B. van Merrienboer, C. Gulcehre, D. Bahdanau, F. Bougares, H.
+Schwenk, and Y. Bengio, Learning Phrase Representations using RNN
+Encoder-Decoder for Statistical Machine Translation. Proceedings of
+the 2014 Conference on Empirical Methods in Natural Language Processing
+(EMNLP), 2014. arXiv:1406.1078.
+\url{https://doi.org/10.3115/v1/D14-1179}
+
+\bibitem{chung2014gru}
+J. Chung, C. Gulcehre, K. Cho, and Y. Bengio, Empirical
+Evaluation of Gated Recurrent Neural Networks on Sequence Modeling.
+arXiv.org preprint arXiv:1412.3555, 2014.
+\url{https://arxiv.org/abs/1412.3555}
+
+\bibitem{holmes2019grnn}
+C. Holmes, D. Mawhirter, Y. He, F. Yan, and B. Wu, GRNN:
+Low-Latency and Scalable RNN Inference on GPUs. Proceedings of the
+Fourteenth European Conference on Computer Systems (EuroSys), 2019.
+\url{https://doi.org/10.1145/3302424.3303949}
+
+\bibitem{georges2007benchmarking}
+A. Georges, D. Buytaert, and L. Eeckhout, Statistically Rigorous
+Java Performance Evaluation. Proceedings of the 22nd ACM SIGPLAN
+Conference on Object-Oriented Programming Systems and Applications
+(OOPSLA), 2007.
+\url{https://doi.org/10.1145/1297027.1297033}
+
+\bibitem{graham1982gprof}
+S. L. Graham, P. B. Kessler, and M. K. McKusick, gprof: A Call
+Graph Execution Profiler. SIGPLAN Symposium on Compiler Construction,
+1982. \url{https://doi.org/10.1145/800230.806987}
+
+\bibitem{ansel2014opentuner}
+J. Ansel, S. Kamil, K. Veeramachaneni, J. Ragan-Kelley,
+J. Bosboom, U.-M. O'Reilly, and S. Amarasinghe, OpenTuner: An
+Extensible Framework for Program Autotuning. Proceedings of the
+23rd International Conference on Parallel Architectures and
+Compilation (PACT '14), pages 303--316, 2014.
+\url{https://doi.org/10.1145/2628071.2628092}
+
+\bibitem{whaley1998atlas}
+R. C. Whaley and J. J. Dongarra, Automatically Tuned Linear
+Algebra Software. Proceedings of the 1998 ACM/IEEE Conference
+on Supercomputing (SC98), 1998. (Best Paper Award.)
+\url{https://doi.org/10.1109/SC.1998.10004}
+
+\end{thebibliography}
+
+\input{appendices}
+
+
+\end{document}
