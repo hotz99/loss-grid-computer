@@ -22,7 +22,7 @@
 \begin{document}
 
 \title{Single-Machine Optimization of Perturbation-Based Loss-Grid Computation\\
-\thanks{This thesis was prepared in partial fulfilment of the requirements for the Degree of Bachelor of Computer Science, Maastricht University. Supervisor(s): Max Sondag, Georgios Stamoulis}
+\thanks{Our thesis was prepared in partial fulfilment of the requirements for the Degree of Bachelor of Computer Science, Maastricht University. Supervisor(s): Max Sondag, Georgios Stamoulis}
 }
 
 \author{\IEEEauthorblockN{Given Name Surname}
@@ -38,55 +38,49 @@ Maastricht, The Netherlands}
 
 \section{INTRODUCTION}\label{introduction}
 
-\subsection{Motivation and Scope}\label{motivation-and-scope}
-
 A loss landscape is a 2D
 scalar field made by perturbing a trained parameter vector
 along two directions and evaluating the loss at each
 point~\cite{li2018losslandscape}, supporting
 generalization analysis and interactive
-checkpoint-comparison tools~\cite{xie2025losslens,losslens_repo}.
-
+model-comparison tools~\cite{xie2025losslens,losslens_repo}.
 Computationally, the landscape is represented as an array of
 scalar loss evaluations indexed by grid coordinates. Each entry
 evaluates the model at the corresponding perturbed parameter
 vector on data. One landscape can require hundreds to thousands
 of such
 evaluations~\cite{li2018losslandscape,goldstein_loss_landscape_repo}.
-In interactive checkpoint comparison, this repeated work can
-dominate latency on commodity hardware.
-
-\subsection{Problem Statement}\label{problem-statement}
+In interactive checkpoint comparison~\cite{xie2025losslens},
+this repeated work can dominate latency on commodity hardware.
 
 The problem is to evaluate candidate single-machine optimization
 mechanisms for perturbation-based loss-grid computation under the
 constraint of one GPU, the available CPU cores, and finite RAM
 and VRAM. The optimization target is the construction of the
 loss grid itself: the perturbed model evaluations that fill the
-grid. The thesis studies this target through two mechanisms:
-faster grid-point evaluation on one device, and CPU/GPU
-distribution on one machine. Because both mechanisms depend on
-hardware and workload, the study determines where each produces
-statistically supported runtime reductions, where it regresses or
-becomes impractical, and whether it preserves the numerical
-equivalence of the resulting loss surface.
+grid. Our thesis explores three mechanisms, each posed as a
+research question. The first is single-device evaluation
+improvement: \textbf{RQ1. Do PyTorch's stateless evaluation APIs
+reduce perturbation-based loss-grid runtime, and for which
+architecture types?} The second is heterogeneous CPU+GPU
+scheduling: \textbf{RQ2. Does heterogeneous CPU+GPU scheduling
+reduce perturbation-based loss-grid runtime, and does the CPU/GPU
+throughput ratio determine where it applies across architecture
+types?} The third is calibrated policy reuse across checkpoint
+sessions: \textbf{RQ3. Can the calibration step be included in a
+related checkpoint session and still reduce total session time
+when the calibrated policy is reused across checkpoints?}
 
-\subsection{Research Questions}\label{research-questions}
-
-\texttt{RQ1.} Do PyTorch's stateless evaluation APIs reduce
-perturbation-based loss-grid runtime, and for which architecture types?
-
-\texttt{RQ2.} Under what conditions do idle CPU cores reduce total
-loss-grid time, and how is the CPU/GPU inference throughput ratio
-associated with those conditions?
-
-\texttt{RQ3.} Does reusing the hybrid scheduler's calibrated
-policy across a related checkpoint session amortize the
-upfront calibration cost?
+Because these mechanisms depend on hardware
+and workload, the study determines where RQ1 and RQ2 produce
+statistically supported runtime reductions, where they regress or
+lose practical utility, and whether all measured configurations
+preserve the numerical equivalence of the resulting loss surface.
+RQ3 then asks whether the one-time calibration cost can be amortized under a multi-checkpoint session.
 
 \subsection{Structure of the Report}\label{structure-of-the-report}
 
-Section~\ref{related-work} frames the thesis with respect to prior work.
+Section~\ref{related-work} frames our thesis with respect to prior work.
 Section~\ref{methods} defines the baseline and the three
 optimization approaches (one per RQ).
 Section~\ref{experiments} gives the experimental design,
@@ -98,14 +92,24 @@ conditions; Section~\ref{conclusions} answers the RQs.
 \subsection{Contributions}\label{contributions}
 
 (RQ1)~An applicability study of PyTorch stateless and
-vectorized evaluation primitives for loss-grid construction
-across architectures and backends.
-(RQ2)~An empirical test of when idle CPU cores help
-single-machine loss-grid computation, using the CPU/GPU
-throughput ratio as the main explanatory variable.
-(RQ3)~An evaluation of whether calibrated hybrid-scheduler
-policies can be reused across related checkpoint-comparison
-sessions to amortize calibration cost.
+vectorized evaluation primitives
+(\texttt{functional\_call}+\texttt{vmap},
+\texttt{torch.compile}) for loss-grid construction across
+architectures and backends.
+
+(RQ2)~An applicability study of heterogeneous CPU+GPU
+scheduling for single-machine loss-grid computation, with
+CPU worker count fixed at maximum to isolate the CPU/GPU
+inference-throughput ratio as the explanatory variable
+across architectures.
+
+(RQ3)~An evaluation of whether a calibrated policy over the
+worker-count and batch-size axes that RQ2 holds fixed can be
+reused across related checkpoint-comparison sessions to
+amortize calibration cost. RQ1 and RQ2 provide the
+architecture-dependent evidence; RQ3 inherits a
+hybrid-affinity regime from RQ2, native or slowed, where
+calibration has an opportunity to change session time.
 
 
 \input{related-work}
@@ -120,158 +124,144 @@ sessions to amortize calibration cost.
 
 \subsection{RQ1: Algorithm Redesign Applicability}\label{rq1-algorithm-redesign-applicability}
 
-[TODO] Table~\ref{tab:profile} shows that the batch-evaluation section
-dominates the measured baseline runtime for every workload and platform.
-That profile sets the scale for interpreting
-Tables~\ref{tab:speedup-mps} and~\ref{tab:speedup-t4}: changes that only
-alter parameter binding have limited room to improve total runtime,
-whereas vectorizing repeated forward/loss work can matter when the
-backend handles the transformed workload efficiently.
-
-The sequential \texttt{functional\_call} candidate functions as a
-binding-semantics control rather than a full algorithmic redesign. In
-the measured rows, its effects are modest and sometimes inconclusive.
-The chunked \texttt{vmap} candidates show the opposite pattern: they
-produce large speedups for several GRU and MLP rows, but they also
-regress on the ResNet20 rows. The result is not a general endorsement
-of \texttt{vmap}; it is evidence that vectorized point evaluation is
-useful only for workloads and backends where the transformed tensor
-program is favorable for that workload/backend pair.
+\begin{itemize}\tightlist
+  \item vectorization affinity:
+    vmap ensembling pattern maps a leading
+    dimension of same-architecture parameter states into
+    batched tensor ops; flat/dense mlp rows closest match to
+    intended vectorization shape
+    % TODO cite: pytorch vmap / ensembling docs, plus a later source
+    % if we keep the flat/dense mlp affinity claim
+  \item architecture interpretation: row-gru has time
+    dependence by design: each row update depends on the
+    previous recurrent state, so vmap can batch perturbations
+    but cannot remove inner sequence; resnet rows combine
+    perturbation batching with convolution kernels whose GPU
+    backend behavior already highly optimized
+    % TODO cite: gru/recurrent architecture definition for time dependence;
+    % cite resnet/convolution GPU-backend claim if kept
+  \item composition: the compiled-vmapped comparison asks
+    whether the composed path improves on the better individual
+    transform under shared timing-verdict taxonomy
+    % TODO cite: methods timing-verdict taxonomy
+\end{itemize}
 
 \subsection{RQ2: Hybrid Scheduling Conditions}\label{rq2-hybrid-scheduling-conditions}
 
-Table~\ref{tab:hybrid-ratio-check} ties hybrid scheduling behavior to
-the measured CPU/GPU inference ratio. In these measurements, hybrid
-speedup appears when the achieved ratio is near or above parity and the
-CPU workers receive a substantial fraction of grid-point tasks. This is
-consistent with the throughput-ratio applicability finding of
-Gallet and Gowanlock~\cite{gallet2021heterogeneous}: heterogeneous
-execution beats GPU-only above a workload-dependent ratio
-threshold and regresses below it.
-
-The table also limits the interpretation. On T4, the reported hybrid
-speedups are measured after applying artificial GPU slowdown, with
-slowdown factors between roughly \(2\times\) and \(8\times\). Those rows
-show that the scheduler can use CPU work when the controlled ratio is
-moved toward parity; they do not show that the same workloads benefit
-from hybrid execution on an unslowed T4. On MPS, rows with larger native
-CPU/GPU ratios provide stronger evidence for native hybrid applicability,
-while rows below parity remain conditional on the achieved ratio.
+\begin{itemize}\tightlist
+  \item explanatory variable: the CPU/GPU forward+loss
+    inference-throughput ratio. Forward+loss inference
+    dominates grid runtime (\ref{tab:profile}), so
+    inference throughput ratio is the relevant narrowing of
+    the general CPU/GPU throughput ratio
+    (\ref{rw-placement}).
+  \item expected ratio threshold: near or above parity, hybrid
+    scheduling absorbs useful CPU work; far below parity,
+    GPU-only is expected to dominate or
+    leave the verdict unresolved
+    % TODO cite: experiment verdict framing
+  \item workload dependence: sequential row-gru should
+    require less artificial GPU slowdown to approach
+    inference parity than cifar10 resnet20; nvidia's
+    DL perf guide for CNNs ~\cite{nvidia_cudnn_convolution_guide} describes
+    tensor-shape and alignment conditions under which
+    conv kernels reach high GPU throughput;
+    resnet20 forward path is dominated by 2d conv
+    layers that meet those conditions; rowgrud
+    is a recurrent sequence of matrixvector
+    ops with dependence between steps; hence expect resnet20h above
+    rowgru on GPU
+    % TODO cite: recurrent/time-dependence claim if kept
+  \item platform interpretation: on a discrete-memory
+    CPU/GPU system, CPU compute reads and writes host DRAM and
+    contends with the GPU only at the PCIe bus, on host-device
+    transfers. On a unified-memory system (Apple M4), CPU and
+    GPU share one physical memory pool and one memory bus by
+    design, so any concurrent CPU compute competes with the
+    GPU for memory bandwidth regardless of transfers; expect hybrid scheduling to tolerate concurrent
+    CPU workers more on the discrete-memory machine than on unified-memory
+    % TODO cite: slowdown instrument scope and platform specs
+\end{itemize}
 
 \subsection{RQ3: Calibration and Cache Reuse}\label{rq3-calibration-and-cache-reuse}
 
-[TODO] Table~\ref{tab:calib} evaluates whether a calibration cost can be
-paid once and reused across a related checkpoint comparison session.
-Report the selected policy, calibration cost, session totals, and
-break-even behavior from verified records.
+\begin{itemize}\tightlist
+  \item measurement scope: single-measurement ratios are descriptive;
+    CI based cross-session repeatability not measured
+  \item cache point: calibration runs once at start; reuse only matters
+    if per-checkpoint saved time amortizes one-time calibration cost
+  \item negative case: if calibration resolves gpu-only then cache has
+    no useful policy to reuse; report amortization refuted for that case
+\end{itemize}
 
 \subsection{Hardware Dependence and Limits}\label{hardware-dependence-and-limits}
 
-[TODO] Characterize the hardware-conditional nature of the measured
-candidates using the RQ1 and RQ2 tables. Relevant limits include memory
-pressure for large \texttt{vmap} chunks, backend-specific handling of the
-transformed tensor program, scheduler overhead for small grid tasks, and
-platform-specific numerical behavior.
-
-\subsection{Threats to Validity}\label{threats-to-validity}
-
-[TODO] Numerical validation claims must be scoped to the backend that produced
-them. Address single-platform generalization limits and workload
-representativeness.
-
-For Experiment B, correctness is evaluated by relative agreement rather
-than absolute error magnitude. Extreme-loss grid points can make
-absolute differences uninformative; scheduler rows are accepted using
-the recorded surface check: zero mismatches at
-$r_{\mathrm{tol}}=10^{-5}$.
+\begin{itemize}\tightlist
+  \item scoped to unified-memory consumer hardware and
+    discrete vram free-tier cloud hardware
+  \item four workloads span mostly orthogonal ML
+    families but do not support claims beyond our workload set
+  \item expected dependence axes: memory pressure for large vmap
+    chunks, backend-specific handling of the transformed tensor
+    program, scheduler overhead at small grid-task granularities, and
+    platform-specific numerical behavior at surface validation
+    % TODO cite: measured diagnostics where each axis appears
+  \item observed differences should link to platform arch differences
+\end{itemize}
 
 
 \section{CONCLUSIONS (TODO)}\label{conclusions}
 
-Summarize the research-question answers and the practical recommendations
-that follow from the measured applicability boundaries, including cases
-where the evidence supports retaining the baseline instead of applying an
-optimization.
+summarize RQ answers and the practical recommendations
+following from measured applicability boundaries, including cases
+where evidence supports baseline instead of applying an
+optimization
 
 \section{REFERENCES}\label{references}
 
 \begin{thebibliography}{00}
 
 \bibitem{goodfellow2015qualitative}
-I. J. Goodfellow, O. Vinyals, and A. M. Saxe, Qualitatively
+I. J. Goodfellow et al., Qualitatively
 Characterizing Neural Network Optimization Problems.
 International Conference on Learning Representations (ICLR),
 2015. arXiv:1412.6544.
 \url{https://arxiv.org/abs/1412.6544}
 
 \bibitem{li2018losslandscape}
-H. Li, Z. Xu, G. Taylor, C. Studer, and T. Goldstein,
-Visualizing the Loss Landscape of Neural Nets. Advances in
+H. Li et al., Visualizing the Loss Landscape of Neural Nets. Advances in
 Neural Information Processing Systems 31 (NeurIPS), 2018.
 arXiv:1712.09913.
 \url{https://papers.nips.cc/paper/7875-visualizing-the-loss-landscape-of-neural-nets}
 
 \bibitem{xie2025losslens}
-T. Xie, J. Chen, Y. Yang, C. Geniesse, G. Shi, A. J. Chaudhari, J. K.
-Cava, M. W. Mahoney, T. Perciano, G. H. Weber, and R. Maciejewski,
-LossLens: Diagnostics for Machine Learning Through Loss Landscape
-Visual Analytics. IEEE Computer Graphics and Applications, 2025.
+T. Xie et al., LossLens: Diagnostics for Machine Learning Through
+Loss Landscape Visual Analytics. IEEE Computer Graphics and Applications, 2025.
 arXiv:2412.13321.
 \url{https://doi.org/10.1109/MCG.2024.3509374}
 
 \bibitem{losslens_repo}
-T. Xie et al., LossLens: A Visual Analytics System for Diagnosing
-Machine Learning Models via Loss Landscape Analysis. GitHub
-repository, accessed May 22, 2026.
+T. Xie et al., LossLens code repository. GitHub, accessed May 22, 2026.
 \url{https://github.com/VADERASU/loss-lens-CGA}
 
 \bibitem{prakash2024adaptive}
-A. Prakash, K. Wang, and R. Balestriero,
-Visualizing Loss Landscapes with Adaptive Sampling and
-Gradient Free Slicing. Brown University CS 237 Course
-Proceedings, 2024.
+A. Prakash et al., Visualizing Loss Landscapes with Adaptive
+Sampling and Gradient Free Slicing. Non-peer-reviewed course
+report, Brown University CS 237 (Interactive Data Visualization),
+2024.
 \url{https://cs.brown.edu/courses/cs237/2025/proceedings2024.pdf}
 
-\bibitem{polychronopoulos1987gss}
-C. D. Polychronopoulos and D. J. Kuck, Guided Self-Scheduling: A
-Practical Scheduling Scheme for Parallel Supercomputers. IEEE
-Transactions on Computers, C-36(12), 1425--1439, 1987.
-\url{https://doi.org/10.1109/TC.1987.5009495}
+\bibitem{kruskal1985selfscheduling}
+C. P. Kruskal and A. Weiss, Allocating Independent Subtasks
+on Parallel Processors. IEEE Transactions on Software
+Engineering, SE-11(10), 1001--1016, 1985.
+\url{https://doi.org/10.1109/TSE.1985.231547}
 
-\bibitem{bora2022tinytasks}
-S. Bora, B. Walker, and M. Fidler, The Tiny-Tasks Granularity
-Trade-Off: Balancing overhead vs. performance in parallel systems.
-arXiv:2202.11464, 2022.
-\url{https://doi.org/10.48550/arXiv.2202.11464}
-
-\bibitem{gallet2021heterogeneous}
-B. Gallet and M. Gowanlock, Heterogeneous CPU-GPU Epsilon Grid
-Joins: Static and Dynamic Work Partitioning Strategies. Data Science
-and Engineering, 2021.
-\url{https://doi.org/10.1007/s41019-020-00145-x}
-
-\bibitem{khairy2020accelsim}
-M. Khairy, Z. Shen, T. M. Aamodt, and T. Rogers, Accel-Sim: An
-Extensible Simulation Framework for Validated GPU Modeling. Proceedings
-of the 47th Annual International Symposium on Computer Architecture
-(ISCA), 2020. \url{https://doi.org/10.1109/ISCA45697.2020.00047}
-
-\bibitem{avalos2021pka}
-C. Avalos, M. Khairy, R. Green, M. Payer, and T. Rogers,
-Principal Kernel Analysis: A Tractable Methodology to Simulate
-Scaled GPU Workloads. Proceedings of the 54th Annual IEEE/ACM
-International Symposium on Microarchitecture (MICRO), 2021.
-\url{https://doi.org/10.1145/3466752.3480100}
-
-\bibitem{gabbay2022dnnmemory}
-F. Gabbay, R. Lev Aharoni, and O. Schweitzer, Deep Neural Network
-Memory Performance and Throughput Modeling and Simulation Framework.
-Mathematics, 2022. \url{https://doi.org/10.3390/math10214144}
-
-\bibitem{nvidia_cuda_guide}
-NVIDIA, CUDA C++ Programming Guide, section 1.1, ``The Benefits
-of Using GPUs''. NVIDIA documentation, accessed May 21, 2026.
-\url{https://docs.nvidia.com/cuda/archive/11.1.1/cuda-c-programming-guide/index.html}
+\bibitem{augonnet2011starpu}
+C. Augonnet et al., StarPU: A Unified Platform for Task Scheduling
+on Heterogeneous Multicore Architectures. Concurrency and Computation: Practice and
+Experience, 23(2), 187--198, 2011.
+\url{https://doi.org/10.1002/cpe.1631}
 
 \bibitem{openvino_hetero}
 Intel, Heterogeneous Execution (HETERO). OpenVINO documentation,
@@ -289,70 +279,91 @@ version 2023.3.0, accessed May 25, 2026.
 \url{https://github.com/openvinotoolkit/openvino/tree/2023.3.0/src/plugins/auto_batch/src}
 
 \bibitem{goldstein_loss_landscape_repo}
-T. Goldstein et al. loss-landscape: Code for visualizing the loss
-landscape of neural nets. GitHub repository, accessed May 21, 2026.
+T. Goldstein et al., loss-landscape code repository. GitHub,
+accessed May 21, 2026.
 \url{https://github.com/tomgoldstein/loss-landscape}
 
 \bibitem{pytorch_functional_call}
-PyTorch, torch.func.functional\_call API documentation. PyTorch
-documentation, accessed May 21, 2026.
+PyTorch, torch.func.functional\_call API docs, accessed May 21, 2026.
 \url{https://docs.pytorch.org/docs/stable/generated/torch.func.functional_call.html}
 
 \bibitem{pytorch_vmap}
-PyTorch, torch.vmap API documentation. PyTorch documentation,
-accessed May 21, 2026.
+PyTorch, torch.vmap API docs, accessed May 21, 2026.
 \url{https://docs.pytorch.org/docs/stable/generated/torch.vmap.html}
 
+\bibitem{pytorch_compile}
+PyTorch, torch.compile API docs, accessed May 25, 2026.
+\url{https://docs.pytorch.org/docs/stable/generated/torch.compile.html}
+
+\bibitem{pytorch_allclose}
+PyTorch, torch.allclose API docs, accessed May 25, 2026.
+\url{https://docs.pytorch.org/docs/stable/generated/torch.allclose.html}
+
 \bibitem{pytorch_ensembling}
-PyTorch, Model ensembling tutorial. PyTorch documentation,
-accessed May 21, 2026.
+PyTorch, Model ensembling tutorial, accessed May 21, 2026.
 \url{https://docs.pytorch.org/tutorials/intermediate/ensembling.html}
 
+\bibitem{nvidia_cudnn_convolution_guide}
+NVIDIA, Convolutional Layers User's Guide, accessed May 26, 2026.
+\url{https://docs.nvidia.com/deeplearning/performance/dl-performance-convolutional/index.html}
+
 \bibitem{cho2014gru}
-K. Cho, B. van Merrienboer, C. Gulcehre, D. Bahdanau, F. Bougares, H.
-Schwenk, and Y. Bengio, Learning Phrase Representations using RNN
+K. Cho et al., Learning Phrase Representations using RNN
 Encoder-Decoder for Statistical Machine Translation. Proceedings of
 the 2014 Conference on Empirical Methods in Natural Language Processing
 (EMNLP), 2014. arXiv:1406.1078.
 \url{https://doi.org/10.3115/v1/D14-1179}
 
 \bibitem{chung2014gru}
-J. Chung, C. Gulcehre, K. Cho, and Y. Bengio, Empirical
-Evaluation of Gated Recurrent Neural Networks on Sequence Modeling.
+J. Chung et al., Empirical Evaluation of Gated Recurrent Neural
+Networks on Sequence Modeling.
 arXiv.org preprint arXiv:1412.3555, 2014.
 \url{https://arxiv.org/abs/1412.3555}
 
-\bibitem{holmes2019grnn}
-C. Holmes, D. Mawhirter, Y. He, F. Yan, and B. Wu, GRNN:
-Low-Latency and Scalable RNN Inference on GPUs. Proceedings of the
-Fourteenth European Conference on Computer Systems (EuroSys), 2019.
-\url{https://doi.org/10.1145/3302424.3303949}
+\bibitem{kalibera2013rigorous}
+T. Kalibera et al., Rigorous Benchmarking in Reasonable Time.
+Proceedings of the 2013 International Symposium on Memory
+Management (ISMM), 2013.
+\url{https://doi.org/10.1145/2464157.2464160}
 
-\bibitem{georges2007benchmarking}
-A. Georges, D. Buytaert, and L. Eeckhout, Statistically Rigorous
-Java Performance Evaluation. Proceedings of the 22nd ACM SIGPLAN
-Conference on Object-Oriented Programming Systems and Applications
-(OOPSLA), 2007.
-\url{https://doi.org/10.1145/1297027.1297033}
-
-\bibitem{graham1982gprof}
-S. L. Graham, P. B. Kessler, and M. K. McKusick, gprof: A Call
-Graph Execution Profiler. SIGPLAN Symposium on Compiler Construction,
-1982. \url{https://doi.org/10.1145/800230.806987}
-
-\bibitem{ansel2014opentuner}
-J. Ansel, S. Kamil, K. Veeramachaneni, J. Ragan-Kelley,
-J. Bosboom, U.-M. O'Reilly, and S. Amarasinghe, OpenTuner: An
-Extensible Framework for Program Autotuning. Proceedings of the
-23rd International Conference on Parallel Architectures and
-Compilation (PACT '14), pages 303--316, 2014.
-\url{https://doi.org/10.1145/2628071.2628092}
+\bibitem{kalibera2020effect}
+T. Kalibera and R. Jones, Quantifying Performance Changes with
+Effect Size Confidence Intervals. IEEE Transactions on Software
+Engineering, 2020.
+\url{https://doi.org/10.1109/TSE.2020.3001339}
 
 \bibitem{whaley1998atlas}
 R. C. Whaley and J. J. Dongarra, Automatically Tuned Linear
 Algebra Software. Proceedings of the 1998 ACM/IEEE Conference
-on Supercomputing (SC98), 1998. (Best Paper Award.)
+on Supercomputing (SC98), 1998.
 \url{https://doi.org/10.1109/SC.1998.10004}
+
+\bibitem{ansel2024pytorch2}
+J. Ansel et al., PyTorch 2: Faster Machine Learning Through
+Dynamic Python Bytecode Transformation and Graph Compilation.
+Proceedings of the 29th ACM International Conference on
+Architectural Support for Programming Languages and Operating
+Systems (ASPLOS), Volume 2, 929--947, 2024.
+\url{https://doi.org/10.1145/3620665.3640366}
+
+\bibitem{crankshaw2017clipper}
+D. Crankshaw et al., Clipper: A Low-Latency Online Prediction
+Serving System. 14th USENIX Symposium on Networked Systems
+Design and Implementation (NSDI), 613--627, 2017.
+\url{https://www.usenix.org/conference/nsdi17/technical-sessions/presentation/crankshaw}
+
+\bibitem{chen2018tvm}
+T. Chen et al., TVM: An Automated End-to-End Optimizing Compiler
+for Deep Learning. 13th USENIX Symposium on Operating Systems
+Design and Implementation (OSDI), 578--594, 2018.
+\url{https://www.usenix.org/conference/osdi18/presentation/chen}
+
+\bibitem{topcuoglu2002heft}
+H. Topcuoglu, S. Hariri, and M.-Y. Wu, Performance-Effective and
+Low-Complexity Task Scheduling for Heterogeneous Computing. IEEE
+Transactions on Parallel and Distributed Systems, 13(3),
+260--274, 2002.
+\url{https://doi.org/10.1109/71.993206}
 
 \end{thebibliography}
 
