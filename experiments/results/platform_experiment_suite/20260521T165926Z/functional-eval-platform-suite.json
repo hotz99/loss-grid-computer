@@ -1,0 +1,1933 @@
+{
+  "child_stem": "functional-eval-platform-suite",
+  "duration_s": 628.3355,
+  "output_path": "outputs/platform_experiment_suite/20260521T165926Z/functional-eval-platform-suite.json",
+  "record": {
+    "completed_scenario_count": 4,
+    "duration_s": 628.3355,
+    "failed": [],
+    "failed_scenario_count": 0,
+    "output_path": "outputs/platform_experiment_suite/20260521T165926Z/functional-eval-platform-suite.json",
+    "scenario_count": 4,
+    "status": "completed"
+  },
+  "result": {
+    "created_at": "2026-05-21T17:10:18.174407+00:00",
+    "device": "auto",
+    "record": {
+      "completed_scenario_count": 4,
+      "failed": [],
+      "failed_scenario_count": 0,
+      "scenario_count": 4,
+      "status": "completed"
+    },
+    "run_label": null,
+    "scenario_count": 4,
+    "scenarios": [
+      {
+        "best_valid_candidate": null,
+        "best_valid_vmap_chunk_size": null,
+        "candidate_summary": [
+          {
+            "candidate": "baseline_original",
+            "mean_total_grid_s": 9.345521599601488,
+            "status_counts": {
+              "ok": 5
+            },
+            "stdev_total_grid_s": 0.9277708331772492,
+            "taxonomy": {
+              "applies_to_sections": [
+                "perturbation_construction",
+                "parameter_binding",
+                "batch_forward_loss"
+              ],
+              "components": [
+                "original_in_place_mutation"
+              ],
+              "control_params": {},
+              "hypothesis": "reference behavior and runtime target"
+            }
+          },
+          {
+            "candidate": "functional_sequential",
+            "mean_total_grid_s": 10.315468491800129,
+            "status_counts": {
+              "ok": 5
+            },
+            "stdev_total_grid_s": 1.3634304434053577,
+            "taxonomy": {
+              "applies_to_sections": [
+                "parameter_binding"
+              ],
+              "components": [
+                "functional_call"
+              ],
+              "control_params": {},
+              "hypothesis": "replace in-place parameter mutation with explicit functional parameter binding while preserving the original point and batch loops; this does not vectorize forward/loss work"
+            }
+          },
+          {
+            "candidate": "vmapped_chunk_32",
+            "mean_total_grid_s": 18.28444100820925,
+            "status_counts": {
+              "ok": 5
+            },
+            "stdev_total_grid_s": 0.244199669569369,
+            "taxonomy": {
+              "applies_to_sections": [
+                "perturbation_construction",
+                "parameter_binding",
+                "batch_forward_loss"
+              ],
+              "components": [
+                "functional_call",
+                "vmap",
+                "point_chunking"
+              ],
+              "control_params": {
+                "point_chunk_size": 32
+              },
+              "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+            }
+          },
+          {
+            "candidate": "vmapped_chunk_64",
+            "mean_total_grid_s": 18.238551933411507,
+            "status_counts": {
+              "ok": 5
+            },
+            "stdev_total_grid_s": 0.18351699326231324,
+            "taxonomy": {
+              "applies_to_sections": [
+                "perturbation_construction",
+                "parameter_binding",
+                "batch_forward_loss"
+              ],
+              "components": [
+                "functional_call",
+                "vmap",
+                "point_chunking"
+              ],
+              "control_params": {
+                "point_chunk_size": 64
+              },
+              "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+            }
+          }
+        ],
+        "config": {
+          "abs_tol": 1e-06,
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/cifar10-resnet20-0.pkl",
+          "dataset": {
+            "input_shape": [
+              3,
+              32,
+              32
+            ],
+            "name": "cifar10",
+            "path": "/Users/pedro/projects/loss-grid-computer/assets/cifar-10-batches-py",
+            "sample_count": 1024
+          },
+          "dataset_name": "cifar10",
+          "dataset_sample_count": 1024,
+          "device": "auto",
+          "gpu_batch_size": 64,
+          "grid_resolution": 8,
+          "grid_scale": 1.0,
+          "loss": "cross_entropy",
+          "max_memory_fraction": 0.85,
+          "mode": "vanilla",
+          "model": "resnet20",
+          "model_family": "resnet20",
+          "point_chunk_sizes": [
+            32,
+            64
+          ],
+          "rel_tol": 1e-05,
+          "run_label": null,
+          "seed": 1337,
+          "task": "image_classification",
+          "task_name": "cifar10_resnet20_classification",
+          "workload_name": "cifar10_resnet20_classification"
+        },
+        "memory": {
+          "peak_cpu_memory_bytes": 788840448,
+          "peak_cuda_memory_bytes": null
+        },
+        "paired_candidate_metrics": [
+          {
+            "all_repeats_beat_baseline": false,
+            "all_validations_passed": true,
+            "all_within_budget": true,
+            "candidate": "functional_sequential",
+            "claim_status": "inconclusive",
+            "mean_total_grid_s": 10.315468491800129,
+            "paired_speedup_ci_95_hi": 1.0872398273233608,
+            "paired_speedup_ci_95_lo": 0.74589300092289,
+            "paired_speedup_max": 1.1348157378256856,
+            "paired_speedup_mean": 0.9165664141231253,
+            "paired_speedup_min": 0.7561309169244788,
+            "paired_speedup_stdev": 0.13747743294943668,
+            "paired_speedups": [
+              0.7561309169244788,
+              1.1348157378256856,
+              0.8990267568889062,
+              0.9199794705960259,
+              0.87287918838053
+            ],
+            "status_counts": {
+              "ok": 5
+            },
+            "summary_mean_speedup_vs_baseline": null,
+            "surface_budget": 0.0001,
+            "taxonomy": {
+              "applies_to_sections": [
+                "parameter_binding"
+              ],
+              "components": [
+                "functional_call"
+              ],
+              "control_params": {},
+              "hypothesis": "replace in-place parameter mutation with explicit functional parameter binding while preserving the original point and batch loops; this does not vectorize forward/loss work"
+            }
+          },
+          {
+            "all_repeats_beat_baseline": false,
+            "all_validations_passed": true,
+            "all_within_budget": false,
+            "candidate": "vmapped_chunk_32",
+            "claim_status": "invalid_surface",
+            "mean_total_grid_s": 18.28444100820925,
+            "paired_speedup_ci_95_hi": 0.571277711561762,
+            "paired_speedup_ci_95_lo": 0.45070485059775905,
+            "paired_speedup_max": 0.5700563815207866,
+            "paired_speedup_mean": 0.5109912810797606,
+            "paired_speedup_min": 0.4666015888828267,
+            "paired_speedup_stdev": 0.04856071926461482,
+            "paired_speedups": [
+              0.4854780388691486,
+              0.5700563815207866,
+              0.4760134896086202,
+              0.4666015888828267,
+              0.5568069065174207
+            ],
+            "status_counts": {
+              "ok": 5
+            },
+            "summary_mean_speedup_vs_baseline": null,
+            "surface_budget": 0.0001,
+            "taxonomy": {
+              "applies_to_sections": [
+                "perturbation_construction",
+                "parameter_binding",
+                "batch_forward_loss"
+              ],
+              "components": [
+                "functional_call",
+                "vmap",
+                "point_chunking"
+              ],
+              "control_params": {
+                "point_chunk_size": 32
+              },
+              "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+            }
+          },
+          {
+            "all_repeats_beat_baseline": false,
+            "all_validations_passed": true,
+            "all_within_budget": false,
+            "candidate": "vmapped_chunk_64",
+            "claim_status": "invalid_surface",
+            "mean_total_grid_s": 18.238551933411507,
+            "paired_speedup_ci_95_hi": 0.577230056224553,
+            "paired_speedup_ci_95_lo": 0.4478154974942511,
+            "paired_speedup_max": 0.573313556947526,
+            "paired_speedup_mean": 0.5125227768594021,
+            "paired_speedup_min": 0.4661570200777283,
+            "paired_speedup_stdev": 0.05212171300415961,
+            "paired_speedups": [
+              0.4812673307143702,
+              0.573313556947526,
+              0.4767630234224296,
+              0.4661570200777283,
+              0.5651129531349567
+            ],
+            "status_counts": {
+              "ok": 5
+            },
+            "summary_mean_speedup_vs_baseline": null,
+            "surface_budget": 0.0001,
+            "taxonomy": {
+              "applies_to_sections": [
+                "perturbation_construction",
+                "parameter_binding",
+                "batch_forward_loss"
+              ],
+              "components": [
+                "functional_call",
+                "vmap",
+                "point_chunking"
+              ],
+              "control_params": {
+                "point_chunk_size": 64
+              },
+              "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+            }
+          }
+        ],
+        "platform": {
+          "cuda": null,
+          "device_name": null,
+          "device_type": "mps",
+          "torch_version": "2.11.0"
+        },
+        "record": {
+          "all_validations_passed": true,
+          "best_valid_candidate": null,
+          "candidate_status_counts": {
+            "baseline_original": {
+              "ok": 5
+            },
+            "functional_sequential": {
+              "ok": 5
+            },
+            "vmapped_chunk_32": {
+              "ok": 5
+            },
+            "vmapped_chunk_64": {
+              "ok": 5
+            }
+          },
+          "candidates": [
+            {
+              "all_repeats_beat_baseline": false,
+              "all_validations_passed": true,
+              "all_within_budget": true,
+              "candidate": "functional_sequential",
+              "claim_status": "inconclusive",
+              "paired_speedup_ci_95_hi": 1.0872398273233608,
+              "paired_speedup_ci_95_lo": 0.74589300092289,
+              "paired_speedup_max": 1.1348157378256856,
+              "paired_speedup_mean": 0.9165664141231253,
+              "paired_speedup_min": 0.7561309169244788,
+              "paired_speedup_stdev": 0.13747743294943668,
+              "surface_budget": 0.0001
+            },
+            {
+              "all_repeats_beat_baseline": false,
+              "all_validations_passed": true,
+              "all_within_budget": false,
+              "candidate": "vmapped_chunk_32",
+              "claim_status": "invalid_surface",
+              "paired_speedup_ci_95_hi": 0.571277711561762,
+              "paired_speedup_ci_95_lo": 0.45070485059775905,
+              "paired_speedup_max": 0.5700563815207866,
+              "paired_speedup_mean": 0.5109912810797606,
+              "paired_speedup_min": 0.4666015888828267,
+              "paired_speedup_stdev": 0.04856071926461482,
+              "surface_budget": 0.0001
+            },
+            {
+              "all_repeats_beat_baseline": false,
+              "all_validations_passed": true,
+              "all_within_budget": false,
+              "candidate": "vmapped_chunk_64",
+              "claim_status": "invalid_surface",
+              "paired_speedup_ci_95_hi": 0.577230056224553,
+              "paired_speedup_ci_95_lo": 0.4478154974942511,
+              "paired_speedup_max": 0.573313556947526,
+              "paired_speedup_mean": 0.5125227768594021,
+              "paired_speedup_min": 0.4661570200777283,
+              "paired_speedup_stdev": 0.05212171300415961,
+              "surface_budget": 0.0001
+            }
+          ],
+          "scenario": "cifar10_resnet20_classification__focused_1024_scaling",
+          "section_timings": {
+            "baseline_original": {
+              "batch_eval_s": 9.2916852346,
+              "binding_s": 0.015966150600000003,
+              "perturbation_s": 0.03713515999999999,
+              "total_grid_s": 9.345521599601488
+            },
+            "functional_sequential": {
+              "batch_eval_s": 10.267127947416157,
+              "binding_s": 0.01208929909626022,
+              "perturbation_s": 0.03611235112184659,
+              "total_grid_s": 10.315468491800129
+            },
+            "vmapped_chunk_32": {
+              "batch_eval_s": 18.133439849945717,
+              "binding_s": 0.00033045802265405653,
+              "perturbation_s": 0.02885972480289638,
+              "total_grid_s": 18.28444100820925
+            },
+            "vmapped_chunk_64": {
+              "batch_eval_s": 18.149578575813212,
+              "binding_s": 0.00011862502433359622,
+              "perturbation_s": 0.015901999990455808,
+              "total_grid_s": 18.238551933411507
+            }
+          },
+          "status": "completed",
+          "validation_status": "checked",
+          "workload": "cifar10_resnet20_classification"
+        },
+        "scenario": {
+          "batch_size": 64,
+          "max_memory_fraction": 0.85,
+          "name": "cifar10_resnet20_classification__focused_1024_scaling",
+          "point_chunk_sizes": [
+            32,
+            64
+          ],
+          "repeats": 5,
+          "resolution": 8,
+          "sample_count": 1024,
+          "scale": 1.0,
+          "warmup_repeats": 2,
+          "workload_name": "cifar10_resnet20_classification"
+        },
+        "section_timings": {
+          "baseline_original": {
+            "batch_eval_s": 9.2916852346,
+            "binding_s": 0.015966150600000003,
+            "perturbation_s": 0.03713515999999999,
+            "total_grid_s": 9.345521599601488
+          },
+          "functional_sequential": {
+            "batch_eval_s": 10.267127947416157,
+            "binding_s": 0.01208929909626022,
+            "perturbation_s": 0.03611235112184659,
+            "total_grid_s": 10.315468491800129
+          },
+          "vmapped_chunk_32": {
+            "batch_eval_s": 18.133439849945717,
+            "binding_s": 0.00033045802265405653,
+            "perturbation_s": 0.02885972480289638,
+            "total_grid_s": 18.28444100820925
+          },
+          "vmapped_chunk_64": {
+            "batch_eval_s": 18.149578575813212,
+            "binding_s": 0.00011862502433359622,
+            "perturbation_s": 0.015901999990455808,
+            "total_grid_s": 18.238551933411507
+          }
+        },
+        "status": "completed",
+        "validation": {
+          "all_validations_passed": true,
+          "status": "checked"
+        },
+        "workload": {
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/cifar10-resnet20-0.pkl",
+          "dataset": {
+            "input_shape": [
+              3,
+              32,
+              32
+            ],
+            "name": "cifar10",
+            "path": "/Users/pedro/projects/loss-grid-computer/assets/cifar-10-batches-py",
+            "sample_count": 1024
+          },
+          "loss": "cross_entropy",
+          "model_family": "resnet20",
+          "registered": true,
+          "task": "image_classification",
+          "workload_name": "cifar10_resnet20_classification"
+        }
+      },
+      {
+        "best_valid_candidate": {
+          "all_repeats_beat_baseline": true,
+          "all_validations_passed": true,
+          "all_within_budget": true,
+          "candidate": "vmapped_chunk_32",
+          "claim_status": "speedup",
+          "mean_total_grid_s": 1.3821611250168644,
+          "paired_speedup_ci_95_hi": 7.501848863060172,
+          "paired_speedup_ci_95_lo": 7.3064114780559635,
+          "paired_speedup_max": 7.52870148263328,
+          "paired_speedup_mean": 7.4041301705580675,
+          "paired_speedup_min": 7.3150333924033895,
+          "paired_speedup_stdev": 0.07871240601840887,
+          "paired_speedups": [
+            7.367741130868947,
+            7.3150333924033895,
+            7.405521073603498,
+            7.52870148263328,
+            7.403653773281226
+          ],
+          "status_counts": {
+            "ok": 5
+          },
+          "summary_mean_speedup_vs_baseline": null,
+          "surface_budget": 0.0001,
+          "taxonomy": {
+            "applies_to_sections": [
+              "perturbation_construction",
+              "parameter_binding",
+              "batch_forward_loss"
+            ],
+            "components": [
+              "functional_call",
+              "vmap",
+              "point_chunking"
+            ],
+            "control_params": {
+              "point_chunk_size": 32
+            },
+            "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+          }
+        },
+        "best_valid_vmap_chunk_size": 32,
+        "candidate_summary": [
+          {
+            "candidate": "baseline_original",
+            "mean_total_grid_s": 10.233295066806022,
+            "status_counts": {
+              "ok": 5
+            },
+            "stdev_total_grid_s": 0.08258163163877506,
+            "taxonomy": {
+              "applies_to_sections": [
+                "perturbation_construction",
+                "parameter_binding",
+                "batch_forward_loss"
+              ],
+              "components": [
+                "original_in_place_mutation"
+              ],
+              "control_params": {},
+              "hypothesis": "reference behavior and runtime target"
+            }
+          },
+          {
+            "candidate": "functional_sequential",
+            "mean_total_grid_s": 10.013298033399042,
+            "status_counts": {
+              "ok": 5
+            },
+            "stdev_total_grid_s": 0.14572974587273807,
+            "taxonomy": {
+              "applies_to_sections": [
+                "parameter_binding"
+              ],
+              "components": [
+                "functional_call"
+              ],
+              "control_params": {},
+              "hypothesis": "replace in-place parameter mutation with explicit functional parameter binding while preserving the original point and batch loops; this does not vectorize forward/loss work"
+            }
+          },
+          {
+            "candidate": "vmapped_chunk_32",
+            "mean_total_grid_s": 1.3821611250168644,
+            "status_counts": {
+              "ok": 5
+            },
+            "stdev_total_grid_s": 0.009952727033162589,
+            "taxonomy": {
+              "applies_to_sections": [
+                "perturbation_construction",
+                "parameter_binding",
+                "batch_forward_loss"
+              ],
+              "components": [
+                "functional_call",
+                "vmap",
+                "point_chunking"
+              ],
+              "control_params": {
+                "point_chunk_size": 32
+              },
+              "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+            }
+          },
+          {
+            "candidate": "vmapped_chunk_64",
+            "mean_total_grid_s": 1.3972891085897572,
+            "status_counts": {
+              "ok": 5
+            },
+            "stdev_total_grid_s": 0.027669310945510173,
+            "taxonomy": {
+              "applies_to_sections": [
+                "perturbation_construction",
+                "parameter_binding",
+                "batch_forward_loss"
+              ],
+              "components": [
+                "functional_call",
+                "vmap",
+                "point_chunking"
+              ],
+              "control_params": {
+                "point_chunk_size": 64
+              },
+              "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+            }
+          }
+        ],
+        "config": {
+          "abs_tol": 1e-06,
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/cifar10-row-gru-0.pkl",
+          "dataset": {
+            "input_shape": [
+              3,
+              32,
+              32
+            ],
+            "name": "cifar10",
+            "path": "/Users/pedro/projects/loss-grid-computer/assets/cifar-10-batches-py",
+            "sample_count": 1024
+          },
+          "dataset_name": "cifar10",
+          "dataset_sample_count": 1024,
+          "device": "auto",
+          "gpu_batch_size": 64,
+          "grid_resolution": 8,
+          "grid_scale": 1.0,
+          "loss": "cross_entropy",
+          "max_memory_fraction": 0.85,
+          "mode": "vanilla",
+          "model": "row_gru",
+          "model_family": "row_gru",
+          "point_chunk_sizes": [
+            32,
+            64
+          ],
+          "rel_tol": 1e-05,
+          "run_label": null,
+          "seed": 1337,
+          "task": "image_classification",
+          "task_name": "cifar10_row_gru_classification",
+          "workload_name": "cifar10_row_gru_classification"
+        },
+        "memory": {
+          "peak_cpu_memory_bytes": 788840448,
+          "peak_cuda_memory_bytes": null
+        },
+        "paired_candidate_metrics": [
+          {
+            "all_repeats_beat_baseline": false,
+            "all_validations_passed": true,
+            "all_within_budget": true,
+            "candidate": "functional_sequential",
+            "claim_status": "speedup",
+            "mean_total_grid_s": 10.013298033399042,
+            "paired_speedup_ci_95_hi": 1.043204274494763,
+            "paired_speedup_ci_95_lo": 1.0010808038849273,
+            "paired_speedup_max": 1.045742815525519,
+            "paired_speedup_mean": 1.022142539189845,
+            "paired_speedup_min": 0.998656110562617,
+            "paired_speedup_stdev": 0.016965227617400488,
+            "paired_speedups": [
+              1.0209550293618104,
+              0.998656110562617,
+              1.0181680586391664,
+              1.045742815525519,
+              1.027190681860113
+            ],
+            "status_counts": {
+              "ok": 5
+            },
+            "summary_mean_speedup_vs_baseline": null,
+            "surface_budget": 0.0001,
+            "taxonomy": {
+              "applies_to_sections": [
+                "parameter_binding"
+              ],
+              "components": [
+                "functional_call"
+              ],
+              "control_params": {},
+              "hypothesis": "replace in-place parameter mutation with explicit functional parameter binding while preserving the original point and batch loops; this does not vectorize forward/loss work"
+            }
+          },
+          {
+            "all_repeats_beat_baseline": true,
+            "all_validations_passed": true,
+            "all_within_budget": true,
+            "candidate": "vmapped_chunk_32",
+            "claim_status": "speedup",
+            "mean_total_grid_s": 1.3821611250168644,
+            "paired_speedup_ci_95_hi": 7.501848863060172,
+            "paired_speedup_ci_95_lo": 7.3064114780559635,
+            "paired_speedup_max": 7.52870148263328,
+            "paired_speedup_mean": 7.4041301705580675,
+            "paired_speedup_min": 7.3150333924033895,
+            "paired_speedup_stdev": 0.07871240601840887,
+            "paired_speedups": [
+              7.367741130868947,
+              7.3150333924033895,
+              7.405521073603498,
+              7.52870148263328,
+              7.403653773281226
+            ],
+            "status_counts": {
+              "ok": 5
+            },
+            "summary_mean_speedup_vs_baseline": null,
+            "surface_budget": 0.0001,
+            "taxonomy": {
+              "applies_to_sections": [
+                "perturbation_construction",
+                "parameter_binding",
+                "batch_forward_loss"
+              ],
+              "components": [
+                "functional_call",
+                "vmap",
+                "point_chunking"
+              ],
+              "control_params": {
+                "point_chunk_size": 32
+              },
+              "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+            }
+          },
+          {
+            "all_repeats_beat_baseline": true,
+            "all_validations_passed": true,
+            "all_within_budget": true,
+            "candidate": "vmapped_chunk_64",
+            "claim_status": "speedup",
+            "mean_total_grid_s": 1.3972891085897572,
+            "paired_speedup_ci_95_hi": 7.549065393492361,
+            "paired_speedup_ci_95_lo": 7.103709242465246,
+            "paired_speedup_max": 7.56546276158689,
+            "paired_speedup_mean": 7.326387317978804,
+            "paired_speedup_min": 7.148390649004844,
+            "paired_speedup_stdev": 0.17936718802130602,
+            "paired_speedups": [
+              7.148390649004844,
+              7.2279686344724,
+              7.223675438947112,
+              7.56546276158689,
+              7.466439105882775
+            ],
+            "status_counts": {
+              "ok": 5
+            },
+            "summary_mean_speedup_vs_baseline": null,
+            "surface_budget": 0.0001,
+            "taxonomy": {
+              "applies_to_sections": [
+                "perturbation_construction",
+                "parameter_binding",
+                "batch_forward_loss"
+              ],
+              "components": [
+                "functional_call",
+                "vmap",
+                "point_chunking"
+              ],
+              "control_params": {
+                "point_chunk_size": 64
+              },
+              "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+            }
+          }
+        ],
+        "platform": {
+          "cuda": null,
+          "device_name": null,
+          "device_type": "mps",
+          "torch_version": "2.11.0"
+        },
+        "record": {
+          "all_validations_passed": true,
+          "best_valid_candidate": {
+            "all_repeats_beat_baseline": true,
+            "all_validations_passed": true,
+            "all_within_budget": true,
+            "candidate": "vmapped_chunk_32",
+            "claim_status": "speedup",
+            "mean_total_grid_s": 1.3821611250168644,
+            "paired_speedup_ci_95_hi": 7.501848863060172,
+            "paired_speedup_ci_95_lo": 7.3064114780559635,
+            "paired_speedup_max": 7.52870148263328,
+            "paired_speedup_mean": 7.4041301705580675,
+            "paired_speedup_min": 7.3150333924033895,
+            "paired_speedup_stdev": 0.07871240601840887,
+            "paired_speedups": [
+              7.367741130868947,
+              7.3150333924033895,
+              7.405521073603498,
+              7.52870148263328,
+              7.403653773281226
+            ],
+            "status_counts": {
+              "ok": 5
+            },
+            "summary_mean_speedup_vs_baseline": null,
+            "surface_budget": 0.0001,
+            "taxonomy": {
+              "applies_to_sections": [
+                "perturbation_construction",
+                "parameter_binding",
+                "batch_forward_loss"
+              ],
+              "components": [
+                "functional_call",
+                "vmap",
+                "point_chunking"
+              ],
+              "control_params": {
+                "point_chunk_size": 32
+              },
+              "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+            }
+          },
+          "candidate_status_counts": {
+            "baseline_original": {
+              "ok": 5
+            },
+            "functional_sequential": {
+              "ok": 5
+            },
+            "vmapped_chunk_32": {
+              "ok": 5
+            },
+            "vmapped_chunk_64": {
+              "ok": 5
+            }
+          },
+          "candidates": [
+            {
+              "all_repeats_beat_baseline": false,
+              "all_validations_passed": true,
+              "all_within_budget": true,
+              "candidate": "functional_sequential",
+              "claim_status": "speedup",
+              "paired_speedup_ci_95_hi": 1.043204274494763,
+              "paired_speedup_ci_95_lo": 1.0010808038849273,
+              "paired_speedup_max": 1.045742815525519,
+              "paired_speedup_mean": 1.022142539189845,
+              "paired_speedup_min": 0.998656110562617,
+              "paired_speedup_stdev": 0.016965227617400488,
+              "surface_budget": 0.0001
+            },
+            {
+              "all_repeats_beat_baseline": true,
+              "all_validations_passed": true,
+              "all_within_budget": true,
+              "candidate": "vmapped_chunk_32",
+              "claim_status": "speedup",
+              "paired_speedup_ci_95_hi": 7.501848863060172,
+              "paired_speedup_ci_95_lo": 7.3064114780559635,
+              "paired_speedup_max": 7.52870148263328,
+              "paired_speedup_mean": 7.4041301705580675,
+              "paired_speedup_min": 7.3150333924033895,
+              "paired_speedup_stdev": 0.07871240601840887,
+              "surface_budget": 0.0001
+            },
+            {
+              "all_repeats_beat_baseline": true,
+              "all_validations_passed": true,
+              "all_within_budget": true,
+              "candidate": "vmapped_chunk_64",
+              "claim_status": "speedup",
+              "paired_speedup_ci_95_hi": 7.549065393492361,
+              "paired_speedup_ci_95_lo": 7.103709242465246,
+              "paired_speedup_max": 7.56546276158689,
+              "paired_speedup_mean": 7.326387317978804,
+              "paired_speedup_min": 7.148390649004844,
+              "paired_speedup_stdev": 0.17936718802130602,
+              "surface_budget": 0.0001
+            }
+          ],
+          "scenario": "cifar10_row_gru_classification__focused_1024_scaling",
+          "section_timings": {
+            "baseline_original": {
+              "batch_eval_s": 10.201885608000001,
+              "binding_s": 0.0031322256,
+              "perturbation_s": 0.0276436578,
+              "total_grid_s": 10.233295066806022
+            },
+            "functional_sequential": {
+              "batch_eval_s": 9.98159670853056,
+              "binding_s": 0.0028054324327968063,
+              "perturbation_s": 0.02878188152099028,
+              "total_grid_s": 10.013298033399042
+            },
+            "vmapped_chunk_32": {
+              "batch_eval_s": 1.280078907602001,
+              "binding_s": 0.00010951677104458213,
+              "perturbation_s": 0.02383770002052188,
+              "total_grid_s": 1.3821611250168644
+            },
+            "vmapped_chunk_64": {
+              "batch_eval_s": 1.3430132077774033,
+              "binding_s": 3.518341109156609e-05,
+              "perturbation_s": 0.0058970749960280955,
+              "total_grid_s": 1.3972891085897572
+            }
+          },
+          "status": "completed",
+          "validation_status": "checked",
+          "workload": "cifar10_row_gru_classification"
+        },
+        "scenario": {
+          "batch_size": 64,
+          "max_memory_fraction": 0.85,
+          "name": "cifar10_row_gru_classification__focused_1024_scaling",
+          "point_chunk_sizes": [
+            32,
+            64
+          ],
+          "repeats": 5,
+          "resolution": 8,
+          "sample_count": 1024,
+          "scale": 1.0,
+          "warmup_repeats": 2,
+          "workload_name": "cifar10_row_gru_classification"
+        },
+        "section_timings": {
+          "baseline_original": {
+            "batch_eval_s": 10.201885608000001,
+            "binding_s": 0.0031322256,
+            "perturbation_s": 0.0276436578,
+            "total_grid_s": 10.233295066806022
+          },
+          "functional_sequential": {
+            "batch_eval_s": 9.98159670853056,
+            "binding_s": 0.0028054324327968063,
+            "perturbation_s": 0.02878188152099028,
+            "total_grid_s": 10.013298033399042
+          },
+          "vmapped_chunk_32": {
+            "batch_eval_s": 1.280078907602001,
+            "binding_s": 0.00010951677104458213,
+            "perturbation_s": 0.02383770002052188,
+            "total_grid_s": 1.3821611250168644
+          },
+          "vmapped_chunk_64": {
+            "batch_eval_s": 1.3430132077774033,
+            "binding_s": 3.518341109156609e-05,
+            "perturbation_s": 0.0058970749960280955,
+            "total_grid_s": 1.3972891085897572
+          }
+        },
+        "status": "completed",
+        "validation": {
+          "all_validations_passed": true,
+          "status": "checked"
+        },
+        "workload": {
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/cifar10-row-gru-0.pkl",
+          "dataset": {
+            "input_shape": [
+              3,
+              32,
+              32
+            ],
+            "name": "cifar10",
+            "path": "/Users/pedro/projects/loss-grid-computer/assets/cifar-10-batches-py",
+            "sample_count": 1024
+          },
+          "loss": "cross_entropy",
+          "model_family": "row_gru",
+          "registered": true,
+          "task": "image_classification",
+          "workload_name": "cifar10_row_gru_classification"
+        }
+      },
+      {
+        "best_valid_candidate": {
+          "all_repeats_beat_baseline": true,
+          "all_validations_passed": true,
+          "all_within_budget": true,
+          "candidate": "vmapped_chunk_64",
+          "claim_status": "speedup",
+          "mean_total_grid_s": 0.03230928340926766,
+          "paired_speedup_ci_95_hi": 45.78047111383379,
+          "paired_speedup_ci_95_lo": 40.22760521098446,
+          "paired_speedup_max": 45.64751093143139,
+          "paired_speedup_mean": 43.004038162409124,
+          "paired_speedup_min": 40.64742338143022,
+          "paired_speedup_stdev": 2.236416719868848,
+          "paired_speedups": [
+            45.64751093143139,
+            40.64742338143022,
+            40.707553534861034,
+            43.716006631193395,
+            44.30169633312958
+          ],
+          "status_counts": {
+            "ok": 5
+          },
+          "summary_mean_speedup_vs_baseline": null,
+          "surface_budget": 0.0001,
+          "taxonomy": {
+            "applies_to_sections": [
+              "perturbation_construction",
+              "parameter_binding",
+              "batch_forward_loss"
+            ],
+            "components": [
+              "functional_call",
+              "vmap",
+              "point_chunking"
+            ],
+            "control_params": {
+              "point_chunk_size": 64
+            },
+            "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+          }
+        },
+        "best_valid_vmap_chunk_size": 64,
+        "candidate_summary": [
+          {
+            "candidate": "baseline_original",
+            "mean_total_grid_s": 1.3874310501967557,
+            "status_counts": {
+              "ok": 5
+            },
+            "stdev_total_grid_s": 0.050394820734306026,
+            "taxonomy": {
+              "applies_to_sections": [
+                "perturbation_construction",
+                "parameter_binding",
+                "batch_forward_loss"
+              ],
+              "components": [
+                "original_in_place_mutation"
+              ],
+              "control_params": {},
+              "hypothesis": "reference behavior and runtime target"
+            }
+          },
+          {
+            "candidate": "functional_sequential",
+            "mean_total_grid_s": 1.4692134081968107,
+            "status_counts": {
+              "ok": 5
+            },
+            "stdev_total_grid_s": 0.04184261956107785,
+            "taxonomy": {
+              "applies_to_sections": [
+                "parameter_binding"
+              ],
+              "components": [
+                "functional_call"
+              ],
+              "control_params": {},
+              "hypothesis": "replace in-place parameter mutation with explicit functional parameter binding while preserving the original point and batch loops; this does not vectorize forward/loss work"
+            }
+          },
+          {
+            "candidate": "vmapped_chunk_32",
+            "mean_total_grid_s": 0.0611619416042231,
+            "status_counts": {
+              "ok": 5
+            },
+            "stdev_total_grid_s": 0.0016584528730694153,
+            "taxonomy": {
+              "applies_to_sections": [
+                "perturbation_construction",
+                "parameter_binding",
+                "batch_forward_loss"
+              ],
+              "components": [
+                "functional_call",
+                "vmap",
+                "point_chunking"
+              ],
+              "control_params": {
+                "point_chunk_size": 32
+              },
+              "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+            }
+          },
+          {
+            "candidate": "vmapped_chunk_64",
+            "mean_total_grid_s": 0.03230928340926766,
+            "status_counts": {
+              "ok": 5
+            },
+            "stdev_total_grid_s": 0.001537249940138112,
+            "taxonomy": {
+              "applies_to_sections": [
+                "perturbation_construction",
+                "parameter_binding",
+                "batch_forward_loss"
+              ],
+              "components": [
+                "functional_call",
+                "vmap",
+                "point_chunking"
+              ],
+              "control_params": {
+                "point_chunk_size": 64
+              },
+              "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+            }
+          }
+        ],
+        "config": {
+          "abs_tol": 1e-06,
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/california-mlp-0.pkl",
+          "dataset": {
+            "input_shape": [
+              8
+            ],
+            "name": "california_housing",
+            "path": "/Users/pedro/projects/loss-grid-computer/assets",
+            "sample_count": 1024
+          },
+          "dataset_name": "california_housing",
+          "dataset_sample_count": 1024,
+          "device": "auto",
+          "gpu_batch_size": 64,
+          "grid_resolution": 8,
+          "grid_scale": 1.0,
+          "loss": "mse",
+          "max_memory_fraction": 0.85,
+          "mode": "vanilla",
+          "model": "mlp_regressor",
+          "model_family": "mlp_regressor",
+          "point_chunk_sizes": [
+            32,
+            64
+          ],
+          "rel_tol": 1e-05,
+          "run_label": null,
+          "seed": 1337,
+          "task": "tabular_regression",
+          "task_name": "california_mlp_regression",
+          "workload_name": "california_mlp_regression"
+        },
+        "memory": {
+          "peak_cpu_memory_bytes": 788840448,
+          "peak_cuda_memory_bytes": null
+        },
+        "paired_candidate_metrics": [
+          {
+            "all_repeats_beat_baseline": false,
+            "all_validations_passed": true,
+            "all_within_budget": true,
+            "candidate": "functional_sequential",
+            "claim_status": "inconclusive",
+            "mean_total_grid_s": 1.4692134081968107,
+            "paired_speedup_ci_95_hi": 1.0136356820465438,
+            "paired_speedup_ci_95_lo": 0.8772602011613746,
+            "paired_speedup_max": 0.9925277268258846,
+            "paired_speedup_mean": 0.9454479416039592,
+            "paired_speedup_min": 0.8595601266873092,
+            "paired_speedup_stdev": 0.05492522437382235,
+            "paired_speedups": [
+              0.9614094895533913,
+              0.8595601266873092,
+              0.9925277268258846,
+              0.9255810379791075,
+              0.9881613269741027
+            ],
+            "status_counts": {
+              "ok": 5
+            },
+            "summary_mean_speedup_vs_baseline": null,
+            "surface_budget": 0.0001,
+            "taxonomy": {
+              "applies_to_sections": [
+                "parameter_binding"
+              ],
+              "components": [
+                "functional_call"
+              ],
+              "control_params": {},
+              "hypothesis": "replace in-place parameter mutation with explicit functional parameter binding while preserving the original point and batch loops; this does not vectorize forward/loss work"
+            }
+          },
+          {
+            "all_repeats_beat_baseline": true,
+            "all_validations_passed": true,
+            "all_within_budget": true,
+            "candidate": "vmapped_chunk_32",
+            "claim_status": "speedup",
+            "mean_total_grid_s": 0.0611619416042231,
+            "paired_speedup_ci_95_hi": 23.564179368188576,
+            "paired_speedup_ci_95_lo": 21.811255993625636,
+            "paired_speedup_max": 23.55280355677648,
+            "paired_speedup_mean": 22.687717680907106,
+            "paired_speedup_min": 22.13043001371713,
+            "paired_speedup_stdev": 0.7059898820012703,
+            "paired_speedups": [
+              23.35789977781957,
+              22.137994690053056,
+              22.13043001371713,
+              22.259460366169304,
+              23.55280355677648
+            ],
+            "status_counts": {
+              "ok": 5
+            },
+            "summary_mean_speedup_vs_baseline": null,
+            "surface_budget": 0.0001,
+            "taxonomy": {
+              "applies_to_sections": [
+                "perturbation_construction",
+                "parameter_binding",
+                "batch_forward_loss"
+              ],
+              "components": [
+                "functional_call",
+                "vmap",
+                "point_chunking"
+              ],
+              "control_params": {
+                "point_chunk_size": 32
+              },
+              "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+            }
+          },
+          {
+            "all_repeats_beat_baseline": true,
+            "all_validations_passed": true,
+            "all_within_budget": true,
+            "candidate": "vmapped_chunk_64",
+            "claim_status": "speedup",
+            "mean_total_grid_s": 0.03230928340926766,
+            "paired_speedup_ci_95_hi": 45.78047111383379,
+            "paired_speedup_ci_95_lo": 40.22760521098446,
+            "paired_speedup_max": 45.64751093143139,
+            "paired_speedup_mean": 43.004038162409124,
+            "paired_speedup_min": 40.64742338143022,
+            "paired_speedup_stdev": 2.236416719868848,
+            "paired_speedups": [
+              45.64751093143139,
+              40.64742338143022,
+              40.707553534861034,
+              43.716006631193395,
+              44.30169633312958
+            ],
+            "status_counts": {
+              "ok": 5
+            },
+            "summary_mean_speedup_vs_baseline": null,
+            "surface_budget": 0.0001,
+            "taxonomy": {
+              "applies_to_sections": [
+                "perturbation_construction",
+                "parameter_binding",
+                "batch_forward_loss"
+              ],
+              "components": [
+                "functional_call",
+                "vmap",
+                "point_chunking"
+              ],
+              "control_params": {
+                "point_chunk_size": 64
+              },
+              "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+            }
+          }
+        ],
+        "platform": {
+          "cuda": null,
+          "device_name": null,
+          "device_type": "mps",
+          "torch_version": "2.11.0"
+        },
+        "record": {
+          "all_validations_passed": true,
+          "best_valid_candidate": {
+            "all_repeats_beat_baseline": true,
+            "all_validations_passed": true,
+            "all_within_budget": true,
+            "candidate": "vmapped_chunk_64",
+            "claim_status": "speedup",
+            "mean_total_grid_s": 0.03230928340926766,
+            "paired_speedup_ci_95_hi": 45.78047111383379,
+            "paired_speedup_ci_95_lo": 40.22760521098446,
+            "paired_speedup_max": 45.64751093143139,
+            "paired_speedup_mean": 43.004038162409124,
+            "paired_speedup_min": 40.64742338143022,
+            "paired_speedup_stdev": 2.236416719868848,
+            "paired_speedups": [
+              45.64751093143139,
+              40.64742338143022,
+              40.707553534861034,
+              43.716006631193395,
+              44.30169633312958
+            ],
+            "status_counts": {
+              "ok": 5
+            },
+            "summary_mean_speedup_vs_baseline": null,
+            "surface_budget": 0.0001,
+            "taxonomy": {
+              "applies_to_sections": [
+                "perturbation_construction",
+                "parameter_binding",
+                "batch_forward_loss"
+              ],
+              "components": [
+                "functional_call",
+                "vmap",
+                "point_chunking"
+              ],
+              "control_params": {
+                "point_chunk_size": 64
+              },
+              "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+            }
+          },
+          "candidate_status_counts": {
+            "baseline_original": {
+              "ok": 5
+            },
+            "functional_sequential": {
+              "ok": 5
+            },
+            "vmapped_chunk_32": {
+              "ok": 5
+            },
+            "vmapped_chunk_64": {
+              "ok": 5
+            }
+          },
+          "candidates": [
+            {
+              "all_repeats_beat_baseline": false,
+              "all_validations_passed": true,
+              "all_within_budget": true,
+              "candidate": "functional_sequential",
+              "claim_status": "inconclusive",
+              "paired_speedup_ci_95_hi": 1.0136356820465438,
+              "paired_speedup_ci_95_lo": 0.8772602011613746,
+              "paired_speedup_max": 0.9925277268258846,
+              "paired_speedup_mean": 0.9454479416039592,
+              "paired_speedup_min": 0.8595601266873092,
+              "paired_speedup_stdev": 0.05492522437382235,
+              "surface_budget": 0.0001
+            },
+            {
+              "all_repeats_beat_baseline": true,
+              "all_validations_passed": true,
+              "all_within_budget": true,
+              "candidate": "vmapped_chunk_32",
+              "claim_status": "speedup",
+              "paired_speedup_ci_95_hi": 23.564179368188576,
+              "paired_speedup_ci_95_lo": 21.811255993625636,
+              "paired_speedup_max": 23.55280355677648,
+              "paired_speedup_mean": 22.687717680907106,
+              "paired_speedup_min": 22.13043001371713,
+              "paired_speedup_stdev": 0.7059898820012703,
+              "surface_budget": 0.0001
+            },
+            {
+              "all_repeats_beat_baseline": true,
+              "all_validations_passed": true,
+              "all_within_budget": true,
+              "candidate": "vmapped_chunk_64",
+              "claim_status": "speedup",
+              "paired_speedup_ci_95_hi": 45.78047111383379,
+              "paired_speedup_ci_95_lo": 40.22760521098446,
+              "paired_speedup_max": 45.64751093143139,
+              "paired_speedup_mean": 43.004038162409124,
+              "paired_speedup_min": 40.64742338143022,
+              "paired_speedup_stdev": 2.236416719868848,
+              "surface_budget": 0.0001
+            }
+          ],
+          "scenario": "california_mlp_regression__focused_1024_scaling",
+          "section_timings": {
+            "baseline_original": {
+              "batch_eval_s": 1.3390393582,
+              "binding_s": 0.006392973800000002,
+              "perturbation_s": 0.040922899,
+              "total_grid_s": 1.3874310501967557
+            },
+            "functional_sequential": {
+              "batch_eval_s": 1.4218952897237613,
+              "binding_s": 0.005447557847946882,
+              "perturbation_s": 0.041687034419737756,
+              "total_grid_s": 1.4692134081968107
+            },
+            "vmapped_chunk_32": {
+              "batch_eval_s": 0.05037380808498711,
+              "binding_s": 9.216659236699343e-05,
+              "perturbation_s": 0.003515916608739644,
+              "total_grid_s": 0.0611619416042231
+            },
+            "vmapped_chunk_64": {
+              "batch_eval_s": 0.02712438879534602,
+              "binding_s": 3.714199410751462e-05,
+              "perturbation_s": 0.0017522332025691866,
+              "total_grid_s": 0.03230928340926766
+            }
+          },
+          "status": "completed",
+          "validation_status": "checked",
+          "workload": "california_mlp_regression"
+        },
+        "scenario": {
+          "batch_size": 64,
+          "max_memory_fraction": 0.85,
+          "name": "california_mlp_regression__focused_1024_scaling",
+          "point_chunk_sizes": [
+            32,
+            64
+          ],
+          "repeats": 5,
+          "resolution": 8,
+          "sample_count": 1024,
+          "scale": 1.0,
+          "warmup_repeats": 2,
+          "workload_name": "california_mlp_regression"
+        },
+        "section_timings": {
+          "baseline_original": {
+            "batch_eval_s": 1.3390393582,
+            "binding_s": 0.006392973800000002,
+            "perturbation_s": 0.040922899,
+            "total_grid_s": 1.3874310501967557
+          },
+          "functional_sequential": {
+            "batch_eval_s": 1.4218952897237613,
+            "binding_s": 0.005447557847946882,
+            "perturbation_s": 0.041687034419737756,
+            "total_grid_s": 1.4692134081968107
+          },
+          "vmapped_chunk_32": {
+            "batch_eval_s": 0.05037380808498711,
+            "binding_s": 9.216659236699343e-05,
+            "perturbation_s": 0.003515916608739644,
+            "total_grid_s": 0.0611619416042231
+          },
+          "vmapped_chunk_64": {
+            "batch_eval_s": 0.02712438879534602,
+            "binding_s": 3.714199410751462e-05,
+            "perturbation_s": 0.0017522332025691866,
+            "total_grid_s": 0.03230928340926766
+          }
+        },
+        "status": "completed",
+        "validation": {
+          "all_validations_passed": true,
+          "status": "checked"
+        },
+        "workload": {
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/california-mlp-0.pkl",
+          "dataset": {
+            "input_shape": [
+              8
+            ],
+            "name": "california_housing",
+            "path": "/Users/pedro/projects/loss-grid-computer/assets",
+            "sample_count": 1024
+          },
+          "loss": "mse",
+          "model_family": "mlp_regressor",
+          "registered": true,
+          "task": "tabular_regression",
+          "workload_name": "california_mlp_regression"
+        }
+      },
+      {
+        "best_valid_candidate": {
+          "all_repeats_beat_baseline": true,
+          "all_validations_passed": true,
+          "all_within_budget": true,
+          "candidate": "vmapped_chunk_64",
+          "claim_status": "speedup",
+          "mean_total_grid_s": 0.42038388320943343,
+          "paired_speedup_ci_95_hi": 7.607122320428074,
+          "paired_speedup_ci_95_lo": 5.875618508954281,
+          "paired_speedup_max": 7.418379596367478,
+          "paired_speedup_mean": 6.741370414691177,
+          "paired_speedup_min": 5.630322365624218,
+          "paired_speedup_stdev": 0.6973631530539233,
+          "paired_speedups": [
+            5.630322365624218,
+            7.418379596367478,
+            6.773752012222142,
+            6.649983871656652,
+            7.234414227585395
+          ],
+          "status_counts": {
+            "ok": 5
+          },
+          "summary_mean_speedup_vs_baseline": null,
+          "surface_budget": 0.0001,
+          "taxonomy": {
+            "applies_to_sections": [
+              "perturbation_construction",
+              "parameter_binding",
+              "batch_forward_loss"
+            ],
+            "components": [
+              "functional_call",
+              "vmap",
+              "point_chunking"
+            ],
+            "control_params": {
+              "point_chunk_size": 64
+            },
+            "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+          }
+        },
+        "best_valid_vmap_chunk_size": 64,
+        "candidate_summary": [
+          {
+            "candidate": "baseline_original",
+            "mean_total_grid_s": 2.807481458003167,
+            "status_counts": {
+              "ok": 5
+            },
+            "stdev_total_grid_s": 0.03794166409851808,
+            "taxonomy": {
+              "applies_to_sections": [
+                "perturbation_construction",
+                "parameter_binding",
+                "batch_forward_loss"
+              ],
+              "components": [
+                "original_in_place_mutation"
+              ],
+              "control_params": {},
+              "hypothesis": "reference behavior and runtime target"
+            }
+          },
+          {
+            "candidate": "functional_sequential",
+            "mean_total_grid_s": 2.662169391592033,
+            "status_counts": {
+              "ok": 5
+            },
+            "stdev_total_grid_s": 0.09795421883338805,
+            "taxonomy": {
+              "applies_to_sections": [
+                "parameter_binding"
+              ],
+              "components": [
+                "functional_call"
+              ],
+              "control_params": {},
+              "hypothesis": "replace in-place parameter mutation with explicit functional parameter binding while preserving the original point and batch loops; this does not vectorize forward/loss work"
+            }
+          },
+          {
+            "candidate": "vmapped_chunk_32",
+            "mean_total_grid_s": 0.4732560582109727,
+            "status_counts": {
+              "ok": 5
+            },
+            "stdev_total_grid_s": 0.016733632065904166,
+            "taxonomy": {
+              "applies_to_sections": [
+                "perturbation_construction",
+                "parameter_binding",
+                "batch_forward_loss"
+              ],
+              "components": [
+                "functional_call",
+                "vmap",
+                "point_chunking"
+              ],
+              "control_params": {
+                "point_chunk_size": 32
+              },
+              "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+            }
+          },
+          {
+            "candidate": "vmapped_chunk_64",
+            "mean_total_grid_s": 0.42038388320943343,
+            "status_counts": {
+              "ok": 5
+            },
+            "stdev_total_grid_s": 0.0479816498295882,
+            "taxonomy": {
+              "applies_to_sections": [
+                "perturbation_construction",
+                "parameter_binding",
+                "batch_forward_loss"
+              ],
+              "components": [
+                "functional_call",
+                "vmap",
+                "point_chunking"
+              ],
+              "control_params": {
+                "point_chunk_size": 64
+              },
+              "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+            }
+          }
+        ],
+        "config": {
+          "abs_tol": 1e-06,
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/mnist-mlp-0.pkl",
+          "dataset": {
+            "input_shape": [
+              1,
+              28,
+              28
+            ],
+            "name": "mnist",
+            "path": "/Users/pedro/projects/loss-grid-computer/assets/mnist",
+            "sample_count": 1024
+          },
+          "dataset_name": "mnist",
+          "dataset_sample_count": 1024,
+          "device": "auto",
+          "gpu_batch_size": 64,
+          "grid_resolution": 8,
+          "grid_scale": 1.0,
+          "loss": "cross_entropy",
+          "max_memory_fraction": 0.85,
+          "mode": "vanilla",
+          "model": "mnist_mlp",
+          "model_family": "mnist_mlp",
+          "point_chunk_sizes": [
+            32,
+            64
+          ],
+          "rel_tol": 1e-05,
+          "run_label": null,
+          "seed": 1337,
+          "task": "image_classification",
+          "task_name": "mnist_mlp_classification",
+          "workload_name": "mnist_mlp_classification"
+        },
+        "memory": {
+          "peak_cpu_memory_bytes": 788840448,
+          "peak_cuda_memory_bytes": null
+        },
+        "paired_candidate_metrics": [
+          {
+            "all_repeats_beat_baseline": false,
+            "all_validations_passed": true,
+            "all_within_budget": true,
+            "candidate": "functional_sequential",
+            "claim_status": "speedup",
+            "mean_total_grid_s": 2.662169391592033,
+            "paired_speedup_ci_95_hi": 1.099391569448707,
+            "paired_speedup_ci_95_lo": 1.011710396870376,
+            "paired_speedup_max": 1.083137090241175,
+            "paired_speedup_mean": 1.0555509831595415,
+            "paired_speedup_min": 0.9959027575230872,
+            "paired_speedup_stdev": 0.03531359190058344,
+            "paired_speedups": [
+              1.083137090241175,
+              1.0770815764337622,
+              1.052148643150495,
+              0.9959027575230872,
+              1.0694848484491881
+            ],
+            "status_counts": {
+              "ok": 5
+            },
+            "summary_mean_speedup_vs_baseline": null,
+            "surface_budget": 0.0001,
+            "taxonomy": {
+              "applies_to_sections": [
+                "parameter_binding"
+              ],
+              "components": [
+                "functional_call"
+              ],
+              "control_params": {},
+              "hypothesis": "replace in-place parameter mutation with explicit functional parameter binding while preserving the original point and batch loops; this does not vectorize forward/loss work"
+            }
+          },
+          {
+            "all_repeats_beat_baseline": true,
+            "all_validations_passed": true,
+            "all_within_budget": true,
+            "candidate": "vmapped_chunk_32",
+            "claim_status": "speedup",
+            "mean_total_grid_s": 0.4732560582109727,
+            "paired_speedup_ci_95_hi": 6.184359531762982,
+            "paired_speedup_ci_95_lo": 5.690665494964386,
+            "paired_speedup_max": 6.233715274805644,
+            "paired_speedup_mean": 5.937512513363684,
+            "paired_speedup_min": 5.748252945479772,
+            "paired_speedup_stdev": 0.19883527131987422,
+            "paired_speedups": [
+              5.938109523403653,
+              6.233715274805644,
+              5.7637345025628,
+              5.748252945479772,
+              6.0037503205665494
+            ],
+            "status_counts": {
+              "ok": 5
+            },
+            "summary_mean_speedup_vs_baseline": null,
+            "surface_budget": 0.0001,
+            "taxonomy": {
+              "applies_to_sections": [
+                "perturbation_construction",
+                "parameter_binding",
+                "batch_forward_loss"
+              ],
+              "components": [
+                "functional_call",
+                "vmap",
+                "point_chunking"
+              ],
+              "control_params": {
+                "point_chunk_size": 32
+              },
+              "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+            }
+          },
+          {
+            "all_repeats_beat_baseline": true,
+            "all_validations_passed": true,
+            "all_within_budget": true,
+            "candidate": "vmapped_chunk_64",
+            "claim_status": "speedup",
+            "mean_total_grid_s": 0.42038388320943343,
+            "paired_speedup_ci_95_hi": 7.607122320428074,
+            "paired_speedup_ci_95_lo": 5.875618508954281,
+            "paired_speedup_max": 7.418379596367478,
+            "paired_speedup_mean": 6.741370414691177,
+            "paired_speedup_min": 5.630322365624218,
+            "paired_speedup_stdev": 0.6973631530539233,
+            "paired_speedups": [
+              5.630322365624218,
+              7.418379596367478,
+              6.773752012222142,
+              6.649983871656652,
+              7.234414227585395
+            ],
+            "status_counts": {
+              "ok": 5
+            },
+            "summary_mean_speedup_vs_baseline": null,
+            "surface_budget": 0.0001,
+            "taxonomy": {
+              "applies_to_sections": [
+                "perturbation_construction",
+                "parameter_binding",
+                "batch_forward_loss"
+              ],
+              "components": [
+                "functional_call",
+                "vmap",
+                "point_chunking"
+              ],
+              "control_params": {
+                "point_chunk_size": 64
+              },
+              "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+            }
+          }
+        ],
+        "platform": {
+          "cuda": null,
+          "device_name": null,
+          "device_type": "mps",
+          "torch_version": "2.11.0"
+        },
+        "record": {
+          "all_validations_passed": true,
+          "best_valid_candidate": {
+            "all_repeats_beat_baseline": true,
+            "all_validations_passed": true,
+            "all_within_budget": true,
+            "candidate": "vmapped_chunk_64",
+            "claim_status": "speedup",
+            "mean_total_grid_s": 0.42038388320943343,
+            "paired_speedup_ci_95_hi": 7.607122320428074,
+            "paired_speedup_ci_95_lo": 5.875618508954281,
+            "paired_speedup_max": 7.418379596367478,
+            "paired_speedup_mean": 6.741370414691177,
+            "paired_speedup_min": 5.630322365624218,
+            "paired_speedup_stdev": 0.6973631530539233,
+            "paired_speedups": [
+              5.630322365624218,
+              7.418379596367478,
+              6.773752012222142,
+              6.649983871656652,
+              7.234414227585395
+            ],
+            "status_counts": {
+              "ok": 5
+            },
+            "summary_mean_speedup_vs_baseline": null,
+            "surface_budget": 0.0001,
+            "taxonomy": {
+              "applies_to_sections": [
+                "perturbation_construction",
+                "parameter_binding",
+                "batch_forward_loss"
+              ],
+              "components": [
+                "functional_call",
+                "vmap",
+                "point_chunking"
+              ],
+              "control_params": {
+                "point_chunk_size": 64
+              },
+              "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+            }
+          },
+          "candidate_status_counts": {
+            "baseline_original": {
+              "ok": 5
+            },
+            "functional_sequential": {
+              "ok": 5
+            },
+            "vmapped_chunk_32": {
+              "ok": 5
+            },
+            "vmapped_chunk_64": {
+              "ok": 5
+            }
+          },
+          "candidates": [
+            {
+              "all_repeats_beat_baseline": false,
+              "all_validations_passed": true,
+              "all_within_budget": true,
+              "candidate": "functional_sequential",
+              "claim_status": "speedup",
+              "paired_speedup_ci_95_hi": 1.099391569448707,
+              "paired_speedup_ci_95_lo": 1.011710396870376,
+              "paired_speedup_max": 1.083137090241175,
+              "paired_speedup_mean": 1.0555509831595415,
+              "paired_speedup_min": 0.9959027575230872,
+              "paired_speedup_stdev": 0.03531359190058344,
+              "surface_budget": 0.0001
+            },
+            {
+              "all_repeats_beat_baseline": true,
+              "all_validations_passed": true,
+              "all_within_budget": true,
+              "candidate": "vmapped_chunk_32",
+              "claim_status": "speedup",
+              "paired_speedup_ci_95_hi": 6.184359531762982,
+              "paired_speedup_ci_95_lo": 5.690665494964386,
+              "paired_speedup_max": 6.233715274805644,
+              "paired_speedup_mean": 5.937512513363684,
+              "paired_speedup_min": 5.748252945479772,
+              "paired_speedup_stdev": 0.19883527131987422,
+              "surface_budget": 0.0001
+            },
+            {
+              "all_repeats_beat_baseline": true,
+              "all_validations_passed": true,
+              "all_within_budget": true,
+              "candidate": "vmapped_chunk_64",
+              "claim_status": "speedup",
+              "paired_speedup_ci_95_hi": 7.607122320428074,
+              "paired_speedup_ci_95_lo": 5.875618508954281,
+              "paired_speedup_max": 7.418379596367478,
+              "paired_speedup_mean": 6.741370414691177,
+              "paired_speedup_min": 5.630322365624218,
+              "paired_speedup_stdev": 0.6973631530539233,
+              "surface_budget": 0.0001
+            }
+          ],
+          "scenario": "mnist_mlp_classification__focused_1024_scaling",
+          "section_timings": {
+            "baseline_original": {
+              "batch_eval_s": 2.6617716516000005,
+              "binding_s": 0.0032924084000000007,
+              "perturbation_s": 0.1414488176,
+              "total_grid_s": 2.807481458003167
+            },
+            "functional_sequential": {
+              "batch_eval_s": 2.5070985723054036,
+              "binding_s": 0.0033089153119362892,
+              "perturbation_s": 0.1516099909436889,
+              "total_grid_s": 2.662169391592033
+            },
+            "vmapped_chunk_32": {
+              "batch_eval_s": 0.2672234591795132,
+              "binding_s": 0.00012630779528990387,
+              "perturbation_s": 0.13987219999544323,
+              "total_grid_s": 0.4732560582109727
+            },
+            "vmapped_chunk_64": {
+              "batch_eval_s": 0.24601889961631968,
+              "binding_s": 6.047539645805955e-05,
+              "perturbation_s": 0.1336268748040311,
+              "total_grid_s": 0.42038388320943343
+            }
+          },
+          "status": "completed",
+          "validation_status": "checked",
+          "workload": "mnist_mlp_classification"
+        },
+        "scenario": {
+          "batch_size": 64,
+          "max_memory_fraction": 0.85,
+          "name": "mnist_mlp_classification__focused_1024_scaling",
+          "point_chunk_sizes": [
+            32,
+            64
+          ],
+          "repeats": 5,
+          "resolution": 8,
+          "sample_count": 1024,
+          "scale": 1.0,
+          "warmup_repeats": 2,
+          "workload_name": "mnist_mlp_classification"
+        },
+        "section_timings": {
+          "baseline_original": {
+            "batch_eval_s": 2.6617716516000005,
+            "binding_s": 0.0032924084000000007,
+            "perturbation_s": 0.1414488176,
+            "total_grid_s": 2.807481458003167
+          },
+          "functional_sequential": {
+            "batch_eval_s": 2.5070985723054036,
+            "binding_s": 0.0033089153119362892,
+            "perturbation_s": 0.1516099909436889,
+            "total_grid_s": 2.662169391592033
+          },
+          "vmapped_chunk_32": {
+            "batch_eval_s": 0.2672234591795132,
+            "binding_s": 0.00012630779528990387,
+            "perturbation_s": 0.13987219999544323,
+            "total_grid_s": 0.4732560582109727
+          },
+          "vmapped_chunk_64": {
+            "batch_eval_s": 0.24601889961631968,
+            "binding_s": 6.047539645805955e-05,
+            "perturbation_s": 0.1336268748040311,
+            "total_grid_s": 0.42038388320943343
+          }
+        },
+        "status": "completed",
+        "validation": {
+          "all_validations_passed": true,
+          "status": "checked"
+        },
+        "workload": {
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/mnist-mlp-0.pkl",
+          "dataset": {
+            "input_shape": [
+              1,
+              28,
+              28
+            ],
+            "name": "mnist",
+            "path": "/Users/pedro/projects/loss-grid-computer/assets/mnist",
+            "sample_count": 1024
+          },
+          "loss": "cross_entropy",
+          "model_family": "mnist_mlp",
+          "registered": true,
+          "task": "image_classification",
+          "workload_name": "mnist_mlp_classification"
+        }
+      }
+    ],
+    "seed": 1337
+  },
+  "status": "completed"
+}

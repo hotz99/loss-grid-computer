@@ -1,0 +1,95 @@
+{
+  "child_stem": "experiment-c-calibration-cache",
+  "duration_s": 119.865516,
+  "output_path": "outputs/platform_experiment_suite/20260519T135522Z/experiment-c-calibration-cache.json",
+  "record": {
+    "best_hybrid_minus_gpu_only_s": null,
+    "calibration_grid_resolution": 7,
+    "calibration_s": 81.522,
+    "duration_s": 119.865516,
+    "mode_selection_consistent": null,
+    "mode_selections_by_variant": null,
+    "output_path": "outputs/platform_experiment_suite/20260519T135522Z/experiment-c-calibration-cache.json",
+    "selected_policy": "vanilla",
+    "session_total_s_with_cache": 119.865,
+    "session_total_s_without_cache": 383.076,
+    "slowdown": 1.0,
+    "slowdown_source": "unslowed",
+    "status": "completed",
+    "time_saved_s": 263.211,
+    "variant_count": 4
+  },
+  "result": {
+    "record": {
+      "best_hybrid_minus_gpu_only_s": null,
+      "calibration_grid_resolution": 7,
+      "calibration_s": 81.522,
+      "mode_selection_consistent": null,
+      "mode_selections_by_variant": null,
+      "selected_policy": "vanilla",
+      "session_total_s_with_cache": 119.865,
+      "session_total_s_without_cache": 383.076,
+      "slowdown": 1.0,
+      "slowdown_source": "unslowed",
+      "status": "completed",
+      "time_saved_s": 263.211,
+      "variant_count": 4
+    },
+    "runtime_condition": {
+      "slowdown": 1.0,
+      "source": "unslowed"
+    },
+    "setup": {
+      "calibration_grid_resolution": 7,
+      "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/cifar10-resnet20-0.pkl",
+      "cpu_batch_sizes": [
+        4,
+        8,
+        16,
+        32,
+        64
+      ],
+      "cpu_worker_values": [
+        1,
+        2,
+        4,
+        8,
+        10
+      ],
+      "execution_grid_resolution": 8,
+      "gpu_slowdown_factor": 1.0,
+      "measure_without_cache": false,
+      "model_variant_checkpoints": [
+        "/Users/pedro/projects/loss-grid-computer/assets/cifar10-resnet20-0.pkl",
+        "/Users/pedro/projects/loss-grid-computer/assets/cifar10-resnet20-123.pkl",
+        "/Users/pedro/projects/loss-grid-computer/assets/cifar10-resnet20-2023.pkl",
+        "/Users/pedro/projects/loss-grid-computer/assets/cifar10-resnet20-123456.pkl"
+      ],
+      "retry": 3,
+      "workload": "cifar10_resnet20_classification"
+    },
+    "with_cache_session": {
+      "baseline_s": 6.215,
+      "best_calibration_hybrid_s": null,
+      "best_hybrid_minus_gpu_only_s": null,
+      "calibration_s": 81.522,
+      "execution_mode": {
+        "_tag": "vanilla",
+        "gpu_batch_size": 64
+      },
+      "execution_s": 32.128,
+      "first_variant_total_s": 95.823,
+      "session_total_s": 119.865,
+      "subsequent_variants_total_s": 24.042
+    },
+    "without_cache_session": {
+      "baseline_s": 24.862,
+      "calibration_s": 326.086,
+      "execution_s": 32.128,
+      "session_total_s": 383.076,
+      "source": "derived",
+      "variants": 4
+    }
+  },
+  "status": "completed"
+}

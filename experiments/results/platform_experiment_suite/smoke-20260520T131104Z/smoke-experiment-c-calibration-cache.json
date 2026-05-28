@@ -1,0 +1,224 @@
+{
+  "child_stem": "experiment-c-calibration-cache",
+  "duration_s": 516.786733,
+  "output_path": "outputs/platform_experiment_suite/smoke-20260520T131104Z/smoke-experiment-c-calibration-cache.json",
+  "record": {
+    "completed_workloads": [
+      "cifar10_resnet20_classification",
+      "cifar10_row_gru_classification",
+      "california_mlp_regression",
+      "mnist_mlp_classification"
+    ],
+    "duration_s": 516.786733,
+    "output_path": "outputs/platform_experiment_suite/smoke-20260520T131104Z/smoke-experiment-c-calibration-cache.json",
+    "skipped_workloads": [],
+    "status": "completed",
+    "workloads": {
+      "california_mlp_regression": {
+        "amortized_calibration_per_variant_s": 5.2988,
+        "break_even_n": null,
+        "break_even_unavailable_reason": "hybrid_per_variant_not_faster",
+        "calibration_grid_resolution": 7,
+        "calibration_s": 21.195,
+        "hybrid_per_variant_grid_s": 2.1968,
+        "hybrid_without_cache_penalty_vs_vanilla": 847.3486,
+        "mode_selections_by_variant": [
+          "hybrid",
+          "hybrid",
+          "hybrid",
+          "hybrid"
+        ],
+        "selected_policy": "hybrid",
+        "session_speedup_vs_vanilla": 0.0036,
+        "session_total_s_vanilla": 0.109,
+        "session_total_s_with_cache": 30.073,
+        "session_total_s_without_cache": 92.361,
+        "slowdown": 1.0,
+        "slowdown_source": "unslowed",
+        "status": "completed",
+        "vanilla_per_variant_s": 0.027,
+        "variant_count": 4
+      },
+      "cifar10_resnet20_classification": {
+        "amortized_calibration_per_variant_s": 6.3695,
+        "break_even_n": null,
+        "break_even_unavailable_reason": "hybrid_per_variant_not_faster",
+        "calibration_grid_resolution": 7,
+        "calibration_s": 25.478,
+        "hybrid_per_variant_grid_s": 2.5368,
+        "hybrid_without_cache_penalty_vs_vanilla": 42.4651,
+        "mode_selections_by_variant": [
+          "vanilla",
+          "vanilla",
+          "vanilla",
+          "vanilla"
+        ],
+        "selected_policy": "hybrid",
+        "session_speedup_vs_vanilla": 0.0547,
+        "session_total_s_vanilla": 2.019,
+        "session_total_s_with_cache": 36.881,
+        "session_total_s_without_cache": 85.737,
+        "slowdown": 1.0,
+        "slowdown_source": "unslowed",
+        "status": "completed",
+        "vanilla_per_variant_s": 0.505,
+        "variant_count": 4
+      },
+      "cifar10_row_gru_classification": {
+        "amortized_calibration_per_variant_s": 8.989,
+        "break_even_n": null,
+        "break_even_unavailable_reason": "hybrid_per_variant_not_faster",
+        "calibration_grid_resolution": 7,
+        "calibration_s": 35.956,
+        "hybrid_per_variant_grid_s": 3.8725,
+        "hybrid_without_cache_penalty_vs_vanilla": 54.3919,
+        "mode_selections_by_variant": [
+          "hybrid",
+          "hybrid",
+          "hybrid",
+          "hybrid"
+        ],
+        "selected_policy": "hybrid",
+        "session_speedup_vs_vanilla": 0.0397,
+        "session_total_s_vanilla": 2.09,
+        "session_total_s_with_cache": 52.585,
+        "session_total_s_without_cache": 113.679,
+        "slowdown": 1.0,
+        "slowdown_source": "unslowed",
+        "status": "completed",
+        "vanilla_per_variant_s": 0.522,
+        "variant_count": 4
+      },
+      "mnist_mlp_classification": {
+        "amortized_calibration_per_variant_s": 5.9238,
+        "break_even_n": null,
+        "break_even_unavailable_reason": "hybrid_per_variant_not_faster",
+        "calibration_grid_resolution": 7,
+        "calibration_s": 23.695,
+        "hybrid_per_variant_grid_s": 2.3472,
+        "hybrid_without_cache_penalty_vs_vanilla": 152.8413,
+        "mode_selections_by_variant": [
+          "vanilla",
+          "vanilla",
+          "vanilla",
+          "vanilla"
+        ],
+        "selected_policy": "hybrid",
+        "session_speedup_vs_vanilla": 0.0132,
+        "session_total_s_vanilla": 0.441,
+        "session_total_s_with_cache": 33.406,
+        "session_total_s_without_cache": 67.403,
+        "slowdown": 1.0,
+        "slowdown_source": "unslowed",
+        "status": "completed",
+        "vanilla_per_variant_s": 0.11,
+        "variant_count": 4
+      }
+    }
+  },
+  "result": {
+    "workloads": {
+      "california_mlp_regression": {
+        "amortized_calibration_per_variant_s": 5.2988,
+        "break_even_n": null,
+        "break_even_unavailable_reason": "hybrid_per_variant_not_faster",
+        "calibration_grid_resolution": 7,
+        "calibration_s": 21.195,
+        "hybrid_per_variant_grid_s": 2.1968,
+        "hybrid_without_cache_penalty_vs_vanilla": 847.3486,
+        "mode_selections_by_variant": [
+          "hybrid",
+          "hybrid",
+          "hybrid",
+          "hybrid"
+        ],
+        "selected_policy": "hybrid",
+        "session_speedup_vs_vanilla": 0.0036,
+        "session_total_s_vanilla": 0.109,
+        "session_total_s_with_cache": 30.073,
+        "session_total_s_without_cache": 92.361,
+        "slowdown": 1.0,
+        "slowdown_source": "unslowed",
+        "status": "completed",
+        "vanilla_per_variant_s": 0.027,
+        "variant_count": 4
+      },
+      "cifar10_resnet20_classification": {
+        "amortized_calibration_per_variant_s": 6.3695,
+        "break_even_n": null,
+        "break_even_unavailable_reason": "hybrid_per_variant_not_faster",
+        "calibration_grid_resolution": 7,
+        "calibration_s": 25.478,
+        "hybrid_per_variant_grid_s": 2.5368,
+        "hybrid_without_cache_penalty_vs_vanilla": 42.4651,
+        "mode_selections_by_variant": [
+          "vanilla",
+          "vanilla",
+          "vanilla",
+          "vanilla"
+        ],
+        "selected_policy": "hybrid",
+        "session_speedup_vs_vanilla": 0.0547,
+        "session_total_s_vanilla": 2.019,
+        "session_total_s_with_cache": 36.881,
+        "session_total_s_without_cache": 85.737,
+        "slowdown": 1.0,
+        "slowdown_source": "unslowed",
+        "status": "completed",
+        "vanilla_per_variant_s": 0.505,
+        "variant_count": 4
+      },
+      "cifar10_row_gru_classification": {
+        "amortized_calibration_per_variant_s": 8.989,
+        "break_even_n": null,
+        "break_even_unavailable_reason": "hybrid_per_variant_not_faster",
+        "calibration_grid_resolution": 7,
+        "calibration_s": 35.956,
+        "hybrid_per_variant_grid_s": 3.8725,
+        "hybrid_without_cache_penalty_vs_vanilla": 54.3919,
+        "mode_selections_by_variant": [
+          "hybrid",
+          "hybrid",
+          "hybrid",
+          "hybrid"
+        ],
+        "selected_policy": "hybrid",
+        "session_speedup_vs_vanilla": 0.0397,
+        "session_total_s_vanilla": 2.09,
+        "session_total_s_with_cache": 52.585,
+        "session_total_s_without_cache": 113.679,
+        "slowdown": 1.0,
+        "slowdown_source": "unslowed",
+        "status": "completed",
+        "vanilla_per_variant_s": 0.522,
+        "variant_count": 4
+      },
+      "mnist_mlp_classification": {
+        "amortized_calibration_per_variant_s": 5.9238,
+        "break_even_n": null,
+        "break_even_unavailable_reason": "hybrid_per_variant_not_faster",
+        "calibration_grid_resolution": 7,
+        "calibration_s": 23.695,
+        "hybrid_per_variant_grid_s": 2.3472,
+        "hybrid_without_cache_penalty_vs_vanilla": 152.8413,
+        "mode_selections_by_variant": [
+          "vanilla",
+          "vanilla",
+          "vanilla",
+          "vanilla"
+        ],
+        "selected_policy": "hybrid",
+        "session_speedup_vs_vanilla": 0.0132,
+        "session_total_s_vanilla": 0.441,
+        "session_total_s_with_cache": 33.406,
+        "session_total_s_without_cache": 67.403,
+        "slowdown": 1.0,
+        "slowdown_source": "unslowed",
+        "status": "completed",
+        "vanilla_per_variant_s": 0.11,
+        "variant_count": 4
+      }
+    }
+  },
+  "status": "completed"
+}

@@ -1,0 +1,3615 @@
+{
+  "config": {
+    "atol": 1e-06,
+    "calibration_retry": 3,
+    "device": "auto",
+    "fail_fast": false,
+    "functional_eval_batch_size": 32,
+    "functional_eval_repeats": 5,
+    "functional_eval_sample_counts": [
+      1024
+    ],
+    "functional_eval_workloads": null,
+    "gpu_batch_size": 64,
+    "grid_resolution": 8,
+    "grid_scale": 1.0,
+    "include_full_test_set": false,
+    "include_vmap_reproduction": false,
+    "max_cpu_worker_candidate": null,
+    "max_memory_fraction": 0.85,
+    "measure_without_cache": false,
+    "mltask_workloads": [
+      "cifar10_resnet20_classification",
+      "cifar10_row_gru_classification",
+      "california_mlp_regression",
+      "mnist_mlp_classification"
+    ],
+    "output_dir": "/content/drive/MyDrive/loss-grid-experiments/runs",
+    "point_chunk_sizes": [
+      32,
+      64
+    ],
+    "rtol": 1e-05,
+    "run_label": "experiment_runner",
+    "sample_count": 1024,
+    "seed": 1337,
+    "verbose_experiment_logs": true
+  },
+  "created_at": "2026-05-17T10:02:16.344670+00:00",
+  "experiments": {
+    "e0_platform_inventory": {
+      "assets": {
+        "california_mlp_regression": {
+          "checkpoint_exists": true,
+          "checkpoint_path": "/content/loss-grid-computer/assets/california-mlp-0.pkl",
+          "dataset_exists": true,
+          "dataset_path": "/content/loss-grid-computer/assets"
+        },
+        "cifar10_resnet20_classification": {
+          "checkpoint_exists": true,
+          "checkpoint_path": "/content/loss-grid-computer/assets/cifar10-resnet20-0.pkl",
+          "dataset_exists": true,
+          "dataset_path": "/content/loss-grid-computer/assets/cifar-10-batches-py"
+        },
+        "cifar10_row_gru_classification": {
+          "checkpoint_exists": true,
+          "checkpoint_path": "/content/loss-grid-computer/assets/cifar10-row-gru-0.pkl",
+          "dataset_exists": true,
+          "dataset_path": "/content/loss-grid-computer/assets/cifar-10-batches-py"
+        },
+        "mnist_mlp_classification": {
+          "checkpoint_exists": true,
+          "checkpoint_path": "/content/loss-grid-computer/assets/mnist-mlp-0.pkl",
+          "dataset_exists": true,
+          "dataset_path": "/content/loss-grid-computer/assets/mnist"
+        }
+      },
+      "duration_s": 0.000665,
+      "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-e0_platform_inventory.json",
+      "platform": {
+        "cpu": {
+          "logical_cores": 2,
+          "model": "x86_64"
+        },
+        "cuda_available": true,
+        "env_threads": {
+          "MKL_NUM_THREADS": null,
+          "NUMEXPR_NUM_THREADS": null,
+          "OMP_NUM_THREADS": null,
+          "VECLIB_MAXIMUM_THREADS": null
+        },
+        "gpu": {
+          "capability": [
+            7,
+            5
+          ],
+          "current_device": 0,
+          "device_count": 1,
+          "multi_processor_count": 40,
+          "name": "Tesla T4",
+          "total_memory_bytes": 15637086208
+        },
+        "host_os": "Linux",
+        "machine": "x86_64",
+        "memory": {
+          "approx_memory_bandwidth": null,
+          "total_system_memory_bytes": 13605830656
+        },
+        "mps_available": false,
+        "os_release": "6.6.122+",
+        "python_version": "3.12.13",
+        "requested_device": "auto",
+        "resolved_device": "cuda",
+        "torch_version": "2.10.0+cu128"
+      },
+      "record": {
+        "asset_count": 4,
+        "cpu_logical_cores": 2,
+        "duration_s": 0.000665,
+        "gpu_model": "Tesla T4",
+        "missing_asset_count": 0,
+        "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-e0_platform_inventory.json",
+        "ram_bytes": 13605830656,
+        "resolved_device": "cuda",
+        "status": "completed",
+        "vram_bytes": 15637086208
+      },
+      "status": "completed"
+    },
+    "experiment_a_candidates": {
+      "child_stem": "functional-eval-platform-suite",
+      "duration_s": 1517.167688,
+      "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-functional-eval-platform-suite.json",
+      "record": {
+        "completed_scenario_count": 4,
+        "duration_s": 1517.167688,
+        "failed": [],
+        "failed_scenario_count": 0,
+        "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-functional-eval-platform-suite.json",
+        "scenario_count": 4,
+        "status": "completed"
+      },
+      "result": {
+        "created_at": "2026-05-16T19:57:40.400554+00:00",
+        "device": "auto",
+        "record": {
+          "completed_scenario_count": 4,
+          "failed": [],
+          "failed_scenario_count": 0,
+          "scenario_count": 4,
+          "status": "completed"
+        },
+        "run_label": "experiment_runner",
+        "scenario_count": 4,
+        "scenarios": [
+          {
+            "best_valid_candidate": {
+              "all_repeats_beat_baseline": true,
+              "all_validations_passed": true,
+              "all_within_budget": true,
+              "candidate": "functional_sequential",
+              "mean_total_grid_s": 25.511793344199987,
+              "paired_speedup_ci_95_hi": 1.048046267704214,
+              "paired_speedup_ci_95_lo": 1.0097560764712836,
+              "paired_speedup_max": 1.0543008741165332,
+              "paired_speedup_mean": 1.0289011720877488,
+              "paired_speedup_min": 1.015283313747087,
+              "paired_speedup_stdev": 0.015421374363886667,
+              "paired_speedups": [
+                1.0235613836265671,
+                1.0316559641487475,
+                1.015283313747087,
+                1.0543008741165332,
+                1.019704324799809
+              ],
+              "status_counts": {
+                "ok": 5
+              },
+              "summary_mean_speedup_vs_baseline": null,
+              "surface_budget": 0.0001,
+              "taxonomy": {
+                "applies_to_sections": [
+                  "parameter_binding"
+                ],
+                "components": [
+                  "functional_call"
+                ],
+                "control_params": {},
+                "hypothesis": "replace in-place parameter mutation with explicit functional parameter binding while preserving the original point and batch loops; this does not vectorize forward/loss work"
+              }
+            },
+            "best_valid_vmap_chunk_size": null,
+            "candidate_summary": [
+              {
+                "candidate": "baseline_original",
+                "mean_total_grid_s": 26.243602333400002,
+                "status_counts": {
+                  "ok": 5
+                },
+                "stdev_total_grid_s": 0.09703787592604202,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "original_in_place_mutation"
+                  ],
+                  "control_params": {},
+                  "hypothesis": "reference behavior and runtime target"
+                }
+              },
+              {
+                "candidate": "functional_sequential",
+                "mean_total_grid_s": 25.511793344199987,
+                "status_counts": {
+                  "ok": 5
+                },
+                "stdev_total_grid_s": 0.45155183624990397,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "parameter_binding"
+                  ],
+                  "components": [
+                    "functional_call"
+                  ],
+                  "control_params": {},
+                  "hypothesis": "replace in-place parameter mutation with explicit functional parameter binding while preserving the original point and batch loops; this does not vectorize forward/loss work"
+                }
+              },
+              {
+                "candidate": "vmapped_chunk_32",
+                "mean_total_grid_s": 26.359270585400054,
+                "status_counts": {
+                  "ok": 5
+                },
+                "stdev_total_grid_s": 0.020791848270671008,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "functional_call",
+                    "vmap",
+                    "point_chunking"
+                  ],
+                  "control_params": {
+                    "point_chunk_size": 32
+                  },
+                  "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+                }
+              },
+              {
+                "candidate": "vmapped_chunk_64",
+                "mean_total_grid_s": 25.95007215820001,
+                "status_counts": {
+                  "ok": 5
+                },
+                "stdev_total_grid_s": 0.02389416744468604,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "functional_call",
+                    "vmap",
+                    "point_chunking"
+                  ],
+                  "control_params": {
+                    "point_chunk_size": 64
+                  },
+                  "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+                }
+              }
+            ],
+            "config": {
+              "abs_tol": 1e-06,
+              "checkpoint_path": "/content/loss-grid-computer/assets/cifar10-resnet20-0.pkl",
+              "dataset": {
+                "input_shape": [
+                  3,
+                  32,
+                  32
+                ],
+                "name": "cifar10",
+                "path": "/content/loss-grid-computer/assets/cifar-10-batches-py",
+                "sample_count": 1024
+              },
+              "dataset_name": "cifar10",
+              "dataset_sample_count": 1024,
+              "device": "auto",
+              "gpu_batch_size": 32,
+              "grid_resolution": 8,
+              "grid_scale": 1.0,
+              "loss": "cross_entropy",
+              "max_memory_fraction": 0.85,
+              "mode": "vanilla",
+              "model": "resnet20",
+              "model_family": "resnet20",
+              "point_chunk_sizes": [
+                32,
+                64
+              ],
+              "rel_tol": 1e-05,
+              "run_label": "experiment_runner",
+              "seed": 1337,
+              "task": "image_classification",
+              "task_name": "cifar10_resnet20_classification",
+              "workload_name": "cifar10_resnet20_classification"
+            },
+            "memory": {
+              "peak_cpu_memory_bytes": 1710985216,
+              "peak_cuda_memory_bytes": 1843396608
+            },
+            "paired_candidate_metrics": [
+              {
+                "all_repeats_beat_baseline": true,
+                "all_validations_passed": true,
+                "all_within_budget": true,
+                "candidate": "functional_sequential",
+                "mean_total_grid_s": 25.511793344199987,
+                "paired_speedup_ci_95_hi": 1.048046267704214,
+                "paired_speedup_ci_95_lo": 1.0097560764712836,
+                "paired_speedup_max": 1.0543008741165332,
+                "paired_speedup_mean": 1.0289011720877488,
+                "paired_speedup_min": 1.015283313747087,
+                "paired_speedup_stdev": 0.015421374363886667,
+                "paired_speedups": [
+                  1.0235613836265671,
+                  1.0316559641487475,
+                  1.015283313747087,
+                  1.0543008741165332,
+                  1.019704324799809
+                ],
+                "status_counts": {
+                  "ok": 5
+                },
+                "summary_mean_speedup_vs_baseline": null,
+                "surface_budget": 0.0001,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "parameter_binding"
+                  ],
+                  "components": [
+                    "functional_call"
+                  ],
+                  "control_params": {},
+                  "hypothesis": "replace in-place parameter mutation with explicit functional parameter binding while preserving the original point and batch loops; this does not vectorize forward/loss work"
+                }
+              },
+              {
+                "all_repeats_beat_baseline": false,
+                "all_validations_passed": true,
+                "all_within_budget": false,
+                "candidate": "vmapped_chunk_32",
+                "mean_total_grid_s": 26.359270585400054,
+                "paired_speedup_ci_95_hi": 1.0003548833440439,
+                "paired_speedup_ci_95_lo": 0.9908701640325153,
+                "paired_speedup_max": 1.0011097687874968,
+                "paired_speedup_mean": 0.9956125236882796,
+                "paired_speedup_min": 0.9918438550822508,
+                "paired_speedup_stdev": 0.0038199706642800574,
+                "paired_speedups": [
+                  0.9952620126687444,
+                  0.9918438550822508,
+                  0.9974605903347303,
+                  0.9923863915681755,
+                  1.0011097687874968
+                ],
+                "status_counts": {
+                  "ok": 5
+                },
+                "summary_mean_speedup_vs_baseline": null,
+                "surface_budget": 0.0001,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "functional_call",
+                    "vmap",
+                    "point_chunking"
+                  ],
+                  "control_params": {
+                    "point_chunk_size": 32
+                  },
+                  "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+                }
+              },
+              {
+                "all_repeats_beat_baseline": true,
+                "all_validations_passed": true,
+                "all_within_budget": false,
+                "candidate": "vmapped_chunk_64",
+                "mean_total_grid_s": 25.95007215820001,
+                "paired_speedup_ci_95_hi": 1.0160170170808613,
+                "paired_speedup_ci_95_lo": 1.0066066610094477,
+                "paired_speedup_max": 1.0169902240371207,
+                "paired_speedup_mean": 1.0113118390451545,
+                "paired_speedup_min": 1.0067129708683549,
+                "paired_speedup_stdev": 0.003790020869625115,
+                "paired_speedups": [
+                  1.0112746925284697,
+                  1.0094642413731802,
+                  1.0121170664186472,
+                  1.0067129708683549,
+                  1.0169902240371207
+                ],
+                "status_counts": {
+                  "ok": 5
+                },
+                "summary_mean_speedup_vs_baseline": null,
+                "surface_budget": 0.0001,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "functional_call",
+                    "vmap",
+                    "point_chunking"
+                  ],
+                  "control_params": {
+                    "point_chunk_size": 64
+                  },
+                  "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+                }
+              }
+            ],
+            "platform": {
+              "cuda": {
+                "capability": [
+                  7,
+                  5
+                ],
+                "current_device": 0,
+                "device_count": 1,
+                "multi_processor_count": 40,
+                "total_memory_bytes": 15637086208
+              },
+              "device_name": "Tesla T4",
+              "device_type": "cuda",
+              "torch_version": "2.10.0+cu128"
+            },
+            "record": {
+              "all_validations_passed": true,
+              "best_valid_candidate": {
+                "all_repeats_beat_baseline": true,
+                "all_validations_passed": true,
+                "all_within_budget": true,
+                "candidate": "functional_sequential",
+                "mean_total_grid_s": 25.511793344199987,
+                "paired_speedup_ci_95_hi": 1.048046267704214,
+                "paired_speedup_ci_95_lo": 1.0097560764712836,
+                "paired_speedup_max": 1.0543008741165332,
+                "paired_speedup_mean": 1.0289011720877488,
+                "paired_speedup_min": 1.015283313747087,
+                "paired_speedup_stdev": 0.015421374363886667,
+                "paired_speedups": [
+                  1.0235613836265671,
+                  1.0316559641487475,
+                  1.015283313747087,
+                  1.0543008741165332,
+                  1.019704324799809
+                ],
+                "status_counts": {
+                  "ok": 5
+                },
+                "summary_mean_speedup_vs_baseline": null,
+                "surface_budget": 0.0001,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "parameter_binding"
+                  ],
+                  "components": [
+                    "functional_call"
+                  ],
+                  "control_params": {},
+                  "hypothesis": "replace in-place parameter mutation with explicit functional parameter binding while preserving the original point and batch loops; this does not vectorize forward/loss work"
+                }
+              },
+              "candidate_status_counts": {
+                "baseline_original": {
+                  "ok": 5
+                },
+                "functional_sequential": {
+                  "ok": 5
+                },
+                "vmapped_chunk_32": {
+                  "ok": 5
+                },
+                "vmapped_chunk_64": {
+                  "ok": 5
+                }
+              },
+              "candidates": [
+                {
+                  "all_repeats_beat_baseline": true,
+                  "all_validations_passed": true,
+                  "all_within_budget": true,
+                  "candidate": "functional_sequential",
+                  "paired_speedup_ci_95_hi": 1.048046267704214,
+                  "paired_speedup_ci_95_lo": 1.0097560764712836,
+                  "paired_speedup_max": 1.0543008741165332,
+                  "paired_speedup_mean": 1.0289011720877488,
+                  "paired_speedup_min": 1.015283313747087,
+                  "paired_speedup_stdev": 0.015421374363886667,
+                  "surface_budget": 0.0001
+                },
+                {
+                  "all_repeats_beat_baseline": false,
+                  "all_validations_passed": true,
+                  "all_within_budget": false,
+                  "candidate": "vmapped_chunk_32",
+                  "paired_speedup_ci_95_hi": 1.0003548833440439,
+                  "paired_speedup_ci_95_lo": 0.9908701640325153,
+                  "paired_speedup_max": 1.0011097687874968,
+                  "paired_speedup_mean": 0.9956125236882796,
+                  "paired_speedup_min": 0.9918438550822508,
+                  "paired_speedup_stdev": 0.0038199706642800574,
+                  "surface_budget": 0.0001
+                },
+                {
+                  "all_repeats_beat_baseline": true,
+                  "all_validations_passed": true,
+                  "all_within_budget": false,
+                  "candidate": "vmapped_chunk_64",
+                  "paired_speedup_ci_95_hi": 1.0160170170808613,
+                  "paired_speedup_ci_95_lo": 1.0066066610094477,
+                  "paired_speedup_max": 1.0169902240371207,
+                  "paired_speedup_mean": 1.0113118390451545,
+                  "paired_speedup_min": 1.0067129708683549,
+                  "paired_speedup_stdev": 0.003790020869625115,
+                  "surface_budget": 0.0001
+                }
+              ],
+              "scenario": "cifar10_resnet20_classification__focused_1024_scaling",
+              "status": "completed",
+              "validation_status": "checked",
+              "workload": "cifar10_resnet20_classification"
+            },
+            "scenario": {
+              "batch_size": 32,
+              "max_memory_fraction": 0.85,
+              "name": "cifar10_resnet20_classification__focused_1024_scaling",
+              "point_chunk_sizes": [
+                32,
+                64
+              ],
+              "repeats": 5,
+              "resolution": 8,
+              "sample_count": 1024,
+              "scale": 1.0,
+              "warmup_repeats": 2,
+              "workload_name": "cifar10_resnet20_classification"
+            },
+            "section_timings": {
+              "baseline_original": {
+                "batch_eval_s": 26.145735992431632,
+                "binding_s": 0.07667678734064101,
+                "perturbation_s": 0.007523641607165336,
+                "total_grid_s": 26.243602333400002
+              },
+              "functional_sequential": {
+                "batch_eval_s": 25.45737268819953,
+                "binding_s": 0.04701184280011148,
+                "perturbation_s": 0.007059798999989653,
+                "total_grid_s": 25.511793344199987
+              },
+              "vmapped_chunk_32": {
+                "batch_eval_s": 25.666138397200076,
+                "binding_s": 0.0011227276000226993,
+                "perturbation_s": 0.0027063861999977235,
+                "total_grid_s": 26.359270585400054
+              },
+              "vmapped_chunk_64": {
+                "batch_eval_s": 25.603044728800615,
+                "binding_s": 0.00048227159995803957,
+                "perturbation_s": 0.0025464479999754985,
+                "total_grid_s": 25.95007215820001
+              }
+            },
+            "status": "completed",
+            "validation": {
+              "all_validations_passed": true,
+              "status": "checked"
+            },
+            "workload": {
+              "checkpoint_path": "/content/loss-grid-computer/assets/cifar10-resnet20-0.pkl",
+              "dataset": {
+                "input_shape": [
+                  3,
+                  32,
+                  32
+                ],
+                "name": "cifar10",
+                "path": "/content/loss-grid-computer/assets/cifar-10-batches-py",
+                "sample_count": 1024
+              },
+              "loss": "cross_entropy",
+              "model_family": "resnet20",
+              "registered": true,
+              "task": "image_classification",
+              "workload_name": "cifar10_resnet20_classification"
+            }
+          },
+          {
+            "best_valid_candidate": {
+              "all_repeats_beat_baseline": true,
+              "all_validations_passed": true,
+              "all_within_budget": true,
+              "candidate": "vmapped_chunk_64",
+              "mean_total_grid_s": 0.7668707997998354,
+              "paired_speedup_ci_95_hi": 51.324292388630965,
+              "paired_speedup_ci_95_lo": 43.7069658103013,
+              "paired_speedup_max": 50.025907612951485,
+              "paired_speedup_mean": 47.51562909946613,
+              "paired_speedup_min": 42.230440941722456,
+              "paired_speedup_stdev": 3.0678782485520584,
+              "paired_speedups": [
+                47.77403439306085,
+                49.073568899269596,
+                50.025907612951485,
+                48.474193650326285,
+                42.230440941722456
+              ],
+              "status_counts": {
+                "ok": 5
+              },
+              "summary_mean_speedup_vs_baseline": null,
+              "surface_budget": 0.0001,
+              "taxonomy": {
+                "applies_to_sections": [
+                  "perturbation_construction",
+                  "parameter_binding",
+                  "batch_forward_loss"
+                ],
+                "components": [
+                  "functional_call",
+                  "vmap",
+                  "point_chunking"
+                ],
+                "control_params": {
+                  "point_chunk_size": 64
+                },
+                "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+              }
+            },
+            "best_valid_vmap_chunk_size": 64,
+            "candidate_summary": [
+              {
+                "candidate": "baseline_original",
+                "mean_total_grid_s": 36.3183188792,
+                "status_counts": {
+                  "ok": 5
+                },
+                "stdev_total_grid_s": 0.6792182090644723,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "original_in_place_mutation"
+                  ],
+                  "control_params": {},
+                  "hypothesis": "reference behavior and runtime target"
+                }
+              },
+              {
+                "candidate": "functional_sequential",
+                "mean_total_grid_s": 31.43316995539999,
+                "status_counts": {
+                  "ok": 5
+                },
+                "stdev_total_grid_s": 0.3709583196243474,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "parameter_binding"
+                  ],
+                  "components": [
+                    "functional_call"
+                  ],
+                  "control_params": {},
+                  "hypothesis": "replace in-place parameter mutation with explicit functional parameter binding while preserving the original point and batch loops; this does not vectorize forward/loss work"
+                }
+              },
+              {
+                "candidate": "vmapped_chunk_32",
+                "mean_total_grid_s": 1.4702747680000356,
+                "status_counts": {
+                  "ok": 5
+                },
+                "stdev_total_grid_s": 0.024214767472292766,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "functional_call",
+                    "vmap",
+                    "point_chunking"
+                  ],
+                  "control_params": {
+                    "point_chunk_size": 32
+                  },
+                  "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+                }
+              },
+              {
+                "candidate": "vmapped_chunk_64",
+                "mean_total_grid_s": 0.7668707997998354,
+                "status_counts": {
+                  "ok": 5
+                },
+                "stdev_total_grid_s": 0.050947755635705444,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "functional_call",
+                    "vmap",
+                    "point_chunking"
+                  ],
+                  "control_params": {
+                    "point_chunk_size": 64
+                  },
+                  "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+                }
+              }
+            ],
+            "config": {
+              "abs_tol": 1e-06,
+              "checkpoint_path": "/content/loss-grid-computer/assets/cifar10-row-gru-0.pkl",
+              "dataset": {
+                "input_shape": [
+                  3,
+                  32,
+                  32
+                ],
+                "name": "cifar10",
+                "path": "/content/loss-grid-computer/assets/cifar-10-batches-py",
+                "sample_count": 1024
+              },
+              "dataset_name": "cifar10",
+              "dataset_sample_count": 1024,
+              "device": "auto",
+              "gpu_batch_size": 32,
+              "grid_resolution": 8,
+              "grid_scale": 1.0,
+              "loss": "cross_entropy",
+              "max_memory_fraction": 0.85,
+              "mode": "vanilla",
+              "model": "row_gru",
+              "model_family": "row_gru",
+              "point_chunk_sizes": [
+                32,
+                64
+              ],
+              "rel_tol": 1e-05,
+              "run_label": "experiment_runner",
+              "seed": 1337,
+              "task": "image_classification",
+              "task_name": "cifar10_row_gru_classification",
+              "workload_name": "cifar10_row_gru_classification"
+            },
+            "memory": {
+              "peak_cpu_memory_bytes": 1710985216,
+              "peak_cuda_memory_bytes": 1849688064
+            },
+            "paired_candidate_metrics": [
+              {
+                "all_repeats_beat_baseline": true,
+                "all_validations_passed": true,
+                "all_within_budget": true,
+                "candidate": "functional_sequential",
+                "mean_total_grid_s": 31.43316995539999,
+                "paired_speedup_ci_95_hi": 1.1906216758468986,
+                "paired_speedup_ci_95_lo": 1.1205718707837287,
+                "paired_speedup_max": 1.182345162281253,
+                "paired_speedup_mean": 1.1555967733153136,
+                "paired_speedup_min": 1.1080001060917302,
+                "paired_speedup_stdev": 0.028212558705305618,
+                "paired_speedups": [
+                  1.1080001060917302,
+                  1.182345162281253,
+                  1.1573286675459231,
+                  1.1680838990063813,
+                  1.1622260316512805
+                ],
+                "status_counts": {
+                  "ok": 5
+                },
+                "summary_mean_speedup_vs_baseline": null,
+                "surface_budget": 0.0001,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "parameter_binding"
+                  ],
+                  "components": [
+                    "functional_call"
+                  ],
+                  "control_params": {},
+                  "hypothesis": "replace in-place parameter mutation with explicit functional parameter binding while preserving the original point and batch loops; this does not vectorize forward/loss work"
+                }
+              },
+              {
+                "all_repeats_beat_baseline": true,
+                "all_validations_passed": true,
+                "all_within_budget": true,
+                "candidate": "vmapped_chunk_32",
+                "mean_total_grid_s": 1.4702747680000356,
+                "paired_speedup_ci_95_hi": 24.88173845573448,
+                "paired_speedup_ci_95_lo": 24.520814453042046,
+                "paired_speedup_max": 24.88565042521426,
+                "paired_speedup_mean": 24.701276454388264,
+                "paired_speedup_min": 24.527295019364125,
+                "paired_speedup_stdev": 0.14536214062168532,
+                "paired_speedups": [
+                  24.527295019364125,
+                  24.721952546984788,
+                  24.784096540733568,
+                  24.88565042521426,
+                  24.587387739644583
+                ],
+                "status_counts": {
+                  "ok": 5
+                },
+                "summary_mean_speedup_vs_baseline": null,
+                "surface_budget": 0.0001,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "functional_call",
+                    "vmap",
+                    "point_chunking"
+                  ],
+                  "control_params": {
+                    "point_chunk_size": 32
+                  },
+                  "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+                }
+              },
+              {
+                "all_repeats_beat_baseline": true,
+                "all_validations_passed": true,
+                "all_within_budget": true,
+                "candidate": "vmapped_chunk_64",
+                "mean_total_grid_s": 0.7668707997998354,
+                "paired_speedup_ci_95_hi": 51.324292388630965,
+                "paired_speedup_ci_95_lo": 43.7069658103013,
+                "paired_speedup_max": 50.025907612951485,
+                "paired_speedup_mean": 47.51562909946613,
+                "paired_speedup_min": 42.230440941722456,
+                "paired_speedup_stdev": 3.0678782485520584,
+                "paired_speedups": [
+                  47.77403439306085,
+                  49.073568899269596,
+                  50.025907612951485,
+                  48.474193650326285,
+                  42.230440941722456
+                ],
+                "status_counts": {
+                  "ok": 5
+                },
+                "summary_mean_speedup_vs_baseline": null,
+                "surface_budget": 0.0001,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "functional_call",
+                    "vmap",
+                    "point_chunking"
+                  ],
+                  "control_params": {
+                    "point_chunk_size": 64
+                  },
+                  "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+                }
+              }
+            ],
+            "platform": {
+              "cuda": {
+                "capability": [
+                  7,
+                  5
+                ],
+                "current_device": 0,
+                "device_count": 1,
+                "multi_processor_count": 40,
+                "total_memory_bytes": 15637086208
+              },
+              "device_name": "Tesla T4",
+              "device_type": "cuda",
+              "torch_version": "2.10.0+cu128"
+            },
+            "record": {
+              "all_validations_passed": true,
+              "best_valid_candidate": {
+                "all_repeats_beat_baseline": true,
+                "all_validations_passed": true,
+                "all_within_budget": true,
+                "candidate": "vmapped_chunk_64",
+                "mean_total_grid_s": 0.7668707997998354,
+                "paired_speedup_ci_95_hi": 51.324292388630965,
+                "paired_speedup_ci_95_lo": 43.7069658103013,
+                "paired_speedup_max": 50.025907612951485,
+                "paired_speedup_mean": 47.51562909946613,
+                "paired_speedup_min": 42.230440941722456,
+                "paired_speedup_stdev": 3.0678782485520584,
+                "paired_speedups": [
+                  47.77403439306085,
+                  49.073568899269596,
+                  50.025907612951485,
+                  48.474193650326285,
+                  42.230440941722456
+                ],
+                "status_counts": {
+                  "ok": 5
+                },
+                "summary_mean_speedup_vs_baseline": null,
+                "surface_budget": 0.0001,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "functional_call",
+                    "vmap",
+                    "point_chunking"
+                  ],
+                  "control_params": {
+                    "point_chunk_size": 64
+                  },
+                  "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+                }
+              },
+              "candidate_status_counts": {
+                "baseline_original": {
+                  "ok": 5
+                },
+                "functional_sequential": {
+                  "ok": 5
+                },
+                "vmapped_chunk_32": {
+                  "ok": 5
+                },
+                "vmapped_chunk_64": {
+                  "ok": 5
+                }
+              },
+              "candidates": [
+                {
+                  "all_repeats_beat_baseline": true,
+                  "all_validations_passed": true,
+                  "all_within_budget": true,
+                  "candidate": "functional_sequential",
+                  "paired_speedup_ci_95_hi": 1.1906216758468986,
+                  "paired_speedup_ci_95_lo": 1.1205718707837287,
+                  "paired_speedup_max": 1.182345162281253,
+                  "paired_speedup_mean": 1.1555967733153136,
+                  "paired_speedup_min": 1.1080001060917302,
+                  "paired_speedup_stdev": 0.028212558705305618,
+                  "surface_budget": 0.0001
+                },
+                {
+                  "all_repeats_beat_baseline": true,
+                  "all_validations_passed": true,
+                  "all_within_budget": true,
+                  "candidate": "vmapped_chunk_32",
+                  "paired_speedup_ci_95_hi": 24.88173845573448,
+                  "paired_speedup_ci_95_lo": 24.520814453042046,
+                  "paired_speedup_max": 24.88565042521426,
+                  "paired_speedup_mean": 24.701276454388264,
+                  "paired_speedup_min": 24.527295019364125,
+                  "paired_speedup_stdev": 0.14536214062168532,
+                  "surface_budget": 0.0001
+                },
+                {
+                  "all_repeats_beat_baseline": true,
+                  "all_validations_passed": true,
+                  "all_within_budget": true,
+                  "candidate": "vmapped_chunk_64",
+                  "paired_speedup_ci_95_hi": 51.324292388630965,
+                  "paired_speedup_ci_95_lo": 43.7069658103013,
+                  "paired_speedup_max": 50.025907612951485,
+                  "paired_speedup_mean": 47.51562909946613,
+                  "paired_speedup_min": 42.230440941722456,
+                  "paired_speedup_stdev": 3.0678782485520584,
+                  "surface_budget": 0.0001
+                }
+              ],
+              "scenario": "cifar10_row_gru_classification__focused_1024_scaling",
+              "status": "completed",
+              "validation_status": "checked",
+              "workload": "cifar10_row_gru_classification"
+            },
+            "scenario": {
+              "batch_size": 32,
+              "max_memory_fraction": 0.85,
+              "name": "cifar10_row_gru_classification__focused_1024_scaling",
+              "point_chunk_sizes": [
+                32,
+                64
+              ],
+              "repeats": 5,
+              "resolution": 8,
+              "sample_count": 1024,
+              "scale": 1.0,
+              "warmup_repeats": 2,
+              "workload_name": "cifar10_row_gru_classification"
+            },
+            "section_timings": {
+              "baseline_original": {
+                "batch_eval_s": 36.28551439208985,
+                "binding_s": 0.012315276816487312,
+                "perturbation_s": 0.007570176006853581,
+                "total_grid_s": 36.3183188792
+              },
+              "functional_sequential": {
+                "batch_eval_s": 31.416224117398997,
+                "binding_s": 0.009749686198665586,
+                "perturbation_s": 0.0068622555998445025,
+                "total_grid_s": 31.43316995539999
+              },
+              "vmapped_chunk_32": {
+                "batch_eval_s": 0.909424466200926,
+                "binding_s": 0.00019834420008919552,
+                "perturbation_s": 0.0010902241999247054,
+                "total_grid_s": 1.4702747680000356
+              },
+              "vmapped_chunk_64": {
+                "batch_eval_s": 0.48002181079918954,
+                "binding_s": 0.0001163873999757925,
+                "perturbation_s": 0.0008898424000108208,
+                "total_grid_s": 0.7668707997998354
+              }
+            },
+            "status": "completed",
+            "validation": {
+              "all_validations_passed": true,
+              "status": "checked"
+            },
+            "workload": {
+              "checkpoint_path": "/content/loss-grid-computer/assets/cifar10-row-gru-0.pkl",
+              "dataset": {
+                "input_shape": [
+                  3,
+                  32,
+                  32
+                ],
+                "name": "cifar10",
+                "path": "/content/loss-grid-computer/assets/cifar-10-batches-py",
+                "sample_count": 1024
+              },
+              "loss": "cross_entropy",
+              "model_family": "row_gru",
+              "registered": true,
+              "task": "image_classification",
+              "workload_name": "cifar10_row_gru_classification"
+            }
+          },
+          {
+            "best_valid_candidate": {
+              "all_repeats_beat_baseline": true,
+              "all_validations_passed": true,
+              "all_within_budget": true,
+              "candidate": "vmapped_chunk_64",
+              "mean_total_grid_s": 0.05173628459997417,
+              "paired_speedup_ci_95_hi": 41.416661609775076,
+              "paired_speedup_ci_95_lo": 26.32908333531449,
+              "paired_speedup_max": 41.57192259601666,
+              "paired_speedup_mean": 33.872872472544785,
+              "paired_speedup_min": 27.14317378923191,
+              "paired_speedup_stdev": 6.076522088894608,
+              "paired_speedups": [
+                34.0288517593233,
+                27.14317378923191,
+                41.57192259601666,
+                37.91860983968575,
+                28.701804378466317
+              ],
+              "status_counts": {
+                "ok": 5
+              },
+              "summary_mean_speedup_vs_baseline": null,
+              "surface_budget": 0.0001,
+              "taxonomy": {
+                "applies_to_sections": [
+                  "perturbation_construction",
+                  "parameter_binding",
+                  "batch_forward_loss"
+                ],
+                "components": [
+                  "functional_call",
+                  "vmap",
+                  "point_chunking"
+                ],
+                "control_params": {
+                  "point_chunk_size": 64
+                },
+                "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+              }
+            },
+            "best_valid_vmap_chunk_size": 64,
+            "candidate_summary": [
+              {
+                "candidate": "baseline_original",
+                "mean_total_grid_s": 1.7180013274000001,
+                "status_counts": {
+                  "ok": 5
+                },
+                "stdev_total_grid_s": 0.120677171465984,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "original_in_place_mutation"
+                  ],
+                  "control_params": {},
+                  "hypothesis": "reference behavior and runtime target"
+                }
+              },
+              {
+                "candidate": "functional_sequential",
+                "mean_total_grid_s": 2.005869655800052,
+                "status_counts": {
+                  "ok": 5
+                },
+                "stdev_total_grid_s": 0.2785516817239468,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "parameter_binding"
+                  ],
+                  "components": [
+                    "functional_call"
+                  ],
+                  "control_params": {},
+                  "hypothesis": "replace in-place parameter mutation with explicit functional parameter binding while preserving the original point and batch loops; this does not vectorize forward/loss work"
+                }
+              },
+              {
+                "candidate": "vmapped_chunk_32",
+                "mean_total_grid_s": 0.10827962200000911,
+                "status_counts": {
+                  "ok": 5
+                },
+                "stdev_total_grid_s": 0.018793659753370676,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "functional_call",
+                    "vmap",
+                    "point_chunking"
+                  ],
+                  "control_params": {
+                    "point_chunk_size": 32
+                  },
+                  "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+                }
+              },
+              {
+                "candidate": "vmapped_chunk_64",
+                "mean_total_grid_s": 0.05173628459997417,
+                "status_counts": {
+                  "ok": 5
+                },
+                "stdev_total_grid_s": 0.007887051849388921,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "functional_call",
+                    "vmap",
+                    "point_chunking"
+                  ],
+                  "control_params": {
+                    "point_chunk_size": 64
+                  },
+                  "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+                }
+              }
+            ],
+            "config": {
+              "abs_tol": 1e-06,
+              "checkpoint_path": "/content/loss-grid-computer/assets/california-mlp-0.pkl",
+              "dataset": {
+                "input_shape": [
+                  8
+                ],
+                "name": "california_housing",
+                "path": "/content/loss-grid-computer/assets",
+                "sample_count": 1024
+              },
+              "dataset_name": "california_housing",
+              "dataset_sample_count": 1024,
+              "device": "auto",
+              "gpu_batch_size": 32,
+              "grid_resolution": 8,
+              "grid_scale": 1.0,
+              "loss": "mse",
+              "max_memory_fraction": 0.85,
+              "mode": "vanilla",
+              "model": "mlp_regressor",
+              "model_family": "mlp_regressor",
+              "point_chunk_sizes": [
+                32,
+                64
+              ],
+              "rel_tol": 1e-05,
+              "run_label": "experiment_runner",
+              "seed": 1337,
+              "task": "tabular_regression",
+              "task_name": "california_mlp_regression",
+              "workload_name": "california_mlp_regression"
+            },
+            "memory": {
+              "peak_cpu_memory_bytes": 1710985216,
+              "peak_cuda_memory_bytes": 1849688064
+            },
+            "paired_candidate_metrics": [
+              {
+                "all_repeats_beat_baseline": false,
+                "all_validations_passed": true,
+                "all_within_budget": true,
+                "candidate": "functional_sequential",
+                "mean_total_grid_s": 2.005869655800052,
+                "paired_speedup_ci_95_hi": 1.0106138636420852,
+                "paired_speedup_ci_95_lo": 0.7241436379373856,
+                "paired_speedup_max": 0.9824086366671577,
+                "paired_speedup_mean": 0.8673787507897354,
+                "paired_speedup_min": 0.6961400376586452,
+                "paired_speedup_stdev": 0.11537588224160951,
+                "paired_speedups": [
+                  0.9021158057144018,
+                  0.6961400376586452,
+                  0.9824086366671577,
+                  0.9461389848160158,
+                  0.8100902890924562
+                ],
+                "status_counts": {
+                  "ok": 5
+                },
+                "summary_mean_speedup_vs_baseline": null,
+                "surface_budget": 0.0001,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "parameter_binding"
+                  ],
+                  "components": [
+                    "functional_call"
+                  ],
+                  "control_params": {},
+                  "hypothesis": "replace in-place parameter mutation with explicit functional parameter binding while preserving the original point and batch loops; this does not vectorize forward/loss work"
+                }
+              },
+              {
+                "all_repeats_beat_baseline": true,
+                "all_validations_passed": true,
+                "all_within_budget": true,
+                "candidate": "vmapped_chunk_32",
+                "mean_total_grid_s": 0.10827962200000911,
+                "paired_speedup_ci_95_hi": 20.502231764303872,
+                "paired_speedup_ci_95_lo": 12.103517518681805,
+                "paired_speedup_max": 20.521399341024622,
+                "paired_speedup_mean": 16.30287464149284,
+                "paired_speedup_min": 12.945553401632685,
+                "paired_speedup_stdev": 3.382582128387393,
+                "paired_speedups": [
+                  16.324335619216836,
+                  13.005856686856896,
+                  20.521399341024622,
+                  18.717228158733146,
+                  12.945553401632685
+                ],
+                "status_counts": {
+                  "ok": 5
+                },
+                "summary_mean_speedup_vs_baseline": null,
+                "surface_budget": 0.0001,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "functional_call",
+                    "vmap",
+                    "point_chunking"
+                  ],
+                  "control_params": {
+                    "point_chunk_size": 32
+                  },
+                  "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+                }
+              },
+              {
+                "all_repeats_beat_baseline": true,
+                "all_validations_passed": true,
+                "all_within_budget": true,
+                "candidate": "vmapped_chunk_64",
+                "mean_total_grid_s": 0.05173628459997417,
+                "paired_speedup_ci_95_hi": 41.416661609775076,
+                "paired_speedup_ci_95_lo": 26.32908333531449,
+                "paired_speedup_max": 41.57192259601666,
+                "paired_speedup_mean": 33.872872472544785,
+                "paired_speedup_min": 27.14317378923191,
+                "paired_speedup_stdev": 6.076522088894608,
+                "paired_speedups": [
+                  34.0288517593233,
+                  27.14317378923191,
+                  41.57192259601666,
+                  37.91860983968575,
+                  28.701804378466317
+                ],
+                "status_counts": {
+                  "ok": 5
+                },
+                "summary_mean_speedup_vs_baseline": null,
+                "surface_budget": 0.0001,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "functional_call",
+                    "vmap",
+                    "point_chunking"
+                  ],
+                  "control_params": {
+                    "point_chunk_size": 64
+                  },
+                  "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+                }
+              }
+            ],
+            "platform": {
+              "cuda": {
+                "capability": [
+                  7,
+                  5
+                ],
+                "current_device": 0,
+                "device_count": 1,
+                "multi_processor_count": 40,
+                "total_memory_bytes": 15637086208
+              },
+              "device_name": "Tesla T4",
+              "device_type": "cuda",
+              "torch_version": "2.10.0+cu128"
+            },
+            "record": {
+              "all_validations_passed": true,
+              "best_valid_candidate": {
+                "all_repeats_beat_baseline": true,
+                "all_validations_passed": true,
+                "all_within_budget": true,
+                "candidate": "vmapped_chunk_64",
+                "mean_total_grid_s": 0.05173628459997417,
+                "paired_speedup_ci_95_hi": 41.416661609775076,
+                "paired_speedup_ci_95_lo": 26.32908333531449,
+                "paired_speedup_max": 41.57192259601666,
+                "paired_speedup_mean": 33.872872472544785,
+                "paired_speedup_min": 27.14317378923191,
+                "paired_speedup_stdev": 6.076522088894608,
+                "paired_speedups": [
+                  34.0288517593233,
+                  27.14317378923191,
+                  41.57192259601666,
+                  37.91860983968575,
+                  28.701804378466317
+                ],
+                "status_counts": {
+                  "ok": 5
+                },
+                "summary_mean_speedup_vs_baseline": null,
+                "surface_budget": 0.0001,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "functional_call",
+                    "vmap",
+                    "point_chunking"
+                  ],
+                  "control_params": {
+                    "point_chunk_size": 64
+                  },
+                  "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+                }
+              },
+              "candidate_status_counts": {
+                "baseline_original": {
+                  "ok": 5
+                },
+                "functional_sequential": {
+                  "ok": 5
+                },
+                "vmapped_chunk_32": {
+                  "ok": 5
+                },
+                "vmapped_chunk_64": {
+                  "ok": 5
+                }
+              },
+              "candidates": [
+                {
+                  "all_repeats_beat_baseline": false,
+                  "all_validations_passed": true,
+                  "all_within_budget": true,
+                  "candidate": "functional_sequential",
+                  "paired_speedup_ci_95_hi": 1.0106138636420852,
+                  "paired_speedup_ci_95_lo": 0.7241436379373856,
+                  "paired_speedup_max": 0.9824086366671577,
+                  "paired_speedup_mean": 0.8673787507897354,
+                  "paired_speedup_min": 0.6961400376586452,
+                  "paired_speedup_stdev": 0.11537588224160951,
+                  "surface_budget": 0.0001
+                },
+                {
+                  "all_repeats_beat_baseline": true,
+                  "all_validations_passed": true,
+                  "all_within_budget": true,
+                  "candidate": "vmapped_chunk_32",
+                  "paired_speedup_ci_95_hi": 20.502231764303872,
+                  "paired_speedup_ci_95_lo": 12.103517518681805,
+                  "paired_speedup_max": 20.521399341024622,
+                  "paired_speedup_mean": 16.30287464149284,
+                  "paired_speedup_min": 12.945553401632685,
+                  "paired_speedup_stdev": 3.382582128387393,
+                  "surface_budget": 0.0001
+                },
+                {
+                  "all_repeats_beat_baseline": true,
+                  "all_validations_passed": true,
+                  "all_within_budget": true,
+                  "candidate": "vmapped_chunk_64",
+                  "paired_speedup_ci_95_hi": 41.416661609775076,
+                  "paired_speedup_ci_95_lo": 26.32908333531449,
+                  "paired_speedup_max": 41.57192259601666,
+                  "paired_speedup_mean": 33.872872472544785,
+                  "paired_speedup_min": 27.14317378923191,
+                  "paired_speedup_stdev": 6.076522088894608,
+                  "surface_budget": 0.0001
+                }
+              ],
+              "scenario": "california_mlp_regression__focused_1024_scaling",
+              "status": "completed",
+              "validation_status": "checked",
+              "workload": "california_mlp_regression"
+            },
+            "scenario": {
+              "batch_size": 32,
+              "max_memory_fraction": 0.85,
+              "name": "california_mlp_regression__focused_1024_scaling",
+              "point_chunk_sizes": [
+                32,
+                64
+              ],
+              "repeats": 5,
+              "resolution": 8,
+              "sample_count": 1024,
+              "scale": 1.0,
+              "warmup_repeats": 2,
+              "workload_name": "california_mlp_regression"
+            },
+            "section_timings": {
+              "baseline_original": {
+                "batch_eval_s": 1.688102247238159,
+                "binding_s": 0.01172853118777275,
+                "perturbation_s": 0.006815999986231326,
+                "total_grid_s": 1.7180013274000001
+              },
+              "functional_sequential": {
+                "batch_eval_s": 1.9891498431997205,
+                "binding_s": 0.00994617640017168,
+                "perturbation_s": 0.006504581599801895,
+                "total_grid_s": 2.005869655800052
+              },
+              "vmapped_chunk_32": {
+                "batch_eval_s": 0.07535958859898528,
+                "binding_s": 0.00021103160006532561,
+                "perturbation_s": 0.0005282400000396592,
+                "total_grid_s": 0.10827962200000911
+              },
+              "vmapped_chunk_64": {
+                "batch_eval_s": 0.03595612320023065,
+                "binding_s": 9.819139986575465e-05,
+                "perturbation_s": 0.00029644779997397566,
+                "total_grid_s": 0.05173628459997417
+              }
+            },
+            "status": "completed",
+            "validation": {
+              "all_validations_passed": true,
+              "status": "checked"
+            },
+            "workload": {
+              "checkpoint_path": "/content/loss-grid-computer/assets/california-mlp-0.pkl",
+              "dataset": {
+                "input_shape": [
+                  8
+                ],
+                "name": "california_housing",
+                "path": "/content/loss-grid-computer/assets",
+                "sample_count": 1024
+              },
+              "loss": "mse",
+              "model_family": "mlp_regressor",
+              "registered": true,
+              "task": "tabular_regression",
+              "workload_name": "california_mlp_regression"
+            }
+          },
+          {
+            "best_valid_candidate": {
+              "all_repeats_beat_baseline": true,
+              "all_validations_passed": true,
+              "all_within_budget": true,
+              "candidate": "vmapped_chunk_64",
+              "mean_total_grid_s": 0.45357631920005587,
+              "paired_speedup_ci_95_hi": 41.37887110184156,
+              "paired_speedup_ci_95_lo": 38.278472560836114,
+              "paired_speedup_max": 41.22071029099834,
+              "paired_speedup_mean": 39.82867183133884,
+              "paired_speedup_min": 38.14611532332729,
+              "paired_speedup_stdev": 1.248685499825171,
+              "paired_speedups": [
+                41.22071029099834,
+                38.976381261582496,
+                40.18949426799614,
+                38.14611532332729,
+                40.610658012789905
+              ],
+              "status_counts": {
+                "ok": 5
+              },
+              "summary_mean_speedup_vs_baseline": null,
+              "surface_budget": 0.0001,
+              "taxonomy": {
+                "applies_to_sections": [
+                  "perturbation_construction",
+                  "parameter_binding",
+                  "batch_forward_loss"
+                ],
+                "components": [
+                  "functional_call",
+                  "vmap",
+                  "point_chunking"
+                ],
+                "control_params": {
+                  "point_chunk_size": 64
+                },
+                "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+              }
+            },
+            "best_valid_vmap_chunk_size": 64,
+            "candidate_summary": [
+              {
+                "candidate": "baseline_original",
+                "mean_total_grid_s": 18.0639416186,
+                "status_counts": {
+                  "ok": 5
+                },
+                "stdev_total_grid_s": 0.5278413689712186,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "original_in_place_mutation"
+                  ],
+                  "control_params": {},
+                  "hypothesis": "reference behavior and runtime target"
+                }
+              },
+              {
+                "candidate": "functional_sequential",
+                "mean_total_grid_s": 15.84411179360004,
+                "status_counts": {
+                  "ok": 5
+                },
+                "stdev_total_grid_s": 0.1542282374286816,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "parameter_binding"
+                  ],
+                  "components": [
+                    "functional_call"
+                  ],
+                  "control_params": {},
+                  "hypothesis": "replace in-place parameter mutation with explicit functional parameter binding while preserving the original point and batch loops; this does not vectorize forward/loss work"
+                }
+              },
+              {
+                "candidate": "vmapped_chunk_32",
+                "mean_total_grid_s": 0.7344628146000105,
+                "status_counts": {
+                  "ok": 5
+                },
+                "stdev_total_grid_s": 0.0031005693588998257,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "functional_call",
+                    "vmap",
+                    "point_chunking"
+                  ],
+                  "control_params": {
+                    "point_chunk_size": 32
+                  },
+                  "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+                }
+              },
+              {
+                "candidate": "vmapped_chunk_64",
+                "mean_total_grid_s": 0.45357631920005587,
+                "status_counts": {
+                  "ok": 5
+                },
+                "stdev_total_grid_s": 0.003622760227250199,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "functional_call",
+                    "vmap",
+                    "point_chunking"
+                  ],
+                  "control_params": {
+                    "point_chunk_size": 64
+                  },
+                  "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+                }
+              }
+            ],
+            "config": {
+              "abs_tol": 1e-06,
+              "checkpoint_path": "/content/loss-grid-computer/assets/mnist-mlp-0.pkl",
+              "dataset": {
+                "input_shape": [
+                  1,
+                  28,
+                  28
+                ],
+                "name": "mnist",
+                "path": "/content/loss-grid-computer/assets/mnist",
+                "sample_count": 1024
+              },
+              "dataset_name": "mnist",
+              "dataset_sample_count": 1024,
+              "device": "auto",
+              "gpu_batch_size": 32,
+              "grid_resolution": 8,
+              "grid_scale": 1.0,
+              "loss": "cross_entropy",
+              "max_memory_fraction": 0.85,
+              "mode": "vanilla",
+              "model": "mnist_mlp",
+              "model_family": "mnist_mlp",
+              "point_chunk_sizes": [
+                32,
+                64
+              ],
+              "rel_tol": 1e-05,
+              "run_label": "experiment_runner",
+              "seed": 1337,
+              "task": "image_classification",
+              "task_name": "mnist_mlp_classification",
+              "workload_name": "mnist_mlp_classification"
+            },
+            "memory": {
+              "peak_cpu_memory_bytes": 1710985216,
+              "peak_cuda_memory_bytes": 4240441344
+            },
+            "paired_candidate_metrics": [
+              {
+                "all_repeats_beat_baseline": true,
+                "all_validations_passed": true,
+                "all_within_budget": true,
+                "candidate": "functional_sequential",
+                "mean_total_grid_s": 15.84411179360004,
+                "paired_speedup_ci_95_hi": 1.1795833385899503,
+                "paired_speedup_ci_95_lo": 1.100634594386848,
+                "paired_speedup_max": 1.1847411053882644,
+                "paired_speedup_mean": 1.1401089664883992,
+                "paired_speedup_min": 1.1071794674168358,
+                "paired_speedup_stdev": 0.031796606407849363,
+                "paired_speedups": [
+                  1.1847411053882644,
+                  1.1116211265127949,
+                  1.1512663889680699,
+                  1.1071794674168358,
+                  1.145736744156031
+                ],
+                "status_counts": {
+                  "ok": 5
+                },
+                "summary_mean_speedup_vs_baseline": null,
+                "surface_budget": 0.0001,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "parameter_binding"
+                  ],
+                  "components": [
+                    "functional_call"
+                  ],
+                  "control_params": {},
+                  "hypothesis": "replace in-place parameter mutation with explicit functional parameter binding while preserving the original point and batch loops; this does not vectorize forward/loss work"
+                }
+              },
+              {
+                "all_repeats_beat_baseline": true,
+                "all_validations_passed": true,
+                "all_within_budget": true,
+                "candidate": "vmapped_chunk_32",
+                "mean_total_grid_s": 0.7344628146000105,
+                "paired_speedup_ci_95_hi": 25.456788233292176,
+                "paired_speedup_ci_95_lo": 23.731968158764378,
+                "paired_speedup_max": 25.237779029562542,
+                "paired_speedup_mean": 24.594378196028277,
+                "paired_speedup_min": 23.803455863402228,
+                "paired_speedup_stdev": 0.6946712780260115,
+                "paired_speedups": [
+                  25.237779029562542,
+                  23.902993672018532,
+                  24.83939532913117,
+                  23.803455863402228,
+                  25.188267086026908
+                ],
+                "status_counts": {
+                  "ok": 5
+                },
+                "summary_mean_speedup_vs_baseline": null,
+                "surface_budget": 0.0001,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "functional_call",
+                    "vmap",
+                    "point_chunking"
+                  ],
+                  "control_params": {
+                    "point_chunk_size": 32
+                  },
+                  "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+                }
+              },
+              {
+                "all_repeats_beat_baseline": true,
+                "all_validations_passed": true,
+                "all_within_budget": true,
+                "candidate": "vmapped_chunk_64",
+                "mean_total_grid_s": 0.45357631920005587,
+                "paired_speedup_ci_95_hi": 41.37887110184156,
+                "paired_speedup_ci_95_lo": 38.278472560836114,
+                "paired_speedup_max": 41.22071029099834,
+                "paired_speedup_mean": 39.82867183133884,
+                "paired_speedup_min": 38.14611532332729,
+                "paired_speedup_stdev": 1.248685499825171,
+                "paired_speedups": [
+                  41.22071029099834,
+                  38.976381261582496,
+                  40.18949426799614,
+                  38.14611532332729,
+                  40.610658012789905
+                ],
+                "status_counts": {
+                  "ok": 5
+                },
+                "summary_mean_speedup_vs_baseline": null,
+                "surface_budget": 0.0001,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "functional_call",
+                    "vmap",
+                    "point_chunking"
+                  ],
+                  "control_params": {
+                    "point_chunk_size": 64
+                  },
+                  "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+                }
+              }
+            ],
+            "platform": {
+              "cuda": {
+                "capability": [
+                  7,
+                  5
+                ],
+                "current_device": 0,
+                "device_count": 1,
+                "multi_processor_count": 40,
+                "total_memory_bytes": 15637086208
+              },
+              "device_name": "Tesla T4",
+              "device_type": "cuda",
+              "torch_version": "2.10.0+cu128"
+            },
+            "record": {
+              "all_validations_passed": true,
+              "best_valid_candidate": {
+                "all_repeats_beat_baseline": true,
+                "all_validations_passed": true,
+                "all_within_budget": true,
+                "candidate": "vmapped_chunk_64",
+                "mean_total_grid_s": 0.45357631920005587,
+                "paired_speedup_ci_95_hi": 41.37887110184156,
+                "paired_speedup_ci_95_lo": 38.278472560836114,
+                "paired_speedup_max": 41.22071029099834,
+                "paired_speedup_mean": 39.82867183133884,
+                "paired_speedup_min": 38.14611532332729,
+                "paired_speedup_stdev": 1.248685499825171,
+                "paired_speedups": [
+                  41.22071029099834,
+                  38.976381261582496,
+                  40.18949426799614,
+                  38.14611532332729,
+                  40.610658012789905
+                ],
+                "status_counts": {
+                  "ok": 5
+                },
+                "summary_mean_speedup_vs_baseline": null,
+                "surface_budget": 0.0001,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "functional_call",
+                    "vmap",
+                    "point_chunking"
+                  ],
+                  "control_params": {
+                    "point_chunk_size": 64
+                  },
+                  "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+                }
+              },
+              "candidate_status_counts": {
+                "baseline_original": {
+                  "ok": 5
+                },
+                "functional_sequential": {
+                  "ok": 5
+                },
+                "vmapped_chunk_32": {
+                  "ok": 5
+                },
+                "vmapped_chunk_64": {
+                  "ok": 5
+                }
+              },
+              "candidates": [
+                {
+                  "all_repeats_beat_baseline": true,
+                  "all_validations_passed": true,
+                  "all_within_budget": true,
+                  "candidate": "functional_sequential",
+                  "paired_speedup_ci_95_hi": 1.1795833385899503,
+                  "paired_speedup_ci_95_lo": 1.100634594386848,
+                  "paired_speedup_max": 1.1847411053882644,
+                  "paired_speedup_mean": 1.1401089664883992,
+                  "paired_speedup_min": 1.1071794674168358,
+                  "paired_speedup_stdev": 0.031796606407849363,
+                  "surface_budget": 0.0001
+                },
+                {
+                  "all_repeats_beat_baseline": true,
+                  "all_validations_passed": true,
+                  "all_within_budget": true,
+                  "candidate": "vmapped_chunk_32",
+                  "paired_speedup_ci_95_hi": 25.456788233292176,
+                  "paired_speedup_ci_95_lo": 23.731968158764378,
+                  "paired_speedup_max": 25.237779029562542,
+                  "paired_speedup_mean": 24.594378196028277,
+                  "paired_speedup_min": 23.803455863402228,
+                  "paired_speedup_stdev": 0.6946712780260115,
+                  "surface_budget": 0.0001
+                },
+                {
+                  "all_repeats_beat_baseline": true,
+                  "all_validations_passed": true,
+                  "all_within_budget": true,
+                  "candidate": "vmapped_chunk_64",
+                  "paired_speedup_ci_95_hi": 41.37887110184156,
+                  "paired_speedup_ci_95_lo": 38.278472560836114,
+                  "paired_speedup_max": 41.22071029099834,
+                  "paired_speedup_mean": 39.82867183133884,
+                  "paired_speedup_min": 38.14611532332729,
+                  "paired_speedup_stdev": 1.248685499825171,
+                  "surface_budget": 0.0001
+                }
+              ],
+              "scenario": "mnist_mlp_classification__focused_1024_scaling",
+              "status": "completed",
+              "validation_status": "checked",
+              "workload": "mnist_mlp_classification"
+            },
+            "scenario": {
+              "batch_size": 32,
+              "max_memory_fraction": 0.85,
+              "name": "mnist_mlp_classification__focused_1024_scaling",
+              "point_chunk_sizes": [
+                32,
+                64
+              ],
+              "repeats": 5,
+              "resolution": 8,
+              "sample_count": 1024,
+              "scale": 1.0,
+              "warmup_repeats": 2,
+              "workload_name": "mnist_mlp_classification"
+            },
+            "section_timings": {
+              "baseline_original": {
+                "batch_eval_s": 18.013123614501957,
+                "binding_s": 0.014704128018021585,
+                "perturbation_s": 0.02297543044090271,
+                "total_grid_s": 18.0639416186
+              },
+              "functional_sequential": {
+                "batch_eval_s": 15.809543437999945,
+                "binding_s": 0.011246028800269415,
+                "perturbation_s": 0.022968688599758025,
+                "total_grid_s": 15.84411179360004
+              },
+              "vmapped_chunk_32": {
+                "batch_eval_s": 0.22723705179996614,
+                "binding_s": 0.0002404952000688354,
+                "perturbation_s": 0.020094255799995152,
+                "total_grid_s": 0.7344628146000105
+              },
+              "vmapped_chunk_64": {
+                "batch_eval_s": 0.19412126839979466,
+                "binding_s": 0.00012200260007375619,
+                "perturbation_s": 0.019913471000199932,
+                "total_grid_s": 0.45357631920005587
+              }
+            },
+            "status": "completed",
+            "validation": {
+              "all_validations_passed": true,
+              "status": "checked"
+            },
+            "workload": {
+              "checkpoint_path": "/content/loss-grid-computer/assets/mnist-mlp-0.pkl",
+              "dataset": {
+                "input_shape": [
+                  1,
+                  28,
+                  28
+                ],
+                "name": "mnist",
+                "path": "/content/loss-grid-computer/assets/mnist",
+                "sample_count": 1024
+              },
+              "loss": "cross_entropy",
+              "model_family": "mnist_mlp",
+              "registered": true,
+              "task": "image_classification",
+              "workload_name": "mnist_mlp_classification"
+            }
+          }
+        ],
+        "seed": 1337
+      },
+      "status": "completed"
+    },
+    "experiment_a_profiling": {
+      "child_stem": "experiment-a-vanilla-profiling",
+      "duration_s": 0.000756,
+      "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-experiment-a-vanilla-profiling.json",
+      "record": {
+        "completed_workloads": 4,
+        "duration_s": 0.000756,
+        "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-experiment-a-vanilla-profiling.json",
+        "status": "completed",
+        "total_grid_s_by_workload": {
+          "california_mlp_regression": 1.6302437010000002,
+          "cifar10_resnet20_classification": 26.464878082000002,
+          "cifar10_row_gru_classification": 35.96123234,
+          "mnist_mlp_classification": 17.210301923
+        },
+        "workload_count": 4
+      },
+      "result": {
+        "record": {
+          "completed_workloads": 4,
+          "status": "completed",
+          "total_grid_s_by_workload": {
+            "california_mlp_regression": 1.6302437010000002,
+            "cifar10_resnet20_classification": 26.464878082000002,
+            "cifar10_row_gru_classification": 35.96123234,
+            "mnist_mlp_classification": 17.210301923
+          },
+          "workload_count": 4
+        },
+        "schema_version": "experiment-a-vanilla-profiling-v1",
+        "workload_count": 4,
+        "workloads": {
+          "california_mlp_regression": {
+            "candidate": "baseline_original",
+            "metadata": {
+              "cpu_memory_available": true,
+              "cpu_memory_reason": null,
+              "cuda_memory": {
+                "allocated_bytes": 84170240,
+                "available": true,
+                "max_allocated_bytes": 84204032,
+                "max_reserved_bytes": 1709178880,
+                "reason": null,
+                "reserved_bytes": 1709178880
+              },
+              "device": "cuda",
+              "section_timings_available": true,
+              "workload": "california_mlp_regression",
+              "wrapped": "generic vanilla point-loop semantics"
+            },
+            "peak_cpu_memory_bytes": 1681358848,
+            "peak_cuda_memory_bytes": 1709178880,
+            "per_point_latency_s": 0.025472557828125002,
+            "section_timings": {
+              "batch_eval_s": 1.6019815311431882,
+              "binding_s": 0.011051648020744327,
+              "perturbation_s": 0.006371967963874338,
+              "total_grid_s": 1.6302437010000002
+            },
+            "status": "completed",
+            "total_grid_s": 1.6302437010000002,
+            "workload": {
+              "checkpoint_path": "/content/loss-grid-computer/assets/california-mlp-0.pkl",
+              "dataset": {
+                "input_shape": [
+                  8
+                ],
+                "name": "california_housing",
+                "path": "/content/loss-grid-computer/assets",
+                "sample_count": 1024
+              },
+              "loss": "mse",
+              "model": "mlp_regressor",
+              "registered": true,
+              "task": "tabular_regression",
+              "workload_name": "california_mlp_regression"
+            }
+          },
+          "cifar10_resnet20_classification": {
+            "candidate": "baseline_original",
+            "metadata": {
+              "cpu_memory_available": true,
+              "cpu_memory_reason": null,
+              "cuda_memory": {
+                "allocated_bytes": 89438720,
+                "available": true,
+                "max_allocated_bytes": 100024320,
+                "max_reserved_bytes": 1709178880,
+                "reason": null,
+                "reserved_bytes": 1709178880
+              },
+              "device": "cuda",
+              "section_timings_available": true,
+              "workload": "cifar10_resnet20_classification",
+              "wrapped": "generic vanilla point-loop semantics"
+            },
+            "peak_cpu_memory_bytes": 1681338368,
+            "peak_cuda_memory_bytes": 1709178880,
+            "per_point_latency_s": 0.41351372003125003,
+            "section_timings": {
+              "batch_eval_s": 26.36605197143555,
+              "binding_s": 0.07702319997549056,
+              "perturbation_s": 0.007942879974842075,
+              "total_grid_s": 26.464878082000002
+            },
+            "status": "completed",
+            "total_grid_s": 26.464878082000002,
+            "workload": {
+              "checkpoint_path": "/content/loss-grid-computer/assets/cifar10-resnet20-0.pkl",
+              "dataset": {
+                "input_shape": [
+                  3,
+                  32,
+                  32
+                ],
+                "name": "cifar10",
+                "path": "/content/loss-grid-computer/assets/cifar-10-batches-py",
+                "sample_count": 1024
+              },
+              "loss": "cross_entropy",
+              "model": "resnet20",
+              "registered": true,
+              "task": "image_classification",
+              "workload_name": "cifar10_resnet20_classification"
+            }
+          },
+          "cifar10_row_gru_classification": {
+            "candidate": "baseline_original",
+            "metadata": {
+              "cpu_memory_available": true,
+              "cpu_memory_reason": null,
+              "cuda_memory": {
+                "allocated_bytes": 85536256,
+                "available": true,
+                "max_allocated_bytes": 86594560,
+                "max_reserved_bytes": 1709178880,
+                "reason": null,
+                "reserved_bytes": 1709178880
+              },
+              "device": "cuda",
+              "section_timings_available": true,
+              "workload": "cifar10_row_gru_classification",
+              "wrapped": "generic vanilla point-loop semantics"
+            },
+            "peak_cpu_memory_bytes": 1681358848,
+            "peak_cuda_memory_bytes": 1709178880,
+            "per_point_latency_s": 0.5618942553125,
+            "section_timings": {
+              "batch_eval_s": 35.93043225097657,
+              "binding_s": 0.011737023979425429,
+              "perturbation_s": 0.007022335976362225,
+              "total_grid_s": 35.96123234
+            },
+            "status": "completed",
+            "total_grid_s": 35.96123234,
+            "workload": {
+              "checkpoint_path": "/content/loss-grid-computer/assets/cifar10-row-gru-0.pkl",
+              "dataset": {
+                "input_shape": [
+                  3,
+                  32,
+                  32
+                ],
+                "name": "cifar10",
+                "path": "/content/loss-grid-computer/assets/cifar-10-batches-py",
+                "sample_count": 1024
+              },
+              "loss": "cross_entropy",
+              "model": "row_gru",
+              "registered": true,
+              "task": "image_classification",
+              "workload_name": "cifar10_row_gru_classification"
+            }
+          },
+          "mnist_mlp_classification": {
+            "candidate": "baseline_original",
+            "metadata": {
+              "cpu_memory_available": true,
+              "cpu_memory_reason": null,
+              "cuda_memory": {
+                "allocated_bytes": 113946112,
+                "available": true,
+                "max_allocated_bytes": 136311808,
+                "max_reserved_bytes": 1709178880,
+                "reason": null,
+                "reserved_bytes": 1709178880
+              },
+              "device": "cuda",
+              "section_timings_available": true,
+              "workload": "mnist_mlp_classification",
+              "wrapped": "generic vanilla point-loop semantics"
+            },
+            "peak_cpu_memory_bytes": 1687654400,
+            "peak_cuda_memory_bytes": 1709178880,
+            "per_point_latency_s": 0.268910967546875,
+            "section_timings": {
+              "batch_eval_s": 17.16203407287598,
+              "binding_s": 0.013320064023137098,
+              "perturbation_s": 0.022887104064226147,
+              "total_grid_s": 17.210301923
+            },
+            "status": "completed",
+            "total_grid_s": 17.210301923,
+            "workload": {
+              "checkpoint_path": "/content/loss-grid-computer/assets/mnist-mlp-0.pkl",
+              "dataset": {
+                "input_shape": [
+                  1,
+                  28,
+                  28
+                ],
+                "name": "mnist",
+                "path": "/content/loss-grid-computer/assets/mnist",
+                "sample_count": 1024
+              },
+              "loss": "cross_entropy",
+              "model": "mnist_mlp",
+              "registered": true,
+              "task": "image_classification",
+              "workload_name": "mnist_mlp_classification"
+            }
+          }
+        }
+      },
+      "status": "completed"
+    },
+    "experiment_b_hybrid_applicability": {
+      "child_stem": "experiment-b-hybrid-applicability",
+      "duration_s": 2561.045208,
+      "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-experiment-b-hybrid-applicability.json",
+      "record": {
+        "duration_s": 2561.045208,
+        "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-experiment-b-hybrid-applicability.json",
+        "status": "completed",
+        "workloads": {
+          "california_mlp_regression": {
+            "cpu_throughput_points_per_s": 10.663799991962852,
+            "gpu_baseline_source": "computed",
+            "gpu_throughput_points_per_s": 54.87246411142142,
+            "parity_probe": {
+              "achieved_ratio": 1.231623404301853,
+              "hybrid_wins": true,
+              "max_abs_error": 2.2649765014648438e-06,
+              "selected_policy": "gpu_cpu_hybrid",
+              "selected_runtime_s": 1.4292574689998219,
+              "slowdown_used": 5.145676414859429,
+              "speedup": 5.1717252617705505,
+              "surface_valid": true,
+              "vanilla_runtime_s": 7.391726958000618,
+              "worker_throughput_split": {
+                "cpu_point_fraction": 0.984375,
+                "cpu_points_processed": 63,
+                "cpu_throughput_points_per_s": 44.078832097401374,
+                "gpu_point_fraction": 0.015625,
+                "gpu_points_processed": 1,
+                "gpu_throughput_points_per_s": 0.9927696437925042,
+                "total_throughput_points_per_s": 44.77849609894743
+              }
+            },
+            "status": "completed",
+            "unslowed_inference_ratio": 0.19433790999998554
+          },
+          "cifar10_resnet20_classification": {
+            "cpu_throughput_points_per_s": 0.36692516510225287,
+            "gpu_baseline_source": "computed",
+            "gpu_throughput_points_per_s": 2.8775747453155036,
+            "parity_probe": {
+              "achieved_ratio": 0.968044696627519,
+              "hybrid_wins": true,
+              "max_abs_error": 5.25,
+              "selected_policy": "gpu_cpu_hybrid",
+              "selected_runtime_s": 87.82015060999993,
+              "slowdown_used": 7.842402263452264,
+              "speedup": 1.9226653878657043,
+              "surface_valid": true,
+              "vanilla_runtime_s": 168.84876393500008,
+              "worker_throughput_split": {
+                "cpu_point_fraction": 0.734375,
+                "cpu_points_processed": 47,
+                "cpu_throughput_points_per_s": 0.5351846890894331,
+                "gpu_point_fraction": 0.265625,
+                "gpu_points_processed": 17,
+                "gpu_throughput_points_per_s": 0.19724867947461075,
+                "total_throughput_points_per_s": 0.7287621298239089
+              }
+            },
+            "status": "completed",
+            "unslowed_inference_ratio": 0.12751194932454218
+          },
+          "cifar10_row_gru_classification": {
+            "cpu_throughput_points_per_s": 0.6079150221727861,
+            "gpu_baseline_source": "computed",
+            "gpu_throughput_points_per_s": 2.4665949398022087,
+            "parity_probe": {
+              "achieved_ratio": 0.9706144036256847,
+              "hybrid_wins": true,
+              "max_abs_error": 2.8014183044433594e-06,
+              "selected_policy": "gpu_cpu_hybrid",
+              "selected_runtime_s": 26.970686996999575,
+              "slowdown_used": 4.0574666685916085,
+              "speedup": 3.7887139890566397,
+              "surface_valid": true,
+              "vanilla_runtime_s": 102.18421912000031,
+              "worker_throughput_split": {
+                "cpu_point_fraction": 0.859375,
+                "cpu_points_processed": 55,
+                "cpu_throughput_points_per_s": 2.0392509840820376,
+                "gpu_point_fraction": 0.140625,
+                "gpu_points_processed": 9,
+                "gpu_throughput_points_per_s": 0.33594818057186915,
+                "total_throughput_points_per_s": 2.372946599659098
+              }
+            },
+            "status": "completed",
+            "unslowed_inference_ratio": 0.24645920266970694
+          },
+          "mnist_mlp_classification": {
+            "cpu_throughput_points_per_s": 2.0106409963360297,
+            "gpu_baseline_source": "computed",
+            "gpu_throughput_points_per_s": 4.188258115329572,
+            "parity_probe": {
+              "achieved_ratio": 0.9762155543703205,
+              "hybrid_wins": true,
+              "max_abs_error": 2.7939677238464355e-08,
+              "selected_policy": "gpu_cpu_hybrid",
+              "selected_runtime_s": 16.534188030999758,
+              "slowdown_used": 2.083046214098783,
+              "speedup": 1.879352696651357,
+              "surface_valid": true,
+              "vanilla_runtime_s": 31.073570862999986,
+              "worker_throughput_split": {
+                "cpu_point_fraction": 0.71875,
+                "cpu_points_processed": 46,
+                "cpu_throughput_points_per_s": 2.782114241942521,
+                "gpu_point_fraction": 0.28125,
+                "gpu_points_processed": 18,
+                "gpu_throughput_points_per_s": 1.1143849467363451,
+                "total_throughput_points_per_s": 3.870767640963508
+              }
+            },
+            "status": "completed",
+            "unslowed_inference_ratio": 0.48006616138982
+          }
+        }
+      },
+      "result": {
+        "control": {
+          "calibration_retry": 3,
+          "cpu_workers": 2
+        },
+        "record": {
+          "status": "completed",
+          "workloads": {
+            "california_mlp_regression": {
+              "cpu_throughput_points_per_s": 10.663799991962852,
+              "gpu_baseline_source": "computed",
+              "gpu_throughput_points_per_s": 54.87246411142142,
+              "parity_probe": {
+                "achieved_ratio": 1.231623404301853,
+                "hybrid_wins": true,
+                "max_abs_error": 2.2649765014648438e-06,
+                "selected_policy": "gpu_cpu_hybrid",
+                "selected_runtime_s": 1.4292574689998219,
+                "slowdown_used": 5.145676414859429,
+                "speedup": 5.1717252617705505,
+                "surface_valid": true,
+                "vanilla_runtime_s": 7.391726958000618,
+                "worker_throughput_split": {
+                  "cpu_point_fraction": 0.984375,
+                  "cpu_points_processed": 63,
+                  "cpu_throughput_points_per_s": 44.078832097401374,
+                  "gpu_point_fraction": 0.015625,
+                  "gpu_points_processed": 1,
+                  "gpu_throughput_points_per_s": 0.9927696437925042,
+                  "total_throughput_points_per_s": 44.77849609894743
+                }
+              },
+              "status": "completed",
+              "unslowed_inference_ratio": 0.19433790999998554
+            },
+            "cifar10_resnet20_classification": {
+              "cpu_throughput_points_per_s": 0.36692516510225287,
+              "gpu_baseline_source": "computed",
+              "gpu_throughput_points_per_s": 2.8775747453155036,
+              "parity_probe": {
+                "achieved_ratio": 0.968044696627519,
+                "hybrid_wins": true,
+                "max_abs_error": 5.25,
+                "selected_policy": "gpu_cpu_hybrid",
+                "selected_runtime_s": 87.82015060999993,
+                "slowdown_used": 7.842402263452264,
+                "speedup": 1.9226653878657043,
+                "surface_valid": true,
+                "vanilla_runtime_s": 168.84876393500008,
+                "worker_throughput_split": {
+                  "cpu_point_fraction": 0.734375,
+                  "cpu_points_processed": 47,
+                  "cpu_throughput_points_per_s": 0.5351846890894331,
+                  "gpu_point_fraction": 0.265625,
+                  "gpu_points_processed": 17,
+                  "gpu_throughput_points_per_s": 0.19724867947461075,
+                  "total_throughput_points_per_s": 0.7287621298239089
+                }
+              },
+              "status": "completed",
+              "unslowed_inference_ratio": 0.12751194932454218
+            },
+            "cifar10_row_gru_classification": {
+              "cpu_throughput_points_per_s": 0.6079150221727861,
+              "gpu_baseline_source": "computed",
+              "gpu_throughput_points_per_s": 2.4665949398022087,
+              "parity_probe": {
+                "achieved_ratio": 0.9706144036256847,
+                "hybrid_wins": true,
+                "max_abs_error": 2.8014183044433594e-06,
+                "selected_policy": "gpu_cpu_hybrid",
+                "selected_runtime_s": 26.970686996999575,
+                "slowdown_used": 4.0574666685916085,
+                "speedup": 3.7887139890566397,
+                "surface_valid": true,
+                "vanilla_runtime_s": 102.18421912000031,
+                "worker_throughput_split": {
+                  "cpu_point_fraction": 0.859375,
+                  "cpu_points_processed": 55,
+                  "cpu_throughput_points_per_s": 2.0392509840820376,
+                  "gpu_point_fraction": 0.140625,
+                  "gpu_points_processed": 9,
+                  "gpu_throughput_points_per_s": 0.33594818057186915,
+                  "total_throughput_points_per_s": 2.372946599659098
+                }
+              },
+              "status": "completed",
+              "unslowed_inference_ratio": 0.24645920266970694
+            },
+            "mnist_mlp_classification": {
+              "cpu_throughput_points_per_s": 2.0106409963360297,
+              "gpu_baseline_source": "computed",
+              "gpu_throughput_points_per_s": 4.188258115329572,
+              "parity_probe": {
+                "achieved_ratio": 0.9762155543703205,
+                "hybrid_wins": true,
+                "max_abs_error": 2.7939677238464355e-08,
+                "selected_policy": "gpu_cpu_hybrid",
+                "selected_runtime_s": 16.534188030999758,
+                "slowdown_used": 2.083046214098783,
+                "speedup": 1.879352696651357,
+                "surface_valid": true,
+                "vanilla_runtime_s": 31.073570862999986,
+                "worker_throughput_split": {
+                  "cpu_point_fraction": 0.71875,
+                  "cpu_points_processed": 46,
+                  "cpu_throughput_points_per_s": 2.782114241942521,
+                  "gpu_point_fraction": 0.28125,
+                  "gpu_points_processed": 18,
+                  "gpu_throughput_points_per_s": 1.1143849467363451,
+                  "total_throughput_points_per_s": 3.870767640963508
+                }
+              },
+              "status": "completed",
+              "unslowed_inference_ratio": 0.48006616138982
+            }
+          }
+        },
+        "schema_version": "experiment-b-hybrid-applicability-v2",
+        "workloads": {
+          "california_mlp_regression": {
+            "result": {
+              "parity_probe": {
+                "achieved_ratio": 1.231623404301853,
+                "hybrid_wins": true,
+                "selected_mode": {
+                  "_tag": "hybrid",
+                  "cpu_batch_size": 64,
+                  "cpu_workers": 1,
+                  "gpu_batch_size": 64
+                },
+                "selected_policy": "gpu_cpu_hybrid",
+                "selected_runtime_s": 1.4292574689998219,
+                "slowdown_used": 5.145676414859429,
+                "speedup_vs_vanilla": 5.1717252617705505,
+                "surface_valid": true,
+                "surface_validation": {
+                  "allclose": true,
+                  "atol": 1e-06,
+                  "max_abs_error": 2.2649765014648438e-06,
+                  "mismatch_count": 0,
+                  "rmse": 5.389786632715556e-07,
+                  "rtol": 1e-05
+                },
+                "target_ratio": 1.0,
+                "vanilla_runtime_s": 7.391726958000618,
+                "worker_throughput_split": {
+                  "cpu_point_fraction": 0.984375,
+                  "cpu_points_processed": 63,
+                  "cpu_throughput_points_per_s": 44.078832097401374,
+                  "gpu_point_fraction": 0.015625,
+                  "gpu_points_processed": 1,
+                  "gpu_throughput_points_per_s": 0.9927696437925042,
+                  "total_throughput_points_per_s": 44.77849609894743
+                }
+              },
+              "unslowed_ratio": {
+                "cpu_batch_size": 4,
+                "cpu_gpu_inference_ratio": 0.19433790999998554,
+                "cpu_runtime_s": 6.001612937999198,
+                "cpu_throughput_points_per_s": 10.663799991962852,
+                "cpu_workers": 2,
+                "gpu_baseline_source": "computed",
+                "gpu_runtime_s": 1.1663409149996369,
+                "gpu_throughput_points_per_s": 54.87246411142142
+              }
+            },
+            "status": "completed",
+            "workload": {
+              "checkpoint_path": "/content/loss-grid-computer/assets/california-mlp-0.pkl",
+              "dataset": {
+                "input_shape": [
+                  8
+                ],
+                "name": "california_housing",
+                "path": "/content/loss-grid-computer/assets",
+                "sample_count": 1024
+              },
+              "loss": "mse",
+              "model": "mlp_regressor",
+              "registered": true,
+              "task": "tabular_regression",
+              "workload_name": "california_mlp_regression"
+            }
+          },
+          "cifar10_resnet20_classification": {
+            "result": {
+              "parity_probe": {
+                "achieved_ratio": 0.968044696627519,
+                "hybrid_wins": true,
+                "selected_mode": {
+                  "_tag": "hybrid",
+                  "cpu_batch_size": 64,
+                  "cpu_workers": 1,
+                  "gpu_batch_size": 64
+                },
+                "selected_policy": "gpu_cpu_hybrid",
+                "selected_runtime_s": 87.82015060999993,
+                "slowdown_used": 7.842402263452264,
+                "speedup_vs_vanilla": 1.9226653878657043,
+                "surface_valid": true,
+                "surface_validation": {
+                  "allclose": true,
+                  "atol": 1e-06,
+                  "max_abs_error": 5.25,
+                  "mismatch_count": 0,
+                  "rmse": 0.7313571692367449,
+                  "rtol": 1e-05
+                },
+                "target_ratio": 1.0,
+                "vanilla_runtime_s": 168.84876393500008,
+                "worker_throughput_split": {
+                  "cpu_point_fraction": 0.734375,
+                  "cpu_points_processed": 47,
+                  "cpu_throughput_points_per_s": 0.5351846890894331,
+                  "gpu_point_fraction": 0.265625,
+                  "gpu_points_processed": 17,
+                  "gpu_throughput_points_per_s": 0.19724867947461075,
+                  "total_throughput_points_per_s": 0.7287621298239089
+                }
+              },
+              "unslowed_ratio": {
+                "cpu_batch_size": 4,
+                "cpu_gpu_inference_ratio": 0.12751194932454218,
+                "cpu_runtime_s": 174.4224874360002,
+                "cpu_throughput_points_per_s": 0.36692516510225287,
+                "cpu_workers": 2,
+                "gpu_baseline_source": "computed",
+                "gpu_runtime_s": 22.240951378999853,
+                "gpu_throughput_points_per_s": 2.8775747453155036
+              }
+            },
+            "status": "completed",
+            "workload": {
+              "checkpoint_path": "/content/loss-grid-computer/assets/cifar10-resnet20-0.pkl",
+              "dataset": {
+                "input_shape": [
+                  3,
+                  32,
+                  32
+                ],
+                "name": "cifar10",
+                "path": "/content/loss-grid-computer/assets/cifar-10-batches-py",
+                "sample_count": 1024
+              },
+              "loss": "cross_entropy",
+              "model": "resnet20",
+              "registered": true,
+              "task": "image_classification",
+              "workload_name": "cifar10_resnet20_classification"
+            }
+          },
+          "cifar10_row_gru_classification": {
+            "result": {
+              "parity_probe": {
+                "achieved_ratio": 0.9706144036256847,
+                "hybrid_wins": true,
+                "selected_mode": {
+                  "_tag": "hybrid",
+                  "cpu_batch_size": 64,
+                  "cpu_workers": 1,
+                  "gpu_batch_size": 64
+                },
+                "selected_policy": "gpu_cpu_hybrid",
+                "selected_runtime_s": 26.970686996999575,
+                "slowdown_used": 4.0574666685916085,
+                "speedup_vs_vanilla": 3.7887139890566397,
+                "surface_valid": true,
+                "surface_validation": {
+                  "allclose": true,
+                  "atol": 1e-06,
+                  "max_abs_error": 2.8014183044433594e-06,
+                  "mismatch_count": 0,
+                  "rmse": 6.169182596818562e-07,
+                  "rtol": 1e-05
+                },
+                "target_ratio": 1.0,
+                "vanilla_runtime_s": 102.18421912000031,
+                "worker_throughput_split": {
+                  "cpu_point_fraction": 0.859375,
+                  "cpu_points_processed": 55,
+                  "cpu_throughput_points_per_s": 2.0392509840820376,
+                  "gpu_point_fraction": 0.140625,
+                  "gpu_points_processed": 9,
+                  "gpu_throughput_points_per_s": 0.33594818057186915,
+                  "total_throughput_points_per_s": 2.372946599659098
+                }
+              },
+              "unslowed_ratio": {
+                "cpu_batch_size": 4,
+                "cpu_gpu_inference_ratio": 0.24645920266970694,
+                "cpu_runtime_s": 105.27787217899913,
+                "cpu_throughput_points_per_s": 0.6079150221727861,
+                "cpu_workers": 2,
+                "gpu_baseline_source": "computed",
+                "gpu_runtime_s": 25.946700435999446,
+                "gpu_throughput_points_per_s": 2.4665949398022087
+              }
+            },
+            "status": "completed",
+            "workload": {
+              "checkpoint_path": "/content/loss-grid-computer/assets/cifar10-row-gru-0.pkl",
+              "dataset": {
+                "input_shape": [
+                  3,
+                  32,
+                  32
+                ],
+                "name": "cifar10",
+                "path": "/content/loss-grid-computer/assets/cifar-10-batches-py",
+                "sample_count": 1024
+              },
+              "loss": "cross_entropy",
+              "model": "row_gru",
+              "registered": true,
+              "task": "image_classification",
+              "workload_name": "cifar10_row_gru_classification"
+            }
+          },
+          "mnist_mlp_classification": {
+            "result": {
+              "parity_probe": {
+                "achieved_ratio": 0.9762155543703205,
+                "hybrid_wins": true,
+                "selected_mode": {
+                  "_tag": "hybrid",
+                  "cpu_batch_size": 64,
+                  "cpu_workers": 1,
+                  "gpu_batch_size": 64
+                },
+                "selected_policy": "gpu_cpu_hybrid",
+                "selected_runtime_s": 16.534188030999758,
+                "slowdown_used": 2.083046214098783,
+                "speedup_vs_vanilla": 1.879352696651357,
+                "surface_valid": true,
+                "surface_validation": {
+                  "allclose": true,
+                  "atol": 1e-06,
+                  "max_abs_error": 2.7939677238464355e-08,
+                  "mismatch_count": 0,
+                  "rmse": 8.870511409616443e-09,
+                  "rtol": 1e-05
+                },
+                "target_ratio": 1.0,
+                "vanilla_runtime_s": 31.073570862999986,
+                "worker_throughput_split": {
+                  "cpu_point_fraction": 0.71875,
+                  "cpu_points_processed": 46,
+                  "cpu_throughput_points_per_s": 2.782114241942521,
+                  "gpu_point_fraction": 0.28125,
+                  "gpu_points_processed": 18,
+                  "gpu_throughput_points_per_s": 1.1143849467363451,
+                  "total_throughput_points_per_s": 3.870767640963508
+                }
+              },
+              "unslowed_ratio": {
+                "cpu_batch_size": 4,
+                "cpu_gpu_inference_ratio": 0.48006616138982,
+                "cpu_runtime_s": 31.830645111000194,
+                "cpu_throughput_points_per_s": 2.0106409963360297,
+                "cpu_workers": 2,
+                "gpu_baseline_source": "computed",
+                "gpu_runtime_s": 15.280815612999504,
+                "gpu_throughput_points_per_s": 4.188258115329572
+              }
+            },
+            "status": "completed",
+            "workload": {
+              "checkpoint_path": "/content/loss-grid-computer/assets/mnist-mlp-0.pkl",
+              "dataset": {
+                "input_shape": [
+                  1,
+                  28,
+                  28
+                ],
+                "name": "mnist",
+                "path": "/content/loss-grid-computer/assets/mnist",
+                "sample_count": 1024
+              },
+              "loss": "cross_entropy",
+              "model": "mnist_mlp",
+              "registered": true,
+              "task": "image_classification",
+              "workload_name": "mnist_mlp_classification"
+            }
+          }
+        }
+      },
+      "status": "completed"
+    },
+    "experiment_c_calibration_cache": {
+      "child_stem": "experiment-c-calibration-cache",
+      "duration_s": 185.754379,
+      "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-experiment-c-calibration-cache.json",
+      "record": {
+        "best_hybrid_minus_gpu_only_s": null,
+        "calibration_grid_resolution": 4,
+        "calibration_s": 86.449,
+        "duration_s": 185.754379,
+        "mode_selection_consistent": null,
+        "mode_selections_by_variant": null,
+        "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-experiment-c-calibration-cache.json",
+        "selected_policy": "vanilla",
+        "session_total_s_with_cache": 185.754,
+        "session_total_s_without_cache": 465.167,
+        "slowdown": 1.0,
+        "slowdown_source": "unslowed",
+        "status": "completed",
+        "time_saved_s": 279.413,
+        "variant_count": 4
+      },
+      "result": {
+        "record": {
+          "best_hybrid_minus_gpu_only_s": null,
+          "calibration_grid_resolution": 4,
+          "calibration_s": 86.449,
+          "mode_selection_consistent": null,
+          "mode_selections_by_variant": null,
+          "selected_policy": "vanilla",
+          "session_total_s_with_cache": 185.754,
+          "session_total_s_without_cache": 465.167,
+          "slowdown": 1.0,
+          "slowdown_source": "unslowed",
+          "status": "completed",
+          "time_saved_s": 279.413,
+          "variant_count": 4
+        },
+        "runtime_condition": {
+          "slowdown": 1.0,
+          "source": "unslowed"
+        },
+        "setup": {
+          "calibration_grid_resolution": 4,
+          "checkpoint_path": "/content/loss-grid-computer/assets/cifar10-resnet20-0.pkl",
+          "cpu_batch_sizes": [
+            4,
+            8,
+            16,
+            32,
+            64
+          ],
+          "cpu_worker_values": [
+            1,
+            2
+          ],
+          "execution_grid_resolution": 8,
+          "gpu_slowdown_factor": 1.0,
+          "measure_without_cache": false,
+          "model_variant_checkpoints": [
+            "/content/loss-grid-computer/assets/cifar10-resnet20-0.pkl",
+            "/content/loss-grid-computer/assets/cifar10-resnet20-123.pkl",
+            "/content/loss-grid-computer/assets/cifar10-resnet20-2023.pkl",
+            "/content/loss-grid-computer/assets/cifar10-resnet20-123456.pkl"
+          ],
+          "retry": 3,
+          "workload": "cifar10_resnet20_classification"
+        },
+        "with_cache_session": {
+          "baseline_s": 6.689,
+          "best_calibration_hybrid_s": null,
+          "best_hybrid_minus_gpu_only_s": null,
+          "calibration_s": 86.449,
+          "execution_mode": {
+            "_tag": "vanilla",
+            "gpu_batch_size": 64
+          },
+          "execution_s": 92.616,
+          "first_variant_total_s": 116.492,
+          "session_total_s": 185.754,
+          "subsequent_variants_total_s": 69.262
+        },
+        "without_cache_session": {
+          "baseline_s": 26.756,
+          "calibration_s": 345.795,
+          "execution_s": 92.616,
+          "session_total_s": 465.167,
+          "source": "derived",
+          "variants": 4
+        }
+      },
+      "status": "completed"
+    },
+    "experiment_d_merged_stack": {
+      "record": {
+        "status": "disabled"
+      },
+      "status": "disabled"
+    },
+    "functional_eval_api_probe": {
+      "child_stem": "functional-eval-api-probe",
+      "duration_s": 0.42497,
+      "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-functional-eval-api-probe.json",
+      "record": {
+        "duration_s": 0.42497,
+        "error_count": 0,
+        "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-functional-eval-api-probe.json",
+        "skipped_count": 0,
+        "status": "completed"
+      },
+      "result": {
+        "backend": {
+          "available": {
+            "cpu": true,
+            "cuda": true,
+            "mps": false
+          },
+          "cuda_device_count": 1,
+          "cuda_device_name": "Tesla T4",
+          "selected": "cuda"
+        },
+        "errors": [],
+        "passed_checks": [
+          {
+            "metadata": {
+              "version": "2.10.0+cu128"
+            },
+            "name": "torch_import"
+          },
+          {
+            "metadata": {
+              "availability": {
+                "cpu": true,
+                "cuda": true,
+                "mps": false
+              },
+              "requested": "auto",
+              "selected": "cuda"
+            },
+            "name": "device_resolution"
+          },
+          {
+            "metadata": {
+              "buffer_count": 3,
+              "parameter_count": 5
+            },
+            "name": "functional_call"
+          },
+          {
+            "metadata": {
+              "chunk_size": 2
+            },
+            "name": "vmap_chunk_size"
+          },
+          {
+            "metadata": {
+              "chunk_size": 1
+            },
+            "name": "functional_call_vmap"
+          },
+          {
+            "name": "inference_mode_vmap"
+          },
+          {
+            "detail": "BatchNorm buffers are passed to functional_call with model.eval()",
+            "metadata": {
+              "batchnorm_modules": [
+                "BatchNorm2d"
+              ]
+            },
+            "name": "batchnorm_handling"
+          },
+          {
+            "metadata": {
+              "batch_size": 2,
+              "checkpoint_path": "/content/loss-grid-computer/assets/cifar10-resnet20-0.pkl",
+              "dataset": "cifar10",
+              "examples": 4,
+              "first_point_loss": 0.17415247841199744,
+              "grid_points": 4,
+              "grid_resolution": 2,
+              "grid_scale": 0.1,
+              "loss": "cross_entropy",
+              "model": "resnet20",
+              "sample_count": 4,
+              "task": "image_classification",
+              "workload": "cifar10_resnet20_classification"
+            },
+            "name": "tiny_workload"
+          }
+        ],
+        "skipped_checks": []
+      },
+      "status": "completed"
+    },
+    "progressive_visualization_deferred": {
+      "record": {
+        "status": "disabled"
+      },
+      "status": "disabled"
+    },
+    "statistical_analysis": {
+      "status": "completed",
+      "child_stem": "statistical-analysis",
+      "result": {
+        "paper_ready": true,
+        "gaps": [],
+        "n_significant_candidates": 10,
+        "exp_a": {
+          "section_shares": [
+            {
+              "workload": "california_mlp_regression",
+              "perturbation_share": 0.0039,
+              "binding_share": 0.0068,
+              "batch_eval_share": 0.9827,
+              "total_grid_s": 1.630244
+            },
+            {
+              "workload": "cifar10_resnet20_classification",
+              "perturbation_share": 0.0003,
+              "binding_share": 0.0029,
+              "batch_eval_share": 0.9963,
+              "total_grid_s": 26.464878
+            },
+            {
+              "workload": "cifar10_row_gru_classification",
+              "perturbation_share": 0.0002,
+              "binding_share": 0.0003,
+              "batch_eval_share": 0.9991,
+              "total_grid_s": 35.961232
+            },
+            {
+              "workload": "mnist_mlp_classification",
+              "perturbation_share": 0.0013,
+              "binding_share": 0.0008,
+              "batch_eval_share": 0.9972,
+              "total_grid_s": 17.210302
+            }
+          ],
+          "candidate_table": [
+            {
+              "workload": "cifar10_resnet20_classification",
+              "candidate": "functional_sequential",
+              "n": 5,
+              "mean_speedup": 1.0289011720877488,
+              "stdev": 0.015421374363886667,
+              "ci_95_lo": 1.0097560764712836,
+              "ci_95_hi": 1.048046267704214,
+              "significant": true,
+              "all_validations_passed": true,
+              "section_timings_s": {
+                "perturbation_s": 0.007059798999989653,
+                "binding_s": 0.04701184280011148,
+                "batch_eval_s": 25.45737268819953,
+                "total_grid_s": 25.511793344199987
+              }
+            },
+            {
+              "workload": "cifar10_resnet20_classification",
+              "candidate": "vmapped_chunk_32",
+              "n": 5,
+              "mean_speedup": 0.9956125236882796,
+              "stdev": 0.0038199706642800574,
+              "ci_95_lo": 0.9908701640325153,
+              "ci_95_hi": 1.0003548833440439,
+              "significant": false,
+              "all_validations_passed": true,
+              "section_timings_s": {
+                "perturbation_s": 0.0027063861999977235,
+                "binding_s": 0.0011227276000226993,
+                "batch_eval_s": 25.666138397200076,
+                "total_grid_s": 26.359270585400054
+              }
+            },
+            {
+              "workload": "cifar10_resnet20_classification",
+              "candidate": "vmapped_chunk_64",
+              "n": 5,
+              "mean_speedup": 1.0113118390451545,
+              "stdev": 0.003790020869625115,
+              "ci_95_lo": 1.0066066610094477,
+              "ci_95_hi": 1.0160170170808613,
+              "significant": true,
+              "all_validations_passed": true,
+              "section_timings_s": {
+                "perturbation_s": 0.0025464479999754985,
+                "binding_s": 0.00048227159995803957,
+                "batch_eval_s": 25.603044728800615,
+                "total_grid_s": 25.95007215820001
+              }
+            },
+            {
+              "workload": "cifar10_row_gru_classification",
+              "candidate": "functional_sequential",
+              "n": 5,
+              "mean_speedup": 1.1555967733153136,
+              "stdev": 0.028212558705305618,
+              "ci_95_lo": 1.1205718707837287,
+              "ci_95_hi": 1.1906216758468986,
+              "significant": true,
+              "all_validations_passed": true,
+              "section_timings_s": {
+                "perturbation_s": 0.0068622555998445025,
+                "binding_s": 0.009749686198665586,
+                "batch_eval_s": 31.416224117398997,
+                "total_grid_s": 31.43316995539999
+              }
+            },
+            {
+              "workload": "cifar10_row_gru_classification",
+              "candidate": "vmapped_chunk_32",
+              "n": 5,
+              "mean_speedup": 24.701276454388264,
+              "stdev": 0.14536214062168532,
+              "ci_95_lo": 24.520814453042046,
+              "ci_95_hi": 24.88173845573448,
+              "significant": true,
+              "all_validations_passed": true,
+              "section_timings_s": {
+                "perturbation_s": 0.0010902241999247054,
+                "binding_s": 0.00019834420008919552,
+                "batch_eval_s": 0.909424466200926,
+                "total_grid_s": 1.4702747680000356
+              }
+            },
+            {
+              "workload": "cifar10_row_gru_classification",
+              "candidate": "vmapped_chunk_64",
+              "n": 5,
+              "mean_speedup": 47.51562909946613,
+              "stdev": 3.0678782485520584,
+              "ci_95_lo": 43.7069658103013,
+              "ci_95_hi": 51.324292388630965,
+              "significant": true,
+              "all_validations_passed": true,
+              "section_timings_s": {
+                "perturbation_s": 0.0008898424000108208,
+                "binding_s": 0.0001163873999757925,
+                "batch_eval_s": 0.48002181079918954,
+                "total_grid_s": 0.7668707997998354
+              }
+            },
+            {
+              "workload": "california_mlp_regression",
+              "candidate": "functional_sequential",
+              "n": 5,
+              "mean_speedup": 0.8673787507897354,
+              "stdev": 0.11537588224160951,
+              "ci_95_lo": 0.7241436379373856,
+              "ci_95_hi": 1.0106138636420852,
+              "significant": false,
+              "all_validations_passed": true,
+              "section_timings_s": {
+                "perturbation_s": 0.006504581599801895,
+                "binding_s": 0.00994617640017168,
+                "batch_eval_s": 1.9891498431997205,
+                "total_grid_s": 2.005869655800052
+              }
+            },
+            {
+              "workload": "california_mlp_regression",
+              "candidate": "vmapped_chunk_32",
+              "n": 5,
+              "mean_speedup": 16.30287464149284,
+              "stdev": 3.382582128387393,
+              "ci_95_lo": 12.103517518681805,
+              "ci_95_hi": 20.502231764303872,
+              "significant": true,
+              "all_validations_passed": true,
+              "section_timings_s": {
+                "perturbation_s": 0.0005282400000396592,
+                "binding_s": 0.00021103160006532561,
+                "batch_eval_s": 0.07535958859898528,
+                "total_grid_s": 0.10827962200000911
+              }
+            },
+            {
+              "workload": "california_mlp_regression",
+              "candidate": "vmapped_chunk_64",
+              "n": 5,
+              "mean_speedup": 33.872872472544785,
+              "stdev": 6.076522088894608,
+              "ci_95_lo": 26.32908333531449,
+              "ci_95_hi": 41.416661609775076,
+              "significant": true,
+              "all_validations_passed": true,
+              "section_timings_s": {
+                "perturbation_s": 0.00029644779997397566,
+                "binding_s": 9.819139986575465e-05,
+                "batch_eval_s": 0.03595612320023065,
+                "total_grid_s": 0.05173628459997417
+              }
+            },
+            {
+              "workload": "mnist_mlp_classification",
+              "candidate": "functional_sequential",
+              "n": 5,
+              "mean_speedup": 1.1401089664883992,
+              "stdev": 0.031796606407849363,
+              "ci_95_lo": 1.100634594386848,
+              "ci_95_hi": 1.1795833385899503,
+              "significant": true,
+              "all_validations_passed": true,
+              "section_timings_s": {
+                "perturbation_s": 0.022968688599758025,
+                "binding_s": 0.011246028800269415,
+                "batch_eval_s": 15.809543437999945,
+                "total_grid_s": 15.84411179360004
+              }
+            },
+            {
+              "workload": "mnist_mlp_classification",
+              "candidate": "vmapped_chunk_32",
+              "n": 5,
+              "mean_speedup": 24.594378196028277,
+              "stdev": 0.6946712780260115,
+              "ci_95_lo": 23.731968158764378,
+              "ci_95_hi": 25.456788233292176,
+              "significant": true,
+              "all_validations_passed": true,
+              "section_timings_s": {
+                "perturbation_s": 0.020094255799995152,
+                "binding_s": 0.0002404952000688354,
+                "batch_eval_s": 0.22723705179996614,
+                "total_grid_s": 0.7344628146000105
+              }
+            },
+            {
+              "workload": "mnist_mlp_classification",
+              "candidate": "vmapped_chunk_64",
+              "n": 5,
+              "mean_speedup": 39.82867183133884,
+              "stdev": 1.248685499825171,
+              "ci_95_lo": 38.278472560836114,
+              "ci_95_hi": 41.37887110184156,
+              "significant": true,
+              "all_validations_passed": true,
+              "section_timings_s": {
+                "perturbation_s": 0.019913471000199932,
+                "binding_s": 0.00012200260007375619,
+                "batch_eval_s": 0.19412126839979466,
+                "total_grid_s": 0.45357631920005587
+              }
+            }
+          ]
+        },
+        "exp_b": {
+          "workload_table": [
+            {
+              "workload": "california_mlp_regression",
+              "cpu_throughput_pts_s": 10.663799991962852,
+              "gpu_throughput_pts_s": 54.87246411142142,
+              "unslowed_ratio": 0.19433790999998554,
+              "slowdown_applied": 5.145676414859429,
+              "achieved_ratio": 1.231623404301853,
+              "vanilla_time_s": 7.391726958000618,
+              "selected_time_s": 1.4292574689998219,
+              "hybrid_speedup": 5.1717252617705505,
+              "hybrid_wins": true,
+              "surface_valid": true,
+              "max_abs_error": 2.2649765014648438e-06,
+              "worker_throughput_split": {
+                "cpu_point_fraction": 0.984375,
+                "cpu_points_processed": 63,
+                "cpu_throughput_points_per_s": 44.078832097401374,
+                "gpu_point_fraction": 0.015625,
+                "gpu_points_processed": 1,
+                "gpu_throughput_points_per_s": 0.9927696437925042,
+                "total_throughput_points_per_s": 44.77849609894743
+              },
+              "selected_policy": "gpu_cpu_hybrid"
+            },
+            {
+              "workload": "cifar10_resnet20_classification",
+              "cpu_throughput_pts_s": 0.36692516510225287,
+              "gpu_throughput_pts_s": 2.8775747453155036,
+              "unslowed_ratio": 0.12751194932454218,
+              "slowdown_applied": 7.842402263452264,
+              "achieved_ratio": 0.968044696627519,
+              "vanilla_time_s": 168.84876393500008,
+              "selected_time_s": 87.82015060999993,
+              "hybrid_speedup": 1.9226653878657043,
+              "hybrid_wins": true,
+              "surface_valid": true,
+              "max_abs_error": 5.25,
+              "worker_throughput_split": {
+                "cpu_point_fraction": 0.734375,
+                "cpu_points_processed": 47,
+                "cpu_throughput_points_per_s": 0.5351846890894331,
+                "gpu_point_fraction": 0.265625,
+                "gpu_points_processed": 17,
+                "gpu_throughput_points_per_s": 0.19724867947461075,
+                "total_throughput_points_per_s": 0.7287621298239089
+              },
+              "selected_policy": "gpu_cpu_hybrid"
+            },
+            {
+              "workload": "cifar10_row_gru_classification",
+              "cpu_throughput_pts_s": 0.6079150221727861,
+              "gpu_throughput_pts_s": 2.4665949398022087,
+              "unslowed_ratio": 0.24645920266970694,
+              "slowdown_applied": 4.0574666685916085,
+              "achieved_ratio": 0.9706144036256847,
+              "vanilla_time_s": 102.18421912000031,
+              "selected_time_s": 26.970686996999575,
+              "hybrid_speedup": 3.7887139890566397,
+              "hybrid_wins": true,
+              "surface_valid": true,
+              "max_abs_error": 2.8014183044433594e-06,
+              "worker_throughput_split": {
+                "cpu_point_fraction": 0.859375,
+                "cpu_points_processed": 55,
+                "cpu_throughput_points_per_s": 2.0392509840820376,
+                "gpu_point_fraction": 0.140625,
+                "gpu_points_processed": 9,
+                "gpu_throughput_points_per_s": 0.33594818057186915,
+                "total_throughput_points_per_s": 2.372946599659098
+              },
+              "selected_policy": "gpu_cpu_hybrid"
+            },
+            {
+              "workload": "mnist_mlp_classification",
+              "cpu_throughput_pts_s": 2.0106409963360297,
+              "gpu_throughput_pts_s": 4.188258115329572,
+              "unslowed_ratio": 0.48006616138982,
+              "slowdown_applied": 2.083046214098783,
+              "achieved_ratio": 0.9762155543703205,
+              "vanilla_time_s": 31.073570862999986,
+              "selected_time_s": 16.534188030999758,
+              "hybrid_speedup": 1.879352696651357,
+              "hybrid_wins": true,
+              "surface_valid": true,
+              "max_abs_error": 2.7939677238464355e-08,
+              "worker_throughput_split": {
+                "cpu_point_fraction": 0.71875,
+                "cpu_points_processed": 46,
+                "cpu_throughput_points_per_s": 2.782114241942521,
+                "gpu_point_fraction": 0.28125,
+                "gpu_points_processed": 18,
+                "gpu_throughput_points_per_s": 1.1143849467363451,
+                "total_throughput_points_per_s": 3.870767640963508
+              },
+              "selected_policy": "gpu_cpu_hybrid"
+            }
+          ]
+        },
+        "exp_c": {
+          "summary": {
+            "selected_mode": "vanilla",
+            "calibration_s": 86.449,
+            "calibration_grid_resolution": 4,
+            "session_total_s_with_cache": 185.754,
+            "session_total_s_without_cache": 465.167,
+            "cache_savings_s": 279.413,
+            "cache_saves_time": true,
+            "best_hybrid_minus_gpu_only_s": null,
+            "variant_count": 4,
+            "mode_selections_by_variant": null,
+            "mode_selection_consistent": null,
+            "time_saved_s": 279.413
+          },
+          "error": null
+        }
+      },
+      "record": {
+        "status": "completed",
+        "paper_ready": true,
+        "gaps": [],
+        "n_significant_candidates": 10,
+        "duration_s": 0.000212,
+        "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-statistical-analysis.json"
+      }
+    }
+  },
+  "platform": {
+    "cpu": {
+      "logical_cores": 2,
+      "model": "x86_64"
+    },
+    "cuda_available": true,
+    "env_threads": {
+      "MKL_NUM_THREADS": null,
+      "NUMEXPR_NUM_THREADS": null,
+      "OMP_NUM_THREADS": null,
+      "VECLIB_MAXIMUM_THREADS": null
+    },
+    "gpu": {
+      "capability": [
+        7,
+        5
+      ],
+      "current_device": 0,
+      "device_count": 1,
+      "multi_processor_count": 40,
+      "name": "Tesla T4",
+      "total_memory_bytes": 15637086208
+    },
+    "host_os": "Linux",
+    "machine": "x86_64",
+    "memory": {
+      "approx_memory_bandwidth": null,
+      "total_system_memory_bytes": 13605830656
+    },
+    "mps_available": false,
+    "os_release": "6.6.122+",
+    "python_version": "3.12.13",
+    "requested_device": "auto",
+    "resolved_device": "cuda",
+    "torch_version": "2.10.0+cu128"
+  },
+  "records": {
+    "e0_platform_inventory": {
+      "asset_count": 4,
+      "cpu_logical_cores": 2,
+      "duration_s": 0.000665,
+      "gpu_model": "Tesla T4",
+      "missing_asset_count": 0,
+      "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-e0_platform_inventory.json",
+      "ram_bytes": 13605830656,
+      "resolved_device": "cuda",
+      "status": "completed",
+      "vram_bytes": 15637086208
+    },
+    "experiment_a_candidates": {
+      "completed_scenario_count": 4,
+      "duration_s": 1517.167688,
+      "failed": [],
+      "failed_scenario_count": 0,
+      "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-functional-eval-platform-suite.json",
+      "scenario_count": 4,
+      "status": "completed"
+    },
+    "experiment_a_profiling": {
+      "completed_workloads": 4,
+      "duration_s": 0.000756,
+      "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-experiment-a-vanilla-profiling.json",
+      "status": "completed",
+      "total_grid_s_by_workload": {
+        "california_mlp_regression": 1.6302437010000002,
+        "cifar10_resnet20_classification": 26.464878082000002,
+        "cifar10_row_gru_classification": 35.96123234,
+        "mnist_mlp_classification": 17.210301923
+      },
+      "workload_count": 4
+    },
+    "experiment_b_hybrid_applicability": {
+      "duration_s": 2561.045208,
+      "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-experiment-b-hybrid-applicability.json",
+      "status": "completed",
+      "workloads": {
+        "california_mlp_regression": {
+          "cpu_throughput_points_per_s": 10.663799991962852,
+          "gpu_baseline_source": "computed",
+          "gpu_throughput_points_per_s": 54.87246411142142,
+          "parity_probe": {
+            "achieved_ratio": 1.231623404301853,
+            "hybrid_wins": true,
+            "max_abs_error": 2.2649765014648438e-06,
+            "selected_policy": "gpu_cpu_hybrid",
+            "selected_runtime_s": 1.4292574689998219,
+            "slowdown_used": 5.145676414859429,
+            "speedup": 5.1717252617705505,
+            "surface_valid": true,
+            "vanilla_runtime_s": 7.391726958000618,
+            "worker_throughput_split": {
+              "cpu_point_fraction": 0.984375,
+              "cpu_points_processed": 63,
+              "cpu_throughput_points_per_s": 44.078832097401374,
+              "gpu_point_fraction": 0.015625,
+              "gpu_points_processed": 1,
+              "gpu_throughput_points_per_s": 0.9927696437925042,
+              "total_throughput_points_per_s": 44.77849609894743
+            }
+          },
+          "status": "completed",
+          "unslowed_inference_ratio": 0.19433790999998554
+        },
+        "cifar10_resnet20_classification": {
+          "cpu_throughput_points_per_s": 0.36692516510225287,
+          "gpu_baseline_source": "computed",
+          "gpu_throughput_points_per_s": 2.8775747453155036,
+          "parity_probe": {
+            "achieved_ratio": 0.968044696627519,
+            "hybrid_wins": true,
+            "max_abs_error": 5.25,
+            "selected_policy": "gpu_cpu_hybrid",
+            "selected_runtime_s": 87.82015060999993,
+            "slowdown_used": 7.842402263452264,
+            "speedup": 1.9226653878657043,
+            "surface_valid": true,
+            "vanilla_runtime_s": 168.84876393500008,
+            "worker_throughput_split": {
+              "cpu_point_fraction": 0.734375,
+              "cpu_points_processed": 47,
+              "cpu_throughput_points_per_s": 0.5351846890894331,
+              "gpu_point_fraction": 0.265625,
+              "gpu_points_processed": 17,
+              "gpu_throughput_points_per_s": 0.19724867947461075,
+              "total_throughput_points_per_s": 0.7287621298239089
+            }
+          },
+          "status": "completed",
+          "unslowed_inference_ratio": 0.12751194932454218
+        },
+        "cifar10_row_gru_classification": {
+          "cpu_throughput_points_per_s": 0.6079150221727861,
+          "gpu_baseline_source": "computed",
+          "gpu_throughput_points_per_s": 2.4665949398022087,
+          "parity_probe": {
+            "achieved_ratio": 0.9706144036256847,
+            "hybrid_wins": true,
+            "max_abs_error": 2.8014183044433594e-06,
+            "selected_policy": "gpu_cpu_hybrid",
+            "selected_runtime_s": 26.970686996999575,
+            "slowdown_used": 4.0574666685916085,
+            "speedup": 3.7887139890566397,
+            "surface_valid": true,
+            "vanilla_runtime_s": 102.18421912000031,
+            "worker_throughput_split": {
+              "cpu_point_fraction": 0.859375,
+              "cpu_points_processed": 55,
+              "cpu_throughput_points_per_s": 2.0392509840820376,
+              "gpu_point_fraction": 0.140625,
+              "gpu_points_processed": 9,
+              "gpu_throughput_points_per_s": 0.33594818057186915,
+              "total_throughput_points_per_s": 2.372946599659098
+            }
+          },
+          "status": "completed",
+          "unslowed_inference_ratio": 0.24645920266970694
+        },
+        "mnist_mlp_classification": {
+          "cpu_throughput_points_per_s": 2.0106409963360297,
+          "gpu_baseline_source": "computed",
+          "gpu_throughput_points_per_s": 4.188258115329572,
+          "parity_probe": {
+            "achieved_ratio": 0.9762155543703205,
+            "hybrid_wins": true,
+            "max_abs_error": 2.7939677238464355e-08,
+            "selected_policy": "gpu_cpu_hybrid",
+            "selected_runtime_s": 16.534188030999758,
+            "slowdown_used": 2.083046214098783,
+            "speedup": 1.879352696651357,
+            "surface_valid": true,
+            "vanilla_runtime_s": 31.073570862999986,
+            "worker_throughput_split": {
+              "cpu_point_fraction": 0.71875,
+              "cpu_points_processed": 46,
+              "cpu_throughput_points_per_s": 2.782114241942521,
+              "gpu_point_fraction": 0.28125,
+              "gpu_points_processed": 18,
+              "gpu_throughput_points_per_s": 1.1143849467363451,
+              "total_throughput_points_per_s": 3.870767640963508
+            }
+          },
+          "status": "completed",
+          "unslowed_inference_ratio": 0.48006616138982
+        }
+      }
+    },
+    "experiment_c_calibration_cache": {
+      "best_hybrid_minus_gpu_only_s": null,
+      "calibration_grid_resolution": 4,
+      "calibration_s": 86.449,
+      "duration_s": 185.754379,
+      "mode_selection_consistent": null,
+      "mode_selections_by_variant": null,
+      "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-experiment-c-calibration-cache.json",
+      "selected_policy": "vanilla",
+      "session_total_s_with_cache": 185.754,
+      "session_total_s_without_cache": 465.167,
+      "slowdown": 1.0,
+      "slowdown_source": "unslowed",
+      "status": "completed",
+      "time_saved_s": 279.413,
+      "variant_count": 4
+    },
+    "experiment_d_merged_stack": {
+      "duration_s": null,
+      "status": "disabled"
+    },
+    "functional_eval_api_probe": {
+      "duration_s": 0.42497,
+      "error_count": 0,
+      "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-functional-eval-api-probe.json",
+      "skipped_count": 0,
+      "status": "completed"
+    },
+    "progressive_visualization_deferred": {
+      "duration_s": null,
+      "status": "disabled"
+    },
+    "statistical_analysis": {
+      "duration_s": 0.000212,
+      "gaps": [],
+      "n_significant_candidates": 10,
+      "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-statistical-analysis.json",
+      "paper_ready": true,
+      "status": "completed"
+    }
+  },
+  "registry": {
+    "e0_platform_inventory": {
+      "enabled": true
+    },
+    "experiment_a_candidates": {
+      "enabled": true
+    },
+    "experiment_a_profiling": {
+      "enabled": true
+    },
+    "experiment_b_hybrid_applicability": {
+      "enabled": true
+    },
+    "experiment_c_calibration_cache": {
+      "enabled": true
+    },
+    "experiment_d_merged_stack": {
+      "enabled": false
+    },
+    "functional_eval_api_probe": {
+      "enabled": true
+    },
+    "progressive_visualization_deferred": {
+      "enabled": false
+    },
+    "statistical_analysis": {
+      "enabled": true
+    }
+  },
+  "schema_version": "platform-experiment-suite-v1",
+  "shared_state": {
+    "artifacts": {
+      "{\"checkpoint_path\":\"/content/loss-grid-computer/assets/california-mlp-0.pkl\",\"device\":\"auto\",\"gpu_batch_size\":32,\"grid_resolution\":8,\"grid_scale\":1.0,\"node_type\":\"vanilla_full_grid\",\"sample_count\":1024,\"seed\":1337,\"slowdown_factor\":1.0,\"workload_name\":\"california_mlp_regression\"}": {
+        "node_type": "vanilla_full_grid",
+        "point_count": 64,
+        "total_grid_s": 1.5487647340000001,
+        "workload": "california_mlp_regression"
+      },
+      "{\"checkpoint_path\":\"/content/loss-grid-computer/assets/cifar10-resnet20-0.pkl\",\"device\":\"auto\",\"gpu_batch_size\":32,\"grid_resolution\":8,\"grid_scale\":1.0,\"node_type\":\"vanilla_full_grid\",\"sample_count\":1024,\"seed\":1337,\"slowdown_factor\":1.0,\"workload_name\":\"cifar10_resnet20_classification\"}": {
+        "node_type": "vanilla_full_grid",
+        "point_count": 64,
+        "total_grid_s": 24.600978662000003,
+        "workload": "cifar10_resnet20_classification"
+      },
+      "{\"checkpoint_path\":\"/content/loss-grid-computer/assets/cifar10-row-gru-0.pkl\",\"device\":\"auto\",\"gpu_batch_size\":32,\"grid_resolution\":8,\"grid_scale\":1.0,\"node_type\":\"vanilla_full_grid\",\"sample_count\":1024,\"seed\":1337,\"slowdown_factor\":1.0,\"workload_name\":\"cifar10_row_gru_classification\"}": {
+        "node_type": "vanilla_full_grid",
+        "point_count": 64,
+        "total_grid_s": 32.589028172,
+        "workload": "cifar10_row_gru_classification"
+      },
+      "{\"checkpoint_path\":\"/content/loss-grid-computer/assets/mnist-mlp-0.pkl\",\"device\":\"auto\",\"gpu_batch_size\":32,\"grid_resolution\":8,\"grid_scale\":1.0,\"node_type\":\"vanilla_full_grid\",\"sample_count\":1024,\"seed\":1337,\"slowdown_factor\":1.0,\"workload_name\":\"mnist_mlp_classification\"}": {
+        "node_type": "vanilla_full_grid",
+        "point_count": 64,
+        "total_grid_s": 15.967384305000001,
+        "workload": "mnist_mlp_classification"
+      }
+    }
+  }
+}

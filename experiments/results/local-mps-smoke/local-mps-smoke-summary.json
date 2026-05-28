@@ -1,0 +1,1357 @@
+{
+  "config": {
+    "atol": 1e-05,
+    "calibration_retry": 1,
+    "device": "mps",
+    "experiment_c_session_grid_resolution": 2,
+    "fail_fast": true,
+    "functional_eval_batch_size": 2,
+    "functional_eval_repeats": 1,
+    "functional_eval_sample_counts": [
+      8
+    ],
+    "functional_eval_workloads": [
+      "california_mlp_regression"
+    ],
+    "gpu_batch_size": 2,
+    "grid_resolution": 2,
+    "grid_scale": 1.0,
+    "include_full_test_set": false,
+    "include_vmap_reproduction": false,
+    "max_cpu_worker_candidate": 1,
+    "max_memory_fraction": 0.85,
+    "measure_without_cache": true,
+    "mltask_workloads": [
+      "california_mlp_regression"
+    ],
+    "output_dir": "outputs/local-mps-smoke",
+    "point_chunk_sizes": [
+      2
+    ],
+    "rtol": 0.0001,
+    "run_label": "local-mps-smoke",
+    "sample_count": 8,
+    "seed": 7,
+    "verbose_experiment_logs": false
+  },
+  "created_at": "2026-05-20T14:35:41.315924+00:00",
+  "experiments": {
+    "e0_platform_inventory": {
+      "assets": {
+        "california_mlp_regression": {
+          "checkpoint_exists": true,
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/california-mlp-0.pkl",
+          "dataset_exists": true,
+          "dataset_path": "/Users/pedro/projects/loss-grid-computer/assets"
+        },
+        "cifar10_resnet20_classification": {
+          "checkpoint_exists": true,
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/cifar10-resnet20-0.pkl",
+          "dataset_exists": true,
+          "dataset_path": "/Users/pedro/projects/loss-grid-computer/assets/cifar-10-batches-py"
+        },
+        "cifar10_row_gru_classification": {
+          "checkpoint_exists": true,
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/cifar10-row-gru-0.pkl",
+          "dataset_exists": true,
+          "dataset_path": "/Users/pedro/projects/loss-grid-computer/assets/cifar-10-batches-py"
+        },
+        "mnist_mlp_classification": {
+          "checkpoint_exists": true,
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/mnist-mlp-0.pkl",
+          "dataset_exists": true,
+          "dataset_path": "/Users/pedro/projects/loss-grid-computer/assets/mnist"
+        }
+      },
+      "duration_s": 0.000103,
+      "output_path": "outputs/local-mps-smoke/local-mps-smoke-e0_platform_inventory.json",
+      "platform": {
+        "cpu": {
+          "logical_cores": 10,
+          "model": "arm"
+        },
+        "cuda_available": false,
+        "env_threads": {
+          "MKL_NUM_THREADS": null,
+          "NUMEXPR_NUM_THREADS": null,
+          "OMP_NUM_THREADS": null,
+          "VECLIB_MAXIMUM_THREADS": null
+        },
+        "gpu": {
+          "mps_built": true,
+          "name": "Apple MPS"
+        },
+        "host_os": "Darwin",
+        "machine": "arm64",
+        "memory": {
+          "approx_memory_bandwidth": null,
+          "total_system_memory_bytes": 17179869184
+        },
+        "mps_available": true,
+        "os_release": "25.4.0",
+        "python_version": "3.12.13",
+        "requested_device": "mps",
+        "resolved_device": "mps",
+        "torch_version": "2.11.0"
+      },
+      "record": {
+        "asset_count": 4,
+        "cpu_logical_cores": 10,
+        "duration_s": 0.000103,
+        "gpu_model": "Apple MPS",
+        "missing_asset_count": 0,
+        "output_path": "outputs/local-mps-smoke/local-mps-smoke-e0_platform_inventory.json",
+        "ram_bytes": 17179869184,
+        "resolved_device": "mps",
+        "status": "completed",
+        "vram_bytes": null
+      },
+      "status": "completed"
+    },
+    "experiment_a_candidates": {
+      "child_stem": "functional-eval-platform-suite",
+      "duration_s": 0.160115,
+      "output_path": "outputs/local-mps-smoke/local-mps-smoke-functional-eval-platform-suite.json",
+      "record": {
+        "completed_scenario_count": 1,
+        "duration_s": 0.160115,
+        "failed": [],
+        "failed_scenario_count": 0,
+        "output_path": "outputs/local-mps-smoke/local-mps-smoke-functional-eval-platform-suite.json",
+        "scenario_count": 1,
+        "status": "completed"
+      },
+      "result": {
+        "created_at": "2026-05-20T14:35:10.022197+00:00",
+        "device": "mps",
+        "record": {
+          "completed_scenario_count": 1,
+          "failed": [],
+          "failed_scenario_count": 0,
+          "scenario_count": 1,
+          "status": "completed"
+        },
+        "run_label": "local-mps-smoke",
+        "scenario_count": 1,
+        "scenarios": [
+          {
+            "best_valid_candidate": null,
+            "best_valid_vmap_chunk_size": null,
+            "candidate_summary": [
+              {
+                "candidate": "baseline_original",
+                "mean_total_grid_s": 0.007921457989141345,
+                "status_counts": {
+                  "ok": 1
+                },
+                "stdev_total_grid_s": null,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "original_in_place_mutation"
+                  ],
+                  "control_params": {},
+                  "hypothesis": "reference behavior and runtime target"
+                }
+              },
+              {
+                "candidate": "functional_sequential",
+                "mean_total_grid_s": 0.008446082996670157,
+                "status_counts": {
+                  "ok": 1
+                },
+                "stdev_total_grid_s": null,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "parameter_binding"
+                  ],
+                  "components": [
+                    "functional_call"
+                  ],
+                  "control_params": {},
+                  "hypothesis": "replace in-place parameter mutation with explicit functional parameter binding while preserving the original point and batch loops; this does not vectorize forward/loss work"
+                }
+              },
+              {
+                "candidate": "vmapped_chunk_2",
+                "mean_total_grid_s": 0.007030124950688332,
+                "status_counts": {
+                  "ok": 1
+                },
+                "stdev_total_grid_s": null,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "functional_call",
+                    "vmap",
+                    "point_chunking"
+                  ],
+                  "control_params": {
+                    "point_chunk_size": 2
+                  },
+                  "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+                }
+              }
+            ],
+            "config": {
+              "abs_tol": 1e-06,
+              "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/california-mlp-0.pkl",
+              "dataset": {
+                "input_shape": [
+                  8
+                ],
+                "name": "california_housing",
+                "path": "/Users/pedro/projects/loss-grid-computer/assets",
+                "sample_count": 8
+              },
+              "dataset_name": "california_housing",
+              "dataset_sample_count": 8,
+              "device": "mps",
+              "gpu_batch_size": 2,
+              "grid_resolution": 2,
+              "grid_scale": 1.0,
+              "loss": "mse",
+              "max_memory_fraction": 0.85,
+              "mode": "vanilla",
+              "model": "mlp_regressor",
+              "model_family": "mlp_regressor",
+              "point_chunk_sizes": [
+                2
+              ],
+              "rel_tol": 1e-05,
+              "run_label": "local-mps-smoke",
+              "seed": 7,
+              "task": "tabular_regression",
+              "task_name": "california_mlp_regression",
+              "workload_name": "california_mlp_regression"
+            },
+            "memory": {
+              "peak_cpu_memory_bytes": 603570176,
+              "peak_cuda_memory_bytes": null
+            },
+            "paired_candidate_metrics": [
+              {
+                "all_repeats_beat_baseline": false,
+                "all_validations_passed": true,
+                "all_within_budget": true,
+                "candidate": "functional_sequential",
+                "claim_status": "insufficient_data",
+                "mean_total_grid_s": 0.008446082996670157,
+                "paired_speedup_ci_95_hi": null,
+                "paired_speedup_ci_95_lo": null,
+                "paired_speedup_max": 0.9378854070300229,
+                "paired_speedup_mean": 0.9378854070300229,
+                "paired_speedup_min": 0.9378854070300229,
+                "paired_speedup_stdev": null,
+                "paired_speedups": [
+                  0.9378854070300229
+                ],
+                "status_counts": {
+                  "ok": 1
+                },
+                "summary_mean_speedup_vs_baseline": null,
+                "surface_budget": 0.0001,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "parameter_binding"
+                  ],
+                  "components": [
+                    "functional_call"
+                  ],
+                  "control_params": {},
+                  "hypothesis": "replace in-place parameter mutation with explicit functional parameter binding while preserving the original point and batch loops; this does not vectorize forward/loss work"
+                }
+              },
+              {
+                "all_repeats_beat_baseline": true,
+                "all_validations_passed": true,
+                "all_within_budget": true,
+                "candidate": "vmapped_chunk_2",
+                "claim_status": "insufficient_data",
+                "mean_total_grid_s": 0.007030124950688332,
+                "paired_speedup_ci_95_hi": null,
+                "paired_speedup_ci_95_lo": null,
+                "paired_speedup_max": 1.1267876523824432,
+                "paired_speedup_mean": 1.1267876523824432,
+                "paired_speedup_min": 1.1267876523824432,
+                "paired_speedup_stdev": null,
+                "paired_speedups": [
+                  1.1267876523824432
+                ],
+                "status_counts": {
+                  "ok": 1
+                },
+                "summary_mean_speedup_vs_baseline": null,
+                "surface_budget": 0.0001,
+                "taxonomy": {
+                  "applies_to_sections": [
+                    "perturbation_construction",
+                    "parameter_binding",
+                    "batch_forward_loss"
+                  ],
+                  "components": [
+                    "functional_call",
+                    "vmap",
+                    "point_chunking"
+                  ],
+                  "control_params": {
+                    "point_chunk_size": 2
+                  },
+                  "hypothesis": "use vmap over functional evaluation to evaluate multiple perturbed variants of the original model for the same dataset batch, with chunk size as the memory/runtime control"
+                }
+              }
+            ],
+            "platform": {
+              "cuda": null,
+              "device_name": null,
+              "device_type": "mps",
+              "torch_version": "2.11.0"
+            },
+            "record": {
+              "all_validations_passed": true,
+              "best_valid_candidate": null,
+              "candidate_status_counts": {
+                "baseline_original": {
+                  "ok": 1
+                },
+                "functional_sequential": {
+                  "ok": 1
+                },
+                "vmapped_chunk_2": {
+                  "ok": 1
+                }
+              },
+              "candidates": [
+                {
+                  "all_repeats_beat_baseline": false,
+                  "all_validations_passed": true,
+                  "all_within_budget": true,
+                  "candidate": "functional_sequential",
+                  "claim_status": "insufficient_data",
+                  "paired_speedup_ci_95_hi": null,
+                  "paired_speedup_ci_95_lo": null,
+                  "paired_speedup_max": 0.9378854070300229,
+                  "paired_speedup_mean": 0.9378854070300229,
+                  "paired_speedup_min": 0.9378854070300229,
+                  "paired_speedup_stdev": null,
+                  "surface_budget": 0.0001
+                },
+                {
+                  "all_repeats_beat_baseline": true,
+                  "all_validations_passed": true,
+                  "all_within_budget": true,
+                  "candidate": "vmapped_chunk_2",
+                  "claim_status": "insufficient_data",
+                  "paired_speedup_ci_95_hi": null,
+                  "paired_speedup_ci_95_lo": null,
+                  "paired_speedup_max": 1.1267876523824432,
+                  "paired_speedup_mean": 1.1267876523824432,
+                  "paired_speedup_min": 1.1267876523824432,
+                  "paired_speedup_stdev": null,
+                  "surface_budget": 0.0001
+                }
+              ],
+              "scenario": "california_mlp_regression__focused_8_scaling",
+              "section_timings": {
+                "baseline_original": {
+                  "batch_eval_s": 0.0067800410000000005,
+                  "binding_s": 0.00011862500000000001,
+                  "perturbation_s": 0.001000208,
+                  "total_grid_s": 0.007921457989141345
+                },
+                "functional_sequential": {
+                  "batch_eval_s": 0.007332125038374215,
+                  "binding_s": 0.0001219160039909184,
+                  "perturbation_s": 0.0009824169683270156,
+                  "total_grid_s": 0.008446082996670157
+                },
+                "vmapped_chunk_2": {
+                  "batch_eval_s": 0.00508308393182233,
+                  "binding_s": 3.370799822732806e-05,
+                  "perturbation_s": 0.0012073329999111593,
+                  "total_grid_s": 0.007030124950688332
+                }
+              },
+              "status": "completed",
+              "validation_status": "checked",
+              "workload": "california_mlp_regression"
+            },
+            "scenario": {
+              "batch_size": 2,
+              "max_memory_fraction": 0.85,
+              "name": "california_mlp_regression__focused_8_scaling",
+              "point_chunk_sizes": [
+                2
+              ],
+              "repeats": 1,
+              "resolution": 2,
+              "sample_count": 8,
+              "scale": 1.0,
+              "warmup_repeats": 2,
+              "workload_name": "california_mlp_regression"
+            },
+            "section_timings": {
+              "baseline_original": {
+                "batch_eval_s": 0.0067800410000000005,
+                "binding_s": 0.00011862500000000001,
+                "perturbation_s": 0.001000208,
+                "total_grid_s": 0.007921457989141345
+              },
+              "functional_sequential": {
+                "batch_eval_s": 0.007332125038374215,
+                "binding_s": 0.0001219160039909184,
+                "perturbation_s": 0.0009824169683270156,
+                "total_grid_s": 0.008446082996670157
+              },
+              "vmapped_chunk_2": {
+                "batch_eval_s": 0.00508308393182233,
+                "binding_s": 3.370799822732806e-05,
+                "perturbation_s": 0.0012073329999111593,
+                "total_grid_s": 0.007030124950688332
+              }
+            },
+            "status": "completed",
+            "validation": {
+              "all_validations_passed": true,
+              "status": "checked"
+            },
+            "workload": {
+              "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/california-mlp-0.pkl",
+              "dataset": {
+                "input_shape": [
+                  8
+                ],
+                "name": "california_housing",
+                "path": "/Users/pedro/projects/loss-grid-computer/assets",
+                "sample_count": 8
+              },
+              "loss": "mse",
+              "model_family": "mlp_regressor",
+              "registered": true,
+              "task": "tabular_regression",
+              "workload_name": "california_mlp_regression"
+            }
+          }
+        ],
+        "seed": 7
+      },
+      "status": "completed"
+    },
+    "experiment_a_profiling": {
+      "child_stem": "experiment-a-vanilla-profiling",
+      "duration_s": 7.1e-05,
+      "output_path": "outputs/local-mps-smoke/local-mps-smoke-experiment-a-vanilla-profiling.json",
+      "record": {
+        "completed_workloads": 1,
+        "duration_s": 7.1e-05,
+        "output_path": "outputs/local-mps-smoke/local-mps-smoke-experiment-a-vanilla-profiling.json",
+        "status": "completed",
+        "total_grid_s_by_workload": {
+          "california_mlp_regression": 0.06018916697939858
+        },
+        "workload_count": 1
+      },
+      "result": {
+        "record": {
+          "completed_workloads": 1,
+          "status": "completed",
+          "total_grid_s_by_workload": {
+            "california_mlp_regression": 0.06018916697939858
+          },
+          "workload_count": 1
+        },
+        "schema_version": "experiment-a-vanilla-profiling-v1",
+        "workload_count": 1,
+        "workloads": {
+          "california_mlp_regression": {
+            "candidate": "baseline_original",
+            "metadata": {
+              "backend": "vanilla",
+              "device": "mps",
+              "section_timings_available": true,
+              "workload": "california_mlp_regression",
+              "wrapped": "canonical vanilla backend"
+            },
+            "peak_cpu_memory_bytes": null,
+            "peak_cuda_memory_bytes": null,
+            "per_point_latency_s": 0.015047291744849645,
+            "section_timings": {
+              "batch_eval_s": 0.02289775,
+              "binding_s": 0.000308833,
+              "perturbation_s": 0.036915166,
+              "total_grid_s": 0.06018916697939858
+            },
+            "status": "completed",
+            "total_grid_s": 0.06018916697939858,
+            "workload": {
+              "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/california-mlp-0.pkl",
+              "dataset": {
+                "input_shape": [
+                  8
+                ],
+                "name": "california_housing",
+                "path": "/Users/pedro/projects/loss-grid-computer/assets",
+                "sample_count": 8
+              },
+              "loss": "mse",
+              "model": "mlp_regressor",
+              "registered": true,
+              "task": "tabular_regression",
+              "workload_name": "california_mlp_regression"
+            }
+          }
+        }
+      },
+      "status": "completed"
+    },
+    "experiment_b_hybrid_applicability": {
+      "child_stem": "experiment-b-hybrid-applicability",
+      "duration_s": 5.683384,
+      "output_path": "outputs/local-mps-smoke/local-mps-smoke-experiment-b-hybrid-applicability.json",
+      "record": {
+        "duration_s": 5.683384,
+        "output_path": "outputs/local-mps-smoke/local-mps-smoke-experiment-b-hybrid-applicability.json",
+        "status": "completed",
+        "workloads": {
+          "california_mlp_regression": {
+            "cpu_throughput_points_per_s": 2858.163620715306,
+            "gpu_baseline_source": "precomputed",
+            "gpu_throughput_points_per_s": 66.45714172068723,
+            "parity_probe": {
+              "achieved_ratio": 43.007621855418996,
+              "claim_status": "hybrid_wins",
+              "hybrid_wins": true,
+              "max_abs_error": 7.152557373046875e-06,
+              "predicted_cpu_fraction": 0.9772766634996691,
+              "selected_policy": "gpu_cpu_hybrid",
+              "selected_runtime_s": 0.0011809589923359454,
+              "slowdown_distance_from_unity": 42.007621855418996,
+              "slowdown_used": 1.0,
+              "speedup": 50.96634800192678,
+              "surface_valid": true,
+              "vanilla_parity_baseline_derived_from": "native_unslowed",
+              "vanilla_runtime_s": 0.06018916697939858,
+              "worker_throughput_split": {
+                "cpu_point_fraction": 1.0,
+                "cpu_points_processed": 4,
+                "cpu_throughput_points_per_s": 3387.0778121499134,
+                "gpu_point_fraction": 0.0,
+                "gpu_points_processed": 0,
+                "gpu_throughput_points_per_s": 0.0,
+                "total_throughput_points_per_s": 3387.0778121499134
+              }
+            },
+            "regime_predictor": {
+              "cpu_throughput_points_per_s": 2858.163620715306,
+              "gpu_baseline_source": "precomputed",
+              "gpu_throughput_points_per_s": 66.45714172068723,
+              "predicted_cpu_fraction": 0.9772766634996691,
+              "r_native": 43.007621855418996
+            },
+            "status": "completed",
+            "unslowed_inference_ratio": 43.007621855418996
+          }
+        }
+      },
+      "result": {
+        "control": {
+          "calibration_retry": 1
+        },
+        "record": {
+          "status": "completed",
+          "workloads": {
+            "california_mlp_regression": {
+              "cpu_throughput_points_per_s": 2858.163620715306,
+              "gpu_baseline_source": "precomputed",
+              "gpu_throughput_points_per_s": 66.45714172068723,
+              "parity_probe": {
+                "achieved_ratio": 43.007621855418996,
+                "claim_status": "hybrid_wins",
+                "hybrid_wins": true,
+                "max_abs_error": 7.152557373046875e-06,
+                "predicted_cpu_fraction": 0.9772766634996691,
+                "selected_policy": "gpu_cpu_hybrid",
+                "selected_runtime_s": 0.0011809589923359454,
+                "slowdown_distance_from_unity": 42.007621855418996,
+                "slowdown_used": 1.0,
+                "speedup": 50.96634800192678,
+                "surface_valid": true,
+                "vanilla_parity_baseline_derived_from": "native_unslowed",
+                "vanilla_runtime_s": 0.06018916697939858,
+                "worker_throughput_split": {
+                  "cpu_point_fraction": 1.0,
+                  "cpu_points_processed": 4,
+                  "cpu_throughput_points_per_s": 3387.0778121499134,
+                  "gpu_point_fraction": 0.0,
+                  "gpu_points_processed": 0,
+                  "gpu_throughput_points_per_s": 0.0,
+                  "total_throughput_points_per_s": 3387.0778121499134
+                }
+              },
+              "regime_predictor": {
+                "cpu_throughput_points_per_s": 2858.163620715306,
+                "gpu_baseline_source": "precomputed",
+                "gpu_throughput_points_per_s": 66.45714172068723,
+                "predicted_cpu_fraction": 0.9772766634996691,
+                "r_native": 43.007621855418996
+              },
+              "status": "completed",
+              "unslowed_inference_ratio": 43.007621855418996
+            }
+          }
+        },
+        "schema_version": "experiment-b-hybrid-applicability-v2",
+        "system": {
+          "cpu_workers": 10
+        },
+        "workloads": {
+          "california_mlp_regression": {
+            "result": {
+              "parity_probe": {
+                "achieved_ratio": 43.007621855418996,
+                "claim_status": "hybrid_wins",
+                "hybrid_wins": true,
+                "predicted_cpu_fraction": 0.9772766634996691,
+                "selected_mode": {
+                  "_tag": "hybrid",
+                  "cpu_batch_size": 2,
+                  "cpu_workers": 1,
+                  "gpu_batch_size": 2
+                },
+                "selected_policy": "gpu_cpu_hybrid",
+                "selected_runtime_s": 0.0011809589923359454,
+                "slowdown_distance_from_unity": 42.007621855418996,
+                "slowdown_used": 1.0,
+                "speedup_vs_vanilla": 50.96634800192678,
+                "surface_valid": true,
+                "surface_validation": {
+                  "allclose": true,
+                  "atol": 1e-05,
+                  "max_abs_error": 7.152557373046875e-06,
+                  "mismatch_count": 0,
+                  "rmse": 5.1749739816542245e-06,
+                  "rtol": 0.0001
+                },
+                "target_ratio": 1.0,
+                "vanilla_parity_baseline_derived_from": "native_unslowed",
+                "vanilla_runtime_s": 0.06018916697939858,
+                "worker_throughput_split": {
+                  "cpu_point_fraction": 1.0,
+                  "cpu_points_processed": 4,
+                  "cpu_throughput_points_per_s": 3387.0778121499134,
+                  "gpu_point_fraction": 0.0,
+                  "gpu_points_processed": 0,
+                  "gpu_throughput_points_per_s": 0.0,
+                  "total_throughput_points_per_s": 3387.0778121499134
+                }
+              },
+              "regime_predictor": {
+                "cpu_throughput_points_per_s": 2858.163620715306,
+                "gpu_baseline_source": "precomputed",
+                "gpu_throughput_points_per_s": 66.45714172068723,
+                "predicted_cpu_fraction": 0.9772766634996691,
+                "r_native": 43.007621855418996
+              },
+              "unslowed_ratio": {
+                "cpu_batch_size": 2,
+                "cpu_gpu_inference_ratio": 43.007621855418996,
+                "cpu_runtime_s": 0.0013995000044815242,
+                "cpu_throughput_points_per_s": 2858.163620715306,
+                "cpu_workers": 10,
+                "gpu_baseline_source": "precomputed",
+                "gpu_runtime_s": 0.06018916697939858,
+                "gpu_throughput_points_per_s": 66.45714172068723
+              }
+            },
+            "status": "completed",
+            "workload": {
+              "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/california-mlp-0.pkl",
+              "dataset": {
+                "input_shape": [
+                  8
+                ],
+                "name": "california_housing",
+                "path": "/Users/pedro/projects/loss-grid-computer/assets",
+                "sample_count": 8
+              },
+              "loss": "mse",
+              "model": "mlp_regressor",
+              "registered": true,
+              "task": "tabular_regression",
+              "workload_name": "california_mlp_regression"
+            }
+          }
+        }
+      },
+      "status": "completed"
+    },
+    "experiment_c_calibration_cache": {
+      "child_stem": "experiment-c-calibration-cache",
+      "duration_s": 25.600025,
+      "output_path": "outputs/local-mps-smoke/local-mps-smoke-experiment-c-calibration-cache.json",
+      "record": {
+        "completed_workloads": [
+          "california_mlp_regression"
+        ],
+        "duration_s": 25.600025,
+        "output_path": "outputs/local-mps-smoke/local-mps-smoke-experiment-c-calibration-cache.json",
+        "skipped_workloads": [],
+        "status": "completed",
+        "workloads": {
+          "california_mlp_regression": {
+            "amortized_calibration_per_variant_s": 0.4758,
+            "break_even_n": null,
+            "break_even_unavailable_reason": "hybrid_per_variant_not_faster",
+            "calibration_grid_resolution": 4,
+            "calibration_s": 1.903,
+            "hybrid_per_variant_grid_s": 1.946,
+            "hybrid_without_cache_penalty_vs_vanilla": 228.913,
+            "mode_selections_by_variant": [
+              "hybrid",
+              "hybrid",
+              "hybrid",
+              "hybrid"
+            ],
+            "selected_policy": "hybrid",
+            "session_grid_resolution": 2,
+            "session_speedup_vs_vanilla": 0.0071,
+            "session_total_s_vanilla": 0.069,
+            "session_total_s_with_cache": 9.735,
+            "session_total_s_without_cache": 15.795,
+            "slowdown": 1.0,
+            "slowdown_source": "unslowed",
+            "status": "completed",
+            "vanilla_per_variant_s": 0.018,
+            "variant_count": 4
+          }
+        }
+      },
+      "result": {
+        "workloads": {
+          "california_mlp_regression": {
+            "comparison_design": {
+              "hybrid_with_cache": "calibrate_once_then_reuse_selected_policy",
+              "hybrid_without_cache": "recalibrate_each_variant_then_execute_selected_policy",
+              "vanilla_reference": "gpu_only_full_session_no_calibration"
+            },
+            "record": {
+              "amortized_calibration_per_variant_s": 0.4758,
+              "break_even_n": null,
+              "break_even_unavailable_reason": "hybrid_per_variant_not_faster",
+              "calibration_grid_resolution": 4,
+              "calibration_s": 1.903,
+              "hybrid_per_variant_grid_s": 1.946,
+              "hybrid_without_cache_penalty_vs_vanilla": 228.913,
+              "mode_selections_by_variant": [
+                "hybrid",
+                "hybrid",
+                "hybrid",
+                "hybrid"
+              ],
+              "selected_policy": "hybrid",
+              "session_grid_resolution": 2,
+              "session_speedup_vs_vanilla": 0.0071,
+              "session_total_s_vanilla": 0.069,
+              "session_total_s_with_cache": 9.735,
+              "session_total_s_without_cache": 15.795,
+              "slowdown": 1.0,
+              "slowdown_source": "unslowed",
+              "status": "completed",
+              "vanilla_per_variant_s": 0.018,
+              "variant_count": 4
+            },
+            "runtime_condition": {
+              "slowdown": 1.0,
+              "source": "unslowed"
+            },
+            "setup": {
+              "calibration_grid_resolution": 4,
+              "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/california-mlp-0.pkl",
+              "cpu_batch_sizes": [
+                2
+              ],
+              "cpu_worker_values": [
+                1
+              ],
+              "execution_grid_resolution": 2,
+              "gpu_slowdown_factor": 1.0,
+              "measure_without_cache": true,
+              "model_variant_checkpoints": [
+                "/Users/pedro/projects/loss-grid-computer/assets/california-mlp-0.pkl",
+                "/Users/pedro/projects/loss-grid-computer/assets/california-mlp-42.pkl",
+                "/Users/pedro/projects/loss-grid-computer/assets/california-mlp-99.pkl",
+                "/Users/pedro/projects/loss-grid-computer/assets/california-mlp-1337.pkl"
+              ],
+              "retry": 1,
+              "workload": "california_mlp_regression"
+            },
+            "vanilla_reference_session": {
+              "mean_per_variant_s": 0.018,
+              "per_variant_s": [
+                0.022,
+                0.016,
+                0.016,
+                0.016
+              ],
+              "session_grid_resolution": 2,
+              "session_total_s": 0.069,
+              "source": "empirical",
+              "variants": 4
+            },
+            "with_cache_session": {
+              "baseline_s": 0.048,
+              "best_calibration_hybrid_s": 0.003515,
+              "best_hybrid_minus_gpu_only_s": -0.032572,
+              "calibration_s": 1.903,
+              "execution_mode": {
+                "_tag": "hybrid",
+                "cpu_batch_size": 2,
+                "cpu_workers": 1,
+                "gpu_batch_size": 2
+              },
+              "execution_s": 7.784,
+              "first_variant_total_s": 3.903,
+              "per_variant_grid_s": [
+                1.952,
+                1.941,
+                1.931,
+                1.96
+              ],
+              "session_total_s": 9.735,
+              "source": "empirical",
+              "subsequent_variants_total_s": 5.832,
+              "variants": 4
+            },
+            "without_cache_session": {
+              "baseline_s": 0.195,
+              "calibration_s": 7.817,
+              "execution_s": 7.782,
+              "session_total_s": 15.795,
+              "source": "empirical",
+              "variant_details": [
+                {
+                  "baseline_s": 0.048,
+                  "best_hybrid_minus_gpu_only_s": -0.03349,
+                  "best_hybrid_s": 0.003407,
+                  "calibration_s": 1.964,
+                  "execution_mode": {
+                    "_tag": "hybrid",
+                    "cpu_batch_size": 2,
+                    "cpu_workers": 1,
+                    "gpu_batch_size": 2
+                  },
+                  "grid_s": 1.952
+                },
+                {
+                  "baseline_s": 0.049,
+                  "best_hybrid_minus_gpu_only_s": -0.035312,
+                  "best_hybrid_s": 0.003735,
+                  "calibration_s": 1.939,
+                  "execution_mode": {
+                    "_tag": "hybrid",
+                    "cpu_batch_size": 2,
+                    "cpu_workers": 1,
+                    "gpu_batch_size": 2
+                  },
+                  "grid_s": 1.923
+                },
+                {
+                  "baseline_s": 0.049,
+                  "best_hybrid_minus_gpu_only_s": -0.033594,
+                  "best_hybrid_s": 0.003668,
+                  "calibration_s": 1.952,
+                  "execution_mode": {
+                    "_tag": "hybrid",
+                    "cpu_batch_size": 2,
+                    "cpu_workers": 1,
+                    "gpu_batch_size": 2
+                  },
+                  "grid_s": 1.942
+                },
+                {
+                  "baseline_s": 0.049,
+                  "best_hybrid_minus_gpu_only_s": -0.034032,
+                  "best_hybrid_s": 0.00405,
+                  "calibration_s": 1.962,
+                  "execution_mode": {
+                    "_tag": "hybrid",
+                    "cpu_batch_size": 2,
+                    "cpu_workers": 1,
+                    "gpu_batch_size": 2
+                  },
+                  "grid_s": 1.965
+                }
+              ],
+              "variants": 4
+            }
+          }
+        }
+      },
+      "status": "completed"
+    },
+    "experiment_d_merged_stack": {
+      "output_path": "outputs/local-mps-smoke/local-mps-smoke-experiment_d_merged_stack.json",
+      "record": {
+        "duration_s": null,
+        "output_path": "outputs/local-mps-smoke/local-mps-smoke-experiment_d_merged_stack.json",
+        "status": "disabled"
+      },
+      "status": "disabled"
+    },
+    "functional_eval_api_probe": {
+      "child_stem": "functional-eval-api-probe",
+      "duration_s": 0.398061,
+      "output_path": "outputs/local-mps-smoke/local-mps-smoke-functional-eval-api-probe.json",
+      "record": {
+        "duration_s": 0.398061,
+        "error_count": 0,
+        "output_path": "outputs/local-mps-smoke/local-mps-smoke-functional-eval-api-probe.json",
+        "skipped_count": 0,
+        "status": "completed"
+      },
+      "result": {
+        "backend": {
+          "available": {
+            "cpu": true,
+            "cuda": false,
+            "mps": true
+          },
+          "mps_built": true,
+          "selected": "mps"
+        },
+        "errors": [],
+        "passed_checks": [
+          {
+            "metadata": {
+              "version": "2.11.0"
+            },
+            "name": "torch_import"
+          },
+          {
+            "metadata": {
+              "availability": {
+                "cpu": true,
+                "cuda": false,
+                "mps": true
+              },
+              "requested": "mps",
+              "selected": "mps"
+            },
+            "name": "device_resolution"
+          },
+          {
+            "metadata": {
+              "buffer_count": 3,
+              "parameter_count": 5
+            },
+            "name": "functional_call"
+          },
+          {
+            "metadata": {
+              "chunk_size": 2
+            },
+            "name": "vmap_chunk_size"
+          },
+          {
+            "metadata": {
+              "chunk_size": 1
+            },
+            "name": "functional_call_vmap"
+          },
+          {
+            "name": "inference_mode_vmap"
+          },
+          {
+            "detail": "BatchNorm buffers are passed to functional_call with model.eval()",
+            "metadata": {
+              "batchnorm_modules": [
+                "BatchNorm2d"
+              ]
+            },
+            "name": "batchnorm_handling"
+          },
+          {
+            "metadata": {
+              "batch_size": 2,
+              "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/cifar10-resnet20-0.pkl",
+              "dataset": "cifar10",
+              "examples": 4,
+              "first_point_loss": 0.06222100812010467,
+              "grid_points": 4,
+              "grid_resolution": 2,
+              "grid_scale": 0.1,
+              "loss": "cross_entropy",
+              "model": "resnet20",
+              "sample_count": 4,
+              "task": "image_classification",
+              "workload": "cifar10_resnet20_classification"
+            },
+            "name": "tiny_workload"
+          }
+        ],
+        "skipped_checks": []
+      },
+      "status": "completed"
+    },
+    "progressive_visualization_deferred": {
+      "output_path": "outputs/local-mps-smoke/local-mps-smoke-progressive_visualization_deferred.json",
+      "record": {
+        "duration_s": null,
+        "output_path": "outputs/local-mps-smoke/local-mps-smoke-progressive_visualization_deferred.json",
+        "status": "disabled"
+      },
+      "status": "disabled"
+    },
+    "statistical_analysis": {
+      "child_stem": "statistical-analysis",
+      "duration_s": 2.9e-05,
+      "output_path": "outputs/local-mps-smoke/local-mps-smoke-statistical-analysis.json",
+      "record": {
+        "duration_s": 2.9e-05,
+        "gaps": [
+          "california_mlp_regression/functional_sequential: n=1 < 2 \u2014 insufficient for CI",
+          "california_mlp_regression/vmapped_chunk_2: n=1 < 2 \u2014 insufficient for CI"
+        ],
+        "n_significant_candidates": 0,
+        "output_path": "outputs/local-mps-smoke/local-mps-smoke-statistical-analysis.json",
+        "paper_ready": false,
+        "status": "completed"
+      },
+      "result": {
+        "exp_a": {
+          "candidate_table": [
+            {
+              "all_validations_passed": true,
+              "candidate": "functional_sequential",
+              "ci_95_hi": null,
+              "ci_95_lo": null,
+              "mean_speedup": 0.9378854070300229,
+              "n": 1,
+              "section_timings_s": {
+                "batch_eval_s": 0.007332125038374215,
+                "binding_s": 0.0001219160039909184,
+                "perturbation_s": 0.0009824169683270156,
+                "total_grid_s": 0.008446082996670157
+              },
+              "significant": false,
+              "stdev": null,
+              "workload": "california_mlp_regression"
+            },
+            {
+              "all_validations_passed": true,
+              "candidate": "vmapped_chunk_2",
+              "ci_95_hi": null,
+              "ci_95_lo": null,
+              "mean_speedup": 1.1267876523824432,
+              "n": 1,
+              "section_timings_s": {
+                "batch_eval_s": 0.00508308393182233,
+                "binding_s": 3.370799822732806e-05,
+                "perturbation_s": 0.0012073329999111593,
+                "total_grid_s": 0.007030124950688332
+              },
+              "significant": false,
+              "stdev": null,
+              "workload": "california_mlp_regression"
+            }
+          ],
+          "section_shares": [
+            {
+              "batch_eval_share": 0.3804,
+              "binding_share": 0.0051,
+              "perturbation_share": 0.6133,
+              "total_grid_s": 0.060189,
+              "workload": "california_mlp_regression"
+            }
+          ]
+        },
+        "exp_b": {
+          "workload_table": [
+            {
+              "achieved_ratio": 43.007621855418996,
+              "cpu_throughput_pts_s": 2858.163620715306,
+              "gpu_throughput_pts_s": 66.45714172068723,
+              "hybrid_speedup": 50.96634800192678,
+              "hybrid_wins": true,
+              "max_abs_error": 7.152557373046875e-06,
+              "selected_policy": "gpu_cpu_hybrid",
+              "selected_time_s": 0.0011809589923359454,
+              "slowdown_applied": 1.0,
+              "surface_valid": true,
+              "unslowed_ratio": 43.007621855418996,
+              "vanilla_time_s": 0.06018916697939858,
+              "worker_throughput_split": {
+                "cpu_point_fraction": 1.0,
+                "cpu_points_processed": 4,
+                "cpu_throughput_points_per_s": 3387.0778121499134,
+                "gpu_point_fraction": 0.0,
+                "gpu_points_processed": 0,
+                "gpu_throughput_points_per_s": 0.0,
+                "total_throughput_points_per_s": 3387.0778121499134
+              },
+              "workload": "california_mlp_regression"
+            }
+          ]
+        },
+        "exp_c": {
+          "error": null,
+          "summary": {
+            "california_mlp_regression": {
+              "amortized_calibration_per_variant_s": 0.4758,
+              "break_even_n": null,
+              "break_even_unavailable_reason": "hybrid_per_variant_not_faster",
+              "calibration_grid_resolution": 4,
+              "calibration_s": 1.903,
+              "hybrid_per_variant_grid_s": 1.946,
+              "hybrid_without_cache_penalty_vs_vanilla": 228.913,
+              "mode_selections_by_variant": [
+                "hybrid",
+                "hybrid",
+                "hybrid",
+                "hybrid"
+              ],
+              "selected_mode": "hybrid",
+              "session_grid_resolution": 2,
+              "session_speedup_vs_vanilla": 0.0071,
+              "session_total_s_vanilla": 0.069,
+              "session_total_s_with_cache": 9.735,
+              "session_total_s_without_cache": 15.795,
+              "speedup_exceeds_one": false,
+              "vanilla_per_variant_s": 0.018,
+              "variant_count": 4
+            }
+          }
+        },
+        "gaps": [
+          "california_mlp_regression/functional_sequential: n=1 < 2 \u2014 insufficient for CI",
+          "california_mlp_regression/vmapped_chunk_2: n=1 < 2 \u2014 insufficient for CI"
+        ],
+        "n_significant_candidates": 0,
+        "paper_ready": false
+      },
+      "status": "completed"
+    }
+  },
+  "output_path": "outputs/local-mps-smoke/local-mps-smoke-summary.json",
+  "platform": {
+    "cpu": {
+      "logical_cores": 10,
+      "model": "arm"
+    },
+    "cuda_available": false,
+    "env_threads": {
+      "MKL_NUM_THREADS": null,
+      "NUMEXPR_NUM_THREADS": null,
+      "OMP_NUM_THREADS": null,
+      "VECLIB_MAXIMUM_THREADS": null
+    },
+    "gpu": {
+      "mps_built": true,
+      "name": "Apple MPS"
+    },
+    "host_os": "Darwin",
+    "machine": "arm64",
+    "memory": {
+      "approx_memory_bandwidth": null,
+      "total_system_memory_bytes": 17179869184
+    },
+    "mps_available": true,
+    "os_release": "25.4.0",
+    "python_version": "3.12.13",
+    "requested_device": "mps",
+    "resolved_device": "mps",
+    "torch_version": "2.11.0"
+  },
+  "records": {
+    "e0_platform_inventory": {
+      "asset_count": 4,
+      "cpu_logical_cores": 10,
+      "duration_s": 0.000103,
+      "gpu_model": "Apple MPS",
+      "missing_asset_count": 0,
+      "output_path": "outputs/local-mps-smoke/local-mps-smoke-e0_platform_inventory.json",
+      "ram_bytes": 17179869184,
+      "resolved_device": "mps",
+      "status": "completed",
+      "vram_bytes": null
+    },
+    "experiment_a_candidates": {
+      "completed_scenario_count": 1,
+      "duration_s": 0.160115,
+      "failed": [],
+      "failed_scenario_count": 0,
+      "output_path": "outputs/local-mps-smoke/local-mps-smoke-functional-eval-platform-suite.json",
+      "scenario_count": 1,
+      "status": "completed"
+    },
+    "experiment_a_profiling": {
+      "completed_workloads": 1,
+      "duration_s": 7.1e-05,
+      "output_path": "outputs/local-mps-smoke/local-mps-smoke-experiment-a-vanilla-profiling.json",
+      "status": "completed",
+      "total_grid_s_by_workload": {
+        "california_mlp_regression": 0.06018916697939858
+      },
+      "workload_count": 1
+    },
+    "experiment_b_hybrid_applicability": {
+      "duration_s": 5.683384,
+      "output_path": "outputs/local-mps-smoke/local-mps-smoke-experiment-b-hybrid-applicability.json",
+      "status": "completed",
+      "workloads": {
+        "california_mlp_regression": {
+          "cpu_throughput_points_per_s": 2858.163620715306,
+          "gpu_baseline_source": "precomputed",
+          "gpu_throughput_points_per_s": 66.45714172068723,
+          "parity_probe": {
+            "achieved_ratio": 43.007621855418996,
+            "claim_status": "hybrid_wins",
+            "hybrid_wins": true,
+            "max_abs_error": 7.152557373046875e-06,
+            "predicted_cpu_fraction": 0.9772766634996691,
+            "selected_policy": "gpu_cpu_hybrid",
+            "selected_runtime_s": 0.0011809589923359454,
+            "slowdown_distance_from_unity": 42.007621855418996,
+            "slowdown_used": 1.0,
+            "speedup": 50.96634800192678,
+            "surface_valid": true,
+            "vanilla_parity_baseline_derived_from": "native_unslowed",
+            "vanilla_runtime_s": 0.06018916697939858,
+            "worker_throughput_split": {
+              "cpu_point_fraction": 1.0,
+              "cpu_points_processed": 4,
+              "cpu_throughput_points_per_s": 3387.0778121499134,
+              "gpu_point_fraction": 0.0,
+              "gpu_points_processed": 0,
+              "gpu_throughput_points_per_s": 0.0,
+              "total_throughput_points_per_s": 3387.0778121499134
+            }
+          },
+          "regime_predictor": {
+            "cpu_throughput_points_per_s": 2858.163620715306,
+            "gpu_baseline_source": "precomputed",
+            "gpu_throughput_points_per_s": 66.45714172068723,
+            "predicted_cpu_fraction": 0.9772766634996691,
+            "r_native": 43.007621855418996
+          },
+          "status": "completed",
+          "unslowed_inference_ratio": 43.007621855418996
+        }
+      }
+    },
+    "experiment_c_calibration_cache": {
+      "completed_workloads": [
+        "california_mlp_regression"
+      ],
+      "duration_s": 25.600025,
+      "output_path": "outputs/local-mps-smoke/local-mps-smoke-experiment-c-calibration-cache.json",
+      "skipped_workloads": [],
+      "status": "completed",
+      "workloads": {
+        "california_mlp_regression": {
+          "amortized_calibration_per_variant_s": 0.4758,
+          "break_even_n": null,
+          "break_even_unavailable_reason": "hybrid_per_variant_not_faster",
+          "calibration_grid_resolution": 4,
+          "calibration_s": 1.903,
+          "hybrid_per_variant_grid_s": 1.946,
+          "hybrid_without_cache_penalty_vs_vanilla": 228.913,
+          "mode_selections_by_variant": [
+            "hybrid",
+            "hybrid",
+            "hybrid",
+            "hybrid"
+          ],
+          "selected_policy": "hybrid",
+          "session_grid_resolution": 2,
+          "session_speedup_vs_vanilla": 0.0071,
+          "session_total_s_vanilla": 0.069,
+          "session_total_s_with_cache": 9.735,
+          "session_total_s_without_cache": 15.795,
+          "slowdown": 1.0,
+          "slowdown_source": "unslowed",
+          "status": "completed",
+          "vanilla_per_variant_s": 0.018,
+          "variant_count": 4
+        }
+      }
+    },
+    "experiment_d_merged_stack": {
+      "duration_s": null,
+      "output_path": "outputs/local-mps-smoke/local-mps-smoke-experiment_d_merged_stack.json",
+      "status": "disabled"
+    },
+    "functional_eval_api_probe": {
+      "duration_s": 0.398061,
+      "error_count": 0,
+      "output_path": "outputs/local-mps-smoke/local-mps-smoke-functional-eval-api-probe.json",
+      "skipped_count": 0,
+      "status": "completed"
+    },
+    "progressive_visualization_deferred": {
+      "duration_s": null,
+      "output_path": "outputs/local-mps-smoke/local-mps-smoke-progressive_visualization_deferred.json",
+      "status": "disabled"
+    },
+    "statistical_analysis": {
+      "duration_s": 2.9e-05,
+      "gaps": [
+        "california_mlp_regression/functional_sequential: n=1 < 2 \u2014 insufficient for CI",
+        "california_mlp_regression/vmapped_chunk_2: n=1 < 2 \u2014 insufficient for CI"
+      ],
+      "n_significant_candidates": 0,
+      "output_path": "outputs/local-mps-smoke/local-mps-smoke-statistical-analysis.json",
+      "paper_ready": false,
+      "status": "completed"
+    }
+  },
+  "registry": {
+    "e0_platform_inventory": {
+      "enabled": true
+    },
+    "experiment_a_candidates": {
+      "enabled": true
+    },
+    "experiment_a_profiling": {
+      "enabled": true
+    },
+    "experiment_b_hybrid_applicability": {
+      "enabled": true
+    },
+    "experiment_c_calibration_cache": {
+      "enabled": true
+    },
+    "experiment_d_merged_stack": {
+      "enabled": false
+    },
+    "functional_eval_api_probe": {
+      "enabled": true
+    },
+    "progressive_visualization_deferred": {
+      "enabled": false
+    },
+    "statistical_analysis": {
+      "enabled": true
+    }
+  },
+  "schema_version": "platform-experiment-suite-v1",
+  "shared_state": {
+    "artifacts": {
+      "{\"checkpoint_path\":\"/Users/pedro/projects/loss-grid-computer/assets/california-mlp-0.pkl\",\"device\":\"mps\",\"gpu_batch_size\":2,\"grid_resolution\":2,\"grid_scale\":1.0,\"node_type\":\"vanilla_full_grid\",\"sample_count\":8,\"seed\":7,\"slowdown_factor\":1.0,\"workload_name\":\"california_mlp_regression\"}": {
+        "node_type": "vanilla_full_grid",
+        "point_count": 4,
+        "total_grid_s": 0.06018916697939858,
+        "workload": "california_mlp_regression"
+      }
+    }
+  },
+  "status": "completed"
+}

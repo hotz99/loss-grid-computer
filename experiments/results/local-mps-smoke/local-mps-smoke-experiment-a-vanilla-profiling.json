@@ -1,0 +1,67 @@
+{
+  "child_stem": "experiment-a-vanilla-profiling",
+  "duration_s": 7.1e-05,
+  "output_path": "outputs/local-mps-smoke/local-mps-smoke-experiment-a-vanilla-profiling.json",
+  "record": {
+    "completed_workloads": 1,
+    "duration_s": 7.1e-05,
+    "output_path": "outputs/local-mps-smoke/local-mps-smoke-experiment-a-vanilla-profiling.json",
+    "status": "completed",
+    "total_grid_s_by_workload": {
+      "california_mlp_regression": 0.06018916697939858
+    },
+    "workload_count": 1
+  },
+  "result": {
+    "record": {
+      "completed_workloads": 1,
+      "status": "completed",
+      "total_grid_s_by_workload": {
+        "california_mlp_regression": 0.06018916697939858
+      },
+      "workload_count": 1
+    },
+    "schema_version": "experiment-a-vanilla-profiling-v1",
+    "workload_count": 1,
+    "workloads": {
+      "california_mlp_regression": {
+        "candidate": "baseline_original",
+        "metadata": {
+          "backend": "vanilla",
+          "device": "mps",
+          "section_timings_available": true,
+          "workload": "california_mlp_regression",
+          "wrapped": "canonical vanilla backend"
+        },
+        "peak_cpu_memory_bytes": null,
+        "peak_cuda_memory_bytes": null,
+        "per_point_latency_s": 0.015047291744849645,
+        "section_timings": {
+          "batch_eval_s": 0.02289775,
+          "binding_s": 0.000308833,
+          "perturbation_s": 0.036915166,
+          "total_grid_s": 0.06018916697939858
+        },
+        "status": "completed",
+        "total_grid_s": 0.06018916697939858,
+        "workload": {
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/california-mlp-0.pkl",
+          "dataset": {
+            "input_shape": [
+              8
+            ],
+            "name": "california_housing",
+            "path": "/Users/pedro/projects/loss-grid-computer/assets",
+            "sample_count": 8
+          },
+          "loss": "mse",
+          "model": "mlp_regressor",
+          "registered": true,
+          "task": "tabular_regression",
+          "workload_name": "california_mlp_regression"
+        }
+      }
+    }
+  },
+  "status": "completed"
+}

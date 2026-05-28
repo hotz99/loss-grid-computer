@@ -1,0 +1,72 @@
+{
+  "assets": {
+    "california_mlp_regression": {
+      "checkpoint_exists": true,
+      "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/california-mlp-0.pkl",
+      "dataset_exists": true,
+      "dataset_path": "/Users/pedro/projects/loss-grid-computer/assets"
+    },
+    "cifar10_resnet20_classification": {
+      "checkpoint_exists": true,
+      "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/cifar10-resnet20-0.pkl",
+      "dataset_exists": true,
+      "dataset_path": "/Users/pedro/projects/loss-grid-computer/assets/cifar-10-batches-py"
+    },
+    "cifar10_row_gru_classification": {
+      "checkpoint_exists": true,
+      "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/cifar10-row-gru-0.pkl",
+      "dataset_exists": true,
+      "dataset_path": "/Users/pedro/projects/loss-grid-computer/assets/cifar-10-batches-py"
+    },
+    "mnist_mlp_classification": {
+      "checkpoint_exists": true,
+      "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/mnist-mlp-0.pkl",
+      "dataset_exists": true,
+      "dataset_path": "/Users/pedro/projects/loss-grid-computer/assets/mnist"
+    }
+  },
+  "duration_s": 0.011981,
+  "output_path": "outputs/platform_experiment_suite/20260519T135522Z/e0_platform_inventory.json",
+  "platform": {
+    "cpu": {
+      "logical_cores": 10,
+      "model": "arm"
+    },
+    "cuda_available": false,
+    "env_threads": {
+      "MKL_NUM_THREADS": null,
+      "NUMEXPR_NUM_THREADS": null,
+      "OMP_NUM_THREADS": null,
+      "VECLIB_MAXIMUM_THREADS": null
+    },
+    "gpu": {
+      "mps_built": true,
+      "name": "Apple MPS"
+    },
+    "host_os": "Darwin",
+    "machine": "arm64",
+    "memory": {
+      "approx_memory_bandwidth": null,
+      "total_system_memory_bytes": 17179869184
+    },
+    "mps_available": true,
+    "os_release": "25.4.0",
+    "python_version": "3.12.13",
+    "requested_device": "auto",
+    "resolved_device": "mps",
+    "torch_version": "2.11.0"
+  },
+  "record": {
+    "asset_count": 4,
+    "cpu_logical_cores": 10,
+    "duration_s": 0.011981,
+    "gpu_model": "Apple MPS",
+    "missing_asset_count": 0,
+    "output_path": "outputs/platform_experiment_suite/20260519T135522Z/e0_platform_inventory.json",
+    "ram_bytes": 17179869184,
+    "resolved_device": "mps",
+    "status": "completed",
+    "vram_bytes": null
+  },
+  "status": "completed"
+}

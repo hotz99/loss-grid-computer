@@ -1,0 +1,95 @@
+{
+  "child_stem": "functional-eval-api-probe",
+  "duration_s": 0.393528,
+  "output_path": "outputs/platform_experiment_suite/20260519T135522Z/functional-eval-api-probe.json",
+  "record": {
+    "duration_s": 0.393528,
+    "error_count": 0,
+    "output_path": "outputs/platform_experiment_suite/20260519T135522Z/functional-eval-api-probe.json",
+    "skipped_count": 0,
+    "status": "completed"
+  },
+  "result": {
+    "backend": {
+      "available": {
+        "cpu": true,
+        "cuda": false,
+        "mps": true
+      },
+      "mps_built": true,
+      "selected": "mps"
+    },
+    "errors": [],
+    "passed_checks": [
+      {
+        "metadata": {
+          "version": "2.11.0"
+        },
+        "name": "torch_import"
+      },
+      {
+        "metadata": {
+          "availability": {
+            "cpu": true,
+            "cuda": false,
+            "mps": true
+          },
+          "requested": "auto",
+          "selected": "mps"
+        },
+        "name": "device_resolution"
+      },
+      {
+        "metadata": {
+          "buffer_count": 3,
+          "parameter_count": 5
+        },
+        "name": "functional_call"
+      },
+      {
+        "metadata": {
+          "chunk_size": 2
+        },
+        "name": "vmap_chunk_size"
+      },
+      {
+        "metadata": {
+          "chunk_size": 1
+        },
+        "name": "functional_call_vmap"
+      },
+      {
+        "name": "inference_mode_vmap"
+      },
+      {
+        "detail": "BatchNorm buffers are passed to functional_call with model.eval()",
+        "metadata": {
+          "batchnorm_modules": [
+            "BatchNorm2d"
+          ]
+        },
+        "name": "batchnorm_handling"
+      },
+      {
+        "metadata": {
+          "batch_size": 2,
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/cifar10-resnet20-0.pkl",
+          "dataset": "cifar10",
+          "examples": 4,
+          "first_point_loss": 0.17415219528993475,
+          "grid_points": 4,
+          "grid_resolution": 2,
+          "grid_scale": 0.1,
+          "loss": "cross_entropy",
+          "model": "resnet20",
+          "sample_count": 4,
+          "task": "image_classification",
+          "workload": "cifar10_resnet20_classification"
+        },
+        "name": "tiny_workload"
+      }
+    ],
+    "skipped_checks": []
+  },
+  "status": "completed"
+}

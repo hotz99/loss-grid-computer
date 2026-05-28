@@ -1,0 +1,226 @@
+{
+  "child_stem": "experiment-a-vanilla-profiling",
+  "duration_s": 0.000756,
+  "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-experiment-a-vanilla-profiling.json",
+  "record": {
+    "completed_workloads": 4,
+    "duration_s": 0.000756,
+    "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-experiment-a-vanilla-profiling.json",
+    "status": "completed",
+    "total_grid_s_by_workload": {
+      "california_mlp_regression": 1.6302437010000002,
+      "cifar10_resnet20_classification": 26.464878082000002,
+      "cifar10_row_gru_classification": 35.96123234,
+      "mnist_mlp_classification": 17.210301923
+    },
+    "workload_count": 4
+  },
+  "result": {
+    "record": {
+      "completed_workloads": 4,
+      "status": "completed",
+      "total_grid_s_by_workload": {
+        "california_mlp_regression": 1.6302437010000002,
+        "cifar10_resnet20_classification": 26.464878082000002,
+        "cifar10_row_gru_classification": 35.96123234,
+        "mnist_mlp_classification": 17.210301923
+      },
+      "workload_count": 4
+    },
+    "schema_version": "experiment-a-vanilla-profiling-v1",
+    "workload_count": 4,
+    "workloads": {
+      "california_mlp_regression": {
+        "candidate": "baseline_original",
+        "metadata": {
+          "cpu_memory_available": true,
+          "cpu_memory_reason": null,
+          "cuda_memory": {
+            "allocated_bytes": 84170240,
+            "available": true,
+            "max_allocated_bytes": 84204032,
+            "max_reserved_bytes": 1709178880,
+            "reason": null,
+            "reserved_bytes": 1709178880
+          },
+          "device": "cuda",
+          "section_timings_available": true,
+          "workload": "california_mlp_regression",
+          "wrapped": "generic vanilla point-loop semantics"
+        },
+        "peak_cpu_memory_bytes": 1681358848,
+        "peak_cuda_memory_bytes": 1709178880,
+        "per_point_latency_s": 0.025472557828125002,
+        "section_timings": {
+          "batch_eval_s": 1.6019815311431882,
+          "binding_s": 0.011051648020744327,
+          "perturbation_s": 0.006371967963874338,
+          "total_grid_s": 1.6302437010000002
+        },
+        "status": "completed",
+        "total_grid_s": 1.6302437010000002,
+        "workload": {
+          "checkpoint_path": "/content/loss-grid-computer/assets/california-mlp-0.pkl",
+          "dataset": {
+            "input_shape": [
+              8
+            ],
+            "name": "california_housing",
+            "path": "/content/loss-grid-computer/assets",
+            "sample_count": 1024
+          },
+          "loss": "mse",
+          "model": "mlp_regressor",
+          "registered": true,
+          "task": "tabular_regression",
+          "workload_name": "california_mlp_regression"
+        }
+      },
+      "cifar10_resnet20_classification": {
+        "candidate": "baseline_original",
+        "metadata": {
+          "cpu_memory_available": true,
+          "cpu_memory_reason": null,
+          "cuda_memory": {
+            "allocated_bytes": 89438720,
+            "available": true,
+            "max_allocated_bytes": 100024320,
+            "max_reserved_bytes": 1709178880,
+            "reason": null,
+            "reserved_bytes": 1709178880
+          },
+          "device": "cuda",
+          "section_timings_available": true,
+          "workload": "cifar10_resnet20_classification",
+          "wrapped": "generic vanilla point-loop semantics"
+        },
+        "peak_cpu_memory_bytes": 1681338368,
+        "peak_cuda_memory_bytes": 1709178880,
+        "per_point_latency_s": 0.41351372003125003,
+        "section_timings": {
+          "batch_eval_s": 26.36605197143555,
+          "binding_s": 0.07702319997549056,
+          "perturbation_s": 0.007942879974842075,
+          "total_grid_s": 26.464878082000002
+        },
+        "status": "completed",
+        "total_grid_s": 26.464878082000002,
+        "workload": {
+          "checkpoint_path": "/content/loss-grid-computer/assets/cifar10-resnet20-0.pkl",
+          "dataset": {
+            "input_shape": [
+              3,
+              32,
+              32
+            ],
+            "name": "cifar10",
+            "path": "/content/loss-grid-computer/assets/cifar-10-batches-py",
+            "sample_count": 1024
+          },
+          "loss": "cross_entropy",
+          "model": "resnet20",
+          "registered": true,
+          "task": "image_classification",
+          "workload_name": "cifar10_resnet20_classification"
+        }
+      },
+      "cifar10_row_gru_classification": {
+        "candidate": "baseline_original",
+        "metadata": {
+          "cpu_memory_available": true,
+          "cpu_memory_reason": null,
+          "cuda_memory": {
+            "allocated_bytes": 85536256,
+            "available": true,
+            "max_allocated_bytes": 86594560,
+            "max_reserved_bytes": 1709178880,
+            "reason": null,
+            "reserved_bytes": 1709178880
+          },
+          "device": "cuda",
+          "section_timings_available": true,
+          "workload": "cifar10_row_gru_classification",
+          "wrapped": "generic vanilla point-loop semantics"
+        },
+        "peak_cpu_memory_bytes": 1681358848,
+        "peak_cuda_memory_bytes": 1709178880,
+        "per_point_latency_s": 0.5618942553125,
+        "section_timings": {
+          "batch_eval_s": 35.93043225097657,
+          "binding_s": 0.011737023979425429,
+          "perturbation_s": 0.007022335976362225,
+          "total_grid_s": 35.96123234
+        },
+        "status": "completed",
+        "total_grid_s": 35.96123234,
+        "workload": {
+          "checkpoint_path": "/content/loss-grid-computer/assets/cifar10-row-gru-0.pkl",
+          "dataset": {
+            "input_shape": [
+              3,
+              32,
+              32
+            ],
+            "name": "cifar10",
+            "path": "/content/loss-grid-computer/assets/cifar-10-batches-py",
+            "sample_count": 1024
+          },
+          "loss": "cross_entropy",
+          "model": "row_gru",
+          "registered": true,
+          "task": "image_classification",
+          "workload_name": "cifar10_row_gru_classification"
+        }
+      },
+      "mnist_mlp_classification": {
+        "candidate": "baseline_original",
+        "metadata": {
+          "cpu_memory_available": true,
+          "cpu_memory_reason": null,
+          "cuda_memory": {
+            "allocated_bytes": 113946112,
+            "available": true,
+            "max_allocated_bytes": 136311808,
+            "max_reserved_bytes": 1709178880,
+            "reason": null,
+            "reserved_bytes": 1709178880
+          },
+          "device": "cuda",
+          "section_timings_available": true,
+          "workload": "mnist_mlp_classification",
+          "wrapped": "generic vanilla point-loop semantics"
+        },
+        "peak_cpu_memory_bytes": 1687654400,
+        "peak_cuda_memory_bytes": 1709178880,
+        "per_point_latency_s": 0.268910967546875,
+        "section_timings": {
+          "batch_eval_s": 17.16203407287598,
+          "binding_s": 0.013320064023137098,
+          "perturbation_s": 0.022887104064226147,
+          "total_grid_s": 17.210301923
+        },
+        "status": "completed",
+        "total_grid_s": 17.210301923,
+        "workload": {
+          "checkpoint_path": "/content/loss-grid-computer/assets/mnist-mlp-0.pkl",
+          "dataset": {
+            "input_shape": [
+              1,
+              28,
+              28
+            ],
+            "name": "mnist",
+            "path": "/content/loss-grid-computer/assets/mnist",
+            "sample_count": 1024
+          },
+          "loss": "cross_entropy",
+          "model": "mnist_mlp",
+          "registered": true,
+          "task": "image_classification",
+          "workload_name": "mnist_mlp_classification"
+        }
+      }
+    }
+  },
+  "status": "completed"
+}

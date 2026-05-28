@@ -1,0 +1,198 @@
+{
+  "child_stem": "experiment-c-calibration-cache-partial",
+  "record": {
+    "completed_workloads": [
+      "cifar10_resnet20_classification"
+    ],
+    "skipped_workloads": [],
+    "status": "running",
+    "workloads": {
+      "cifar10_resnet20_classification": {
+        "amortized_calibration_per_variant_s": 30.4915,
+        "break_even_n": 5,
+        "break_even_unavailable_reason": null,
+        "calibration_grid_resolution": 7,
+        "calibration_s": 121.966,
+        "hybrid_per_variant_grid_s": 257.3885,
+        "hybrid_without_cache_penalty_vs_vanilla": 1.3701,
+        "mode_selections_by_variant": [
+          "vanilla",
+          "vanilla",
+          "vanilla",
+          "vanilla"
+        ],
+        "selected_policy": "vanilla",
+        "session_grid_resolution": 40,
+        "session_speedup_vs_vanilla": 0.9983,
+        "session_total_s_vanilla": 1157.322,
+        "session_total_s_with_cache": 1159.326,
+        "session_total_s_without_cache": 1585.684,
+        "slowdown": 1.0,
+        "slowdown_source": "unslowed",
+        "status": "completed",
+        "vanilla_per_variant_s": 289.331,
+        "variant_count": 4
+      }
+    }
+  },
+  "result": {
+    "workloads": {
+      "cifar10_resnet20_classification": {
+        "comparison_design": {
+          "hybrid_with_cache": "calibrate_once_then_reuse_selected_policy",
+          "hybrid_without_cache": "recalibrate_each_variant_then_execute_selected_policy",
+          "vanilla_reference": "gpu_only_full_session_no_calibration"
+        },
+        "record": {
+          "amortized_calibration_per_variant_s": 30.4915,
+          "break_even_n": 5,
+          "break_even_unavailable_reason": null,
+          "calibration_grid_resolution": 7,
+          "calibration_s": 121.966,
+          "hybrid_per_variant_grid_s": 257.3885,
+          "hybrid_without_cache_penalty_vs_vanilla": 1.3701,
+          "mode_selections_by_variant": [
+            "vanilla",
+            "vanilla",
+            "vanilla",
+            "vanilla"
+          ],
+          "selected_policy": "vanilla",
+          "session_grid_resolution": 40,
+          "session_speedup_vs_vanilla": 0.9983,
+          "session_total_s_vanilla": 1157.322,
+          "session_total_s_with_cache": 1159.326,
+          "session_total_s_without_cache": 1585.684,
+          "slowdown": 1.0,
+          "slowdown_source": "unslowed",
+          "status": "completed",
+          "vanilla_per_variant_s": 289.331,
+          "variant_count": 4
+        },
+        "runtime_condition": {
+          "slowdown": 1.0,
+          "source": "unslowed"
+        },
+        "setup": {
+          "calibration_grid_resolution": 7,
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/cifar10-resnet20-0.pkl",
+          "cpu_batch_sizes": [
+            4,
+            8,
+            16,
+            32,
+            64
+          ],
+          "cpu_worker_values": [
+            1,
+            2,
+            4,
+            8,
+            10
+          ],
+          "execution_grid_resolution": 40,
+          "gpu_slowdown_factor": 1.0,
+          "measure_without_cache": true,
+          "model_variant_checkpoints": [
+            "/Users/pedro/projects/loss-grid-computer/assets/cifar10-resnet20-0.pkl",
+            "/Users/pedro/projects/loss-grid-computer/assets/cifar10-resnet20-123.pkl",
+            "/Users/pedro/projects/loss-grid-computer/assets/cifar10-resnet20-2023.pkl",
+            "/Users/pedro/projects/loss-grid-computer/assets/cifar10-resnet20-123456.pkl"
+          ],
+          "retry": 3,
+          "workload": "cifar10_resnet20_classification"
+        },
+        "vanilla_reference_session": {
+          "mean_per_variant_s": 289.331,
+          "per_variant_s": [
+            302.182,
+            306.522,
+            268.713,
+            279.906
+          ],
+          "session_grid_resolution": 40,
+          "session_total_s": 1157.322,
+          "source": "empirical",
+          "variants": 4
+        },
+        "with_cache_session": {
+          "baseline_s": 7.805,
+          "best_calibration_hybrid_s": null,
+          "best_hybrid_minus_gpu_only_s": null,
+          "calibration_s": 121.966,
+          "execution_mode": {
+            "_tag": "vanilla",
+            "gpu_batch_size": 64
+          },
+          "execution_s": 1029.554,
+          "first_variant_total_s": 382.736,
+          "per_variant_grid_s": [
+            252.964,
+            265.998,
+            256.724,
+            253.867
+          ],
+          "session_total_s": 1159.326,
+          "source": "empirical",
+          "subsequent_variants_total_s": 776.589,
+          "variants": 4
+        },
+        "without_cache_session": {
+          "baseline_s": 32.189,
+          "calibration_s": 480.036,
+          "execution_s": 1073.459,
+          "session_total_s": 1585.684,
+          "source": "empirical",
+          "variant_details": [
+            {
+              "baseline_s": 8.13,
+              "best_hybrid_minus_gpu_only_s": null,
+              "best_hybrid_s": null,
+              "calibration_s": 118.528,
+              "execution_mode": {
+                "_tag": "vanilla",
+                "gpu_batch_size": 64
+              },
+              "grid_s": 255.221
+            },
+            {
+              "baseline_s": 7.809,
+              "best_hybrid_minus_gpu_only_s": null,
+              "best_hybrid_s": null,
+              "calibration_s": 113.887,
+              "execution_mode": {
+                "_tag": "vanilla",
+                "gpu_batch_size": 64
+              },
+              "grid_s": 262.75
+            },
+            {
+              "baseline_s": 7.841,
+              "best_hybrid_minus_gpu_only_s": null,
+              "best_hybrid_s": null,
+              "calibration_s": 113.986,
+              "execution_mode": {
+                "_tag": "vanilla",
+                "gpu_batch_size": 64
+              },
+              "grid_s": 278.556
+            },
+            {
+              "baseline_s": 8.409,
+              "best_hybrid_minus_gpu_only_s": null,
+              "best_hybrid_s": null,
+              "calibration_s": 133.635,
+              "execution_mode": {
+                "_tag": "vanilla",
+                "gpu_batch_size": 64
+              },
+              "grid_s": 276.932
+            }
+          ],
+          "variants": 4
+        }
+      }
+    }
+  },
+  "status": "running"
+}

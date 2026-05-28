@@ -1,0 +1,509 @@
+{
+  "child_stem": "experiment-b-hybrid-applicability",
+  "duration_s": 416.349123,
+  "output_path": "outputs/platform_experiment_suite/20260519T135522Z/experiment-b-hybrid-applicability.json",
+  "record": {
+    "duration_s": 416.349123,
+    "output_path": "outputs/platform_experiment_suite/20260519T135522Z/experiment-b-hybrid-applicability.json",
+    "status": "completed",
+    "workloads": {
+      "california_mlp_regression": {
+        "cpu_throughput_points_per_s": 265.2951911180973,
+        "gpu_baseline_source": "precomputed",
+        "gpu_throughput_points_per_s": 84.81668662201496,
+        "parity_probe": {
+          "achieved_ratio": 3.1278655378320037,
+          "hybrid_wins": true,
+          "max_abs_error": 1.6689300537109375e-06,
+          "selected_policy": "gpu_cpu_hybrid",
+          "selected_runtime_s": 0.09687200002372265,
+          "slowdown_used": 1.0,
+          "speedup": 7.789335409849615,
+          "surface_valid": true,
+          "vanilla_runtime_s": 0.7545685000077356,
+          "worker_throughput_split": {
+            "cpu_point_fraction": 0.9375,
+            "cpu_points_processed": 60,
+            "cpu_throughput_points_per_s": 619.374019172793,
+            "gpu_point_fraction": 0.0625,
+            "gpu_points_processed": 4,
+            "gpu_throughput_points_per_s": 45.77929230490902,
+            "total_throughput_points_per_s": 660.6656204509792
+          }
+        },
+        "status": "completed",
+        "unslowed_inference_ratio": 3.1278655378320037
+      },
+      "cifar10_resnet20_classification": {
+        "cpu_throughput_points_per_s": 2.9195466073028253,
+        "gpu_baseline_source": "precomputed",
+        "gpu_throughput_points_per_s": 8.181825692110166,
+        "parity_probe": {
+          "achieved_ratio": 1.0,
+          "hybrid_wins": true,
+          "max_abs_error": 0.1380615234375,
+          "selected_policy": "gpu_cpu_hybrid",
+          "selected_runtime_s": 15.423446583998157,
+          "slowdown_used": 2.8024302375048604,
+          "speedup": 1.4212913980434252,
+          "surface_valid": true,
+          "vanilla_runtime_s": 21.92121195801883,
+          "worker_throughput_split": {
+            "cpu_point_fraction": 0.484375,
+            "cpu_points_processed": 31,
+            "cpu_throughput_points_per_s": 2.042614298838773,
+            "gpu_point_fraction": 0.515625,
+            "gpu_points_processed": 33,
+            "gpu_throughput_points_per_s": 2.1395995908098477,
+            "total_throughput_points_per_s": 4.149526479146371
+          }
+        },
+        "status": "completed",
+        "unslowed_inference_ratio": 0.35683314667998606
+      },
+      "cifar10_row_gru_classification": {
+        "cpu_throughput_points_per_s": 14.934738256553977,
+        "gpu_baseline_source": "precomputed",
+        "gpu_throughput_points_per_s": 6.948202116728823,
+        "parity_probe": {
+          "achieved_ratio": 2.1494392370360655,
+          "hybrid_wins": true,
+          "max_abs_error": 2.294778823852539e-06,
+          "selected_policy": "gpu_cpu_hybrid",
+          "selected_runtime_s": 2.268712124990998,
+          "slowdown_used": 1.0,
+          "speedup": 4.060019679689973,
+          "surface_valid": true,
+          "vanilla_runtime_s": 9.21101587501471,
+          "worker_throughput_split": {
+            "cpu_point_fraction": 0.796875,
+            "cpu_points_processed": 51,
+            "cpu_throughput_points_per_s": 22.99417439942918,
+            "gpu_point_fraction": 0.203125,
+            "gpu_points_processed": 13,
+            "gpu_throughput_points_per_s": 5.730123208140205,
+            "total_throughput_points_per_s": 28.209837332382552
+          }
+        },
+        "status": "completed",
+        "unslowed_inference_ratio": 2.1494392370360655
+      },
+      "mnist_mlp_classification": {
+        "cpu_throughput_points_per_s": 10.925348883484098,
+        "gpu_baseline_source": "precomputed",
+        "gpu_throughput_points_per_s": 24.57424874076853,
+        "parity_probe": {
+          "achieved_ratio": 1.0,
+          "hybrid_wins": true,
+          "max_abs_error": 5.494803190231323e-08,
+          "selected_policy": "gpu_cpu_hybrid",
+          "selected_runtime_s": 1.6139323339739349,
+          "slowdown_used": 2.2492873227982257,
+          "speedup": 3.6296047713443365,
+          "surface_valid": true,
+          "vanilla_runtime_s": 5.857936500018695,
+          "worker_throughput_split": {
+            "cpu_point_fraction": 0.78125,
+            "cpu_points_processed": 50,
+            "cpu_throughput_points_per_s": 31.41217187501299,
+            "gpu_point_fraction": 0.21875,
+            "gpu_points_processed": 14,
+            "gpu_throughput_points_per_s": 8.67446528289587,
+            "total_throughput_points_per_s": 39.6546984360954
+          }
+        },
+        "status": "completed",
+        "unslowed_inference_ratio": 0.4445852647922054
+      }
+    }
+  },
+  "result": {
+    "control": {
+      "calibration_retry": 3,
+      "cpu_workers": 10
+    },
+    "record": {
+      "status": "completed",
+      "workloads": {
+        "california_mlp_regression": {
+          "cpu_throughput_points_per_s": 265.2951911180973,
+          "gpu_baseline_source": "precomputed",
+          "gpu_throughput_points_per_s": 84.81668662201496,
+          "parity_probe": {
+            "achieved_ratio": 3.1278655378320037,
+            "hybrid_wins": true,
+            "max_abs_error": 1.6689300537109375e-06,
+            "selected_policy": "gpu_cpu_hybrid",
+            "selected_runtime_s": 0.09687200002372265,
+            "slowdown_used": 1.0,
+            "speedup": 7.789335409849615,
+            "surface_valid": true,
+            "vanilla_runtime_s": 0.7545685000077356,
+            "worker_throughput_split": {
+              "cpu_point_fraction": 0.9375,
+              "cpu_points_processed": 60,
+              "cpu_throughput_points_per_s": 619.374019172793,
+              "gpu_point_fraction": 0.0625,
+              "gpu_points_processed": 4,
+              "gpu_throughput_points_per_s": 45.77929230490902,
+              "total_throughput_points_per_s": 660.6656204509792
+            }
+          },
+          "status": "completed",
+          "unslowed_inference_ratio": 3.1278655378320037
+        },
+        "cifar10_resnet20_classification": {
+          "cpu_throughput_points_per_s": 2.9195466073028253,
+          "gpu_baseline_source": "precomputed",
+          "gpu_throughput_points_per_s": 8.181825692110166,
+          "parity_probe": {
+            "achieved_ratio": 1.0,
+            "hybrid_wins": true,
+            "max_abs_error": 0.1380615234375,
+            "selected_policy": "gpu_cpu_hybrid",
+            "selected_runtime_s": 15.423446583998157,
+            "slowdown_used": 2.8024302375048604,
+            "speedup": 1.4212913980434252,
+            "surface_valid": true,
+            "vanilla_runtime_s": 21.92121195801883,
+            "worker_throughput_split": {
+              "cpu_point_fraction": 0.484375,
+              "cpu_points_processed": 31,
+              "cpu_throughput_points_per_s": 2.042614298838773,
+              "gpu_point_fraction": 0.515625,
+              "gpu_points_processed": 33,
+              "gpu_throughput_points_per_s": 2.1395995908098477,
+              "total_throughput_points_per_s": 4.149526479146371
+            }
+          },
+          "status": "completed",
+          "unslowed_inference_ratio": 0.35683314667998606
+        },
+        "cifar10_row_gru_classification": {
+          "cpu_throughput_points_per_s": 14.934738256553977,
+          "gpu_baseline_source": "precomputed",
+          "gpu_throughput_points_per_s": 6.948202116728823,
+          "parity_probe": {
+            "achieved_ratio": 2.1494392370360655,
+            "hybrid_wins": true,
+            "max_abs_error": 2.294778823852539e-06,
+            "selected_policy": "gpu_cpu_hybrid",
+            "selected_runtime_s": 2.268712124990998,
+            "slowdown_used": 1.0,
+            "speedup": 4.060019679689973,
+            "surface_valid": true,
+            "vanilla_runtime_s": 9.21101587501471,
+            "worker_throughput_split": {
+              "cpu_point_fraction": 0.796875,
+              "cpu_points_processed": 51,
+              "cpu_throughput_points_per_s": 22.99417439942918,
+              "gpu_point_fraction": 0.203125,
+              "gpu_points_processed": 13,
+              "gpu_throughput_points_per_s": 5.730123208140205,
+              "total_throughput_points_per_s": 28.209837332382552
+            }
+          },
+          "status": "completed",
+          "unslowed_inference_ratio": 2.1494392370360655
+        },
+        "mnist_mlp_classification": {
+          "cpu_throughput_points_per_s": 10.925348883484098,
+          "gpu_baseline_source": "precomputed",
+          "gpu_throughput_points_per_s": 24.57424874076853,
+          "parity_probe": {
+            "achieved_ratio": 1.0,
+            "hybrid_wins": true,
+            "max_abs_error": 5.494803190231323e-08,
+            "selected_policy": "gpu_cpu_hybrid",
+            "selected_runtime_s": 1.6139323339739349,
+            "slowdown_used": 2.2492873227982257,
+            "speedup": 3.6296047713443365,
+            "surface_valid": true,
+            "vanilla_runtime_s": 5.857936500018695,
+            "worker_throughput_split": {
+              "cpu_point_fraction": 0.78125,
+              "cpu_points_processed": 50,
+              "cpu_throughput_points_per_s": 31.41217187501299,
+              "gpu_point_fraction": 0.21875,
+              "gpu_points_processed": 14,
+              "gpu_throughput_points_per_s": 8.67446528289587,
+              "total_throughput_points_per_s": 39.6546984360954
+            }
+          },
+          "status": "completed",
+          "unslowed_inference_ratio": 0.4445852647922054
+        }
+      }
+    },
+    "schema_version": "experiment-b-hybrid-applicability-v2",
+    "workloads": {
+      "california_mlp_regression": {
+        "result": {
+          "parity_probe": {
+            "achieved_ratio": 3.1278655378320037,
+            "hybrid_wins": true,
+            "selected_mode": {
+              "_tag": "hybrid",
+              "cpu_batch_size": 64,
+              "cpu_workers": 1,
+              "gpu_batch_size": 64
+            },
+            "selected_policy": "gpu_cpu_hybrid",
+            "selected_runtime_s": 0.09687200002372265,
+            "slowdown_used": 1.0,
+            "speedup_vs_vanilla": 7.789335409849615,
+            "surface_valid": true,
+            "surface_validation": {
+              "allclose": true,
+              "atol": 1e-06,
+              "max_abs_error": 1.6689300537109375e-06,
+              "mismatch_count": 0,
+              "rmse": 3.764828490844002e-07,
+              "rtol": 1e-05
+            },
+            "target_ratio": 1.0,
+            "vanilla_runtime_s": 0.7545685000077356,
+            "worker_throughput_split": {
+              "cpu_point_fraction": 0.9375,
+              "cpu_points_processed": 60,
+              "cpu_throughput_points_per_s": 619.374019172793,
+              "gpu_point_fraction": 0.0625,
+              "gpu_points_processed": 4,
+              "gpu_throughput_points_per_s": 45.77929230490902,
+              "total_throughput_points_per_s": 660.6656204509792
+            }
+          },
+          "unslowed_ratio": {
+            "cpu_batch_size": 4,
+            "cpu_gpu_inference_ratio": 3.1278655378320037,
+            "cpu_runtime_s": 0.24124070900143124,
+            "cpu_throughput_points_per_s": 265.2951911180973,
+            "cpu_workers": 10,
+            "gpu_baseline_source": "precomputed",
+            "gpu_runtime_s": 0.7545685000077356,
+            "gpu_throughput_points_per_s": 84.81668662201496
+          }
+        },
+        "status": "completed",
+        "workload": {
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/california-mlp-0.pkl",
+          "dataset": {
+            "input_shape": [
+              8
+            ],
+            "name": "california_housing",
+            "path": "/Users/pedro/projects/loss-grid-computer/assets",
+            "sample_count": 1024
+          },
+          "loss": "mse",
+          "model": "mlp_regressor",
+          "registered": true,
+          "task": "tabular_regression",
+          "workload_name": "california_mlp_regression"
+        }
+      },
+      "cifar10_resnet20_classification": {
+        "result": {
+          "parity_probe": {
+            "achieved_ratio": 1.0,
+            "hybrid_wins": true,
+            "selected_mode": {
+              "_tag": "hybrid",
+              "cpu_batch_size": 8,
+              "cpu_workers": 1,
+              "gpu_batch_size": 64
+            },
+            "selected_policy": "gpu_cpu_hybrid",
+            "selected_runtime_s": 15.423446583998157,
+            "slowdown_used": 2.8024302375048604,
+            "speedup_vs_vanilla": 1.4212913980434252,
+            "surface_valid": true,
+            "surface_validation": {
+              "allclose": true,
+              "atol": 1e-06,
+              "max_abs_error": 0.1380615234375,
+              "mismatch_count": 0,
+              "rmse": 0.025377638687488806,
+              "rtol": 1e-05
+            },
+            "target_ratio": 1.0,
+            "vanilla_runtime_s": 21.92121195801883,
+            "worker_throughput_split": {
+              "cpu_point_fraction": 0.484375,
+              "cpu_points_processed": 31,
+              "cpu_throughput_points_per_s": 2.042614298838773,
+              "gpu_point_fraction": 0.515625,
+              "gpu_points_processed": 33,
+              "gpu_throughput_points_per_s": 2.1395995908098477,
+              "total_throughput_points_per_s": 4.149526479146371
+            }
+          },
+          "unslowed_ratio": {
+            "cpu_batch_size": 4,
+            "cpu_gpu_inference_ratio": 0.35683314667998606,
+            "cpu_runtime_s": 21.92121195801883,
+            "cpu_throughput_points_per_s": 2.9195466073028253,
+            "cpu_workers": 10,
+            "gpu_baseline_source": "precomputed",
+            "gpu_runtime_s": 7.822215042018797,
+            "gpu_throughput_points_per_s": 8.181825692110166
+          }
+        },
+        "status": "completed",
+        "workload": {
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/cifar10-resnet20-0.pkl",
+          "dataset": {
+            "input_shape": [
+              3,
+              32,
+              32
+            ],
+            "name": "cifar10",
+            "path": "/Users/pedro/projects/loss-grid-computer/assets/cifar-10-batches-py",
+            "sample_count": 1024
+          },
+          "loss": "cross_entropy",
+          "model": "resnet20",
+          "registered": true,
+          "task": "image_classification",
+          "workload_name": "cifar10_resnet20_classification"
+        }
+      },
+      "cifar10_row_gru_classification": {
+        "result": {
+          "parity_probe": {
+            "achieved_ratio": 2.1494392370360655,
+            "hybrid_wins": true,
+            "selected_mode": {
+              "_tag": "hybrid",
+              "cpu_batch_size": 64,
+              "cpu_workers": 2,
+              "gpu_batch_size": 64
+            },
+            "selected_policy": "gpu_cpu_hybrid",
+            "selected_runtime_s": 2.268712124990998,
+            "slowdown_used": 1.0,
+            "speedup_vs_vanilla": 4.060019679689973,
+            "surface_valid": true,
+            "surface_validation": {
+              "allclose": true,
+              "atol": 1e-06,
+              "max_abs_error": 2.294778823852539e-06,
+              "mismatch_count": 0,
+              "rmse": 3.694637177866109e-07,
+              "rtol": 1e-05
+            },
+            "target_ratio": 1.0,
+            "vanilla_runtime_s": 9.21101587501471,
+            "worker_throughput_split": {
+              "cpu_point_fraction": 0.796875,
+              "cpu_points_processed": 51,
+              "cpu_throughput_points_per_s": 22.99417439942918,
+              "gpu_point_fraction": 0.203125,
+              "gpu_points_processed": 13,
+              "gpu_throughput_points_per_s": 5.730123208140205,
+              "total_throughput_points_per_s": 28.209837332382552
+            }
+          },
+          "unslowed_ratio": {
+            "cpu_batch_size": 4,
+            "cpu_gpu_inference_ratio": 2.1494392370360655,
+            "cpu_runtime_s": 4.285311125015141,
+            "cpu_throughput_points_per_s": 14.934738256553977,
+            "cpu_workers": 10,
+            "gpu_baseline_source": "precomputed",
+            "gpu_runtime_s": 9.21101587501471,
+            "gpu_throughput_points_per_s": 6.948202116728823
+          }
+        },
+        "status": "completed",
+        "workload": {
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/cifar10-row-gru-0.pkl",
+          "dataset": {
+            "input_shape": [
+              3,
+              32,
+              32
+            ],
+            "name": "cifar10",
+            "path": "/Users/pedro/projects/loss-grid-computer/assets/cifar-10-batches-py",
+            "sample_count": 1024
+          },
+          "loss": "cross_entropy",
+          "model": "row_gru",
+          "registered": true,
+          "task": "image_classification",
+          "workload_name": "cifar10_row_gru_classification"
+        }
+      },
+      "mnist_mlp_classification": {
+        "result": {
+          "parity_probe": {
+            "achieved_ratio": 1.0,
+            "hybrid_wins": true,
+            "selected_mode": {
+              "_tag": "hybrid",
+              "cpu_batch_size": 64,
+              "cpu_workers": 1,
+              "gpu_batch_size": 64
+            },
+            "selected_policy": "gpu_cpu_hybrid",
+            "selected_runtime_s": 1.6139323339739349,
+            "slowdown_used": 2.2492873227982257,
+            "speedup_vs_vanilla": 3.6296047713443365,
+            "surface_valid": true,
+            "surface_validation": {
+              "allclose": true,
+              "atol": 1e-06,
+              "max_abs_error": 5.494803190231323e-08,
+              "mismatch_count": 0,
+              "rmse": 1.7729369379486736e-08,
+              "rtol": 1e-05
+            },
+            "target_ratio": 1.0,
+            "vanilla_runtime_s": 5.857936500018695,
+            "worker_throughput_split": {
+              "cpu_point_fraction": 0.78125,
+              "cpu_points_processed": 50,
+              "cpu_throughput_points_per_s": 31.41217187501299,
+              "gpu_point_fraction": 0.21875,
+              "gpu_points_processed": 14,
+              "gpu_throughput_points_per_s": 8.67446528289587,
+              "total_throughput_points_per_s": 39.6546984360954
+            }
+          },
+          "unslowed_ratio": {
+            "cpu_batch_size": 4,
+            "cpu_gpu_inference_ratio": 0.4445852647922054,
+            "cpu_runtime_s": 5.857936500018695,
+            "cpu_throughput_points_per_s": 10.925348883484098,
+            "cpu_workers": 10,
+            "gpu_baseline_source": "precomputed",
+            "gpu_runtime_s": 2.6043522499967366,
+            "gpu_throughput_points_per_s": 24.57424874076853
+          }
+        },
+        "status": "completed",
+        "workload": {
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/mnist-mlp-0.pkl",
+          "dataset": {
+            "input_shape": [
+              1,
+              28,
+              28
+            ],
+            "name": "mnist",
+            "path": "/Users/pedro/projects/loss-grid-computer/assets/mnist",
+            "sample_count": 1024
+          },
+          "loss": "cross_entropy",
+          "model": "mnist_mlp",
+          "registered": true,
+          "task": "image_classification",
+          "workload_name": "mnist_mlp_classification"
+        }
+      }
+    }
+  },
+  "status": "completed"
+}

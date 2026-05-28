@@ -1,238 +1,278 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-from dataclasses import asdict
-from contextlib import redirect_stderr, redirect_stdout
-from datetime import datetime, timezone
-import io
 import json
 import os
-from pathlib import Path
-import platform
 import sys
-import time
-from types import SimpleNamespace
-from typing import Any, Callable
+from dataclasses import asdict, is_dataclass, replace
+from datetime import datetime, timezone
+from enum import Enum
+from pathlib import Path
+from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
-import torch  # noqa: E402
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from experiments import (  # noqa: E402
-    calibration_cache,
-    functional_eval_experiments,
-    hybrid_applicability,
+    exp_1_algorithm,
+    exp_2_hybrid,
+    exp_3_cache,
     inventory,
-    statistical_analysis,
-    vanilla_profiling,
+    project,
 )
-from src.backends.base import resolve_device  # noqa: E402
-from experiments.functional_eval_experiments import (  # noqa: E402
-    DEFAULT_FUNCTIONAL_EVAL_WORKLOADS,
-)
-from experiments.common import (  # noqa: E402
-    configured_workloads,
-    put_shared_artifact,
-    workload_unavailable_reason,
+from experiments.schemas import (  # noqa: E402
+    Experiment1Config,
+    Experiment2Config,
+    Experiment3Config,
+    GridSpec,
 )
 
-ExperimentRunner = Callable[[SimpleNamespace, Path, dict[str, Any]], dict[str, Any]]
 
-
-# ------------------------------
-# Notebook Globals
-# ------------------------------
-
-# Edit these in the notebook, then call run_aio_suite().
-DEVICE = "auto"
 OUTPUT_DIR: str | None = None
-FAIL_FAST = False
-VERBOSE_EXPERIMENT_LOGS = False
+RUN_LABEL: str | None = None
+DEVICE = "auto"
+FAIL_FAST = True
 
+RUN_PLATFORM_INVENTORY = False
+RUN_EXPERIMENT_1 = True
+RUN_EXPERIMENT_2 = True
+RUN_EXPERIMENT_3 = True
+RUN_PROJECTION = True
+
+WORKLOAD_NAMES: tuple[str, ...] | None = None
 SEED = 1337
 SAMPLE_COUNT = 1024
 GRID_RESOLUTION = 8
-EXPERIMENT_C_SESSION_GRID_RESOLUTION = 40
+EXPERIMENT_3_SESSION_GRID_RESOLUTION = 20
 GRID_SCALE = 1.0
 GPU_BATCH_SIZE = 64
-ATOL = 1e-6
-RTOL = 1e-5
-
-MEASURE_WITHOUT_CACHE = True
-
+REPEATS = 1
+POINT_CHUNK_SIZES = (32, 64)
+MAX_MEMORY_FRACTION: float | None = 0.85
+INCLUDE_COMPILE_CANDIDATES = True
 CALIBRATION_RETRY = 3
 MAX_CPU_WORKER_CANDIDATE: int | None = None
 
-RUN_LABEL: str | None = None
-MLTASK_WORKLOADS = list(DEFAULT_FUNCTIONAL_EVAL_WORKLOADS)
-FUNCTIONAL_EVAL_WORKLOADS: list[str] | None = None
-FUNCTIONAL_EVAL_SAMPLE_COUNTS = [1024]
-FUNCTIONAL_EVAL_REPEATS = 5
-FUNCTIONAL_EVAL_BATCH_SIZE: int | None = None
-POINT_CHUNK_SIZES: list[int] = [32, 64]
-MAX_MEMORY_FRACTION: float | None = 0.85
-INCLUDE_VMAP_REPRODUCTION = False
-INCLUDE_FULL_TEST_SET = False
 
-
-# ------------------------------
-# Experiment Registry
-# ------------------------------
-
-# Toggle enabled values from the notebook.
-EXPERIMENT_REGISTRY: dict[str, dict[str, Any]] = {
-    # hardware/software metadata
-    "e0_platform_inventory": {
-        "enabled": True,
-        "title": "Platform Inventory",
-        "run": lambda config, output_dir, shared_state: inventory.run(
-            config,
-            output_dir,
-            shared_state,
-            platform_summary=_platform_summary,
-        ),
-    },
-    # Platform preflight for torch.func/vmap primitives.
-    "functional_eval_api_probe": {
-        "enabled": True,
-        "title": "Functional Eval API Preflight",
-        "run": functional_eval_experiments.run_api_probe,
-    },
-    # Experiment A step 0: baseline section timing (perturbation construction, parameter binding, forward+loss, result collection).
-    "experiment_a_profiling": {
-        "enabled": True,
-        "title": "Experiment A: Algorithm Profiling (Step 0 — Baseline Section Timing)",
-        "run": vanilla_profiling.run,
-    },
-    # Experiment A steps 1–3: functional_call and vmap redesign candidates.
-    "experiment_a_candidates": {
-        "enabled": True,
-        "title": "Experiment A: Algorithm Redesign Candidates",
-        "run": functional_eval_experiments.run_platform_benchmark,
-    },
-    # Experiment B: throughput-regime scheduler applicability and device affinity.
-    "experiment_b_hybrid_applicability": {
-        "enabled": True,
-        "title": "Experiment B: Hybrid Applicability",
-        "run": hybrid_applicability.run,
-    },
-    # Experiment C: calibration selection and same-family cache amortization.
-    # Runs all workloads with 4 variant checkpoints (see calibration_cache.VARIANT_PATHS).
-    "experiment_c_calibration_cache": {
-        "enabled": True,
-        "title": "Experiment C: Calibration Cache",
-        "run": calibration_cache.run_all,
-    },
-    # Statistical analysis: synthesize A/B/C results into paper-ready CI tables.
-    "statistical_analysis": {
-        "enabled": True,
-        "title": "Statistical Analysis",
-        "run": lambda config, output_dir, shared_state: statistical_analysis.run(
-            config,
-            output_dir,
-            shared_state,
-            experiments=shared_state.get("_experiments", {}),
-        ),
-    },
-    # Experiment D placeholder: compose only after isolated wins exist.
-    "experiment_d_merged_stack": {
-        "enabled": False,
-        "title": "Experiment D: Merged Stack",
-        "run": "_run_not_implemented",
-    },
-    # Deferred placeholder: AMR/progressive visualization is outside A-D.
-    "progressive_visualization_deferred": {
-        "enabled": False,
-        "title": "Progressive Visualization",
-        "run": "_run_not_implemented",
-    },
-}
-
-
-# ------------------------------
-# Entry Point
-# ------------------------------
-
-
-def _json_safe(value: Any) -> Any:
-    if isinstance(value, dict):
-        return {str(key): _json_safe(item) for key, item in value.items()}
-    if isinstance(value, (list, tuple, set)):
-        return [_json_safe(item) for item in value]
-    if isinstance(value, Path):
-        return str(value)
-    if hasattr(value, "__dataclass_fields__"):
-        return _json_safe(asdict(value))
-    if isinstance(value, SimpleNamespace):
-        return _json_safe(vars(value))
-    if isinstance(value, (str, int, float, bool)) or value is None:
-        return value
-    return str(value)
-
-
-def main() -> dict[str, Any]:
-    summary = run_aio_suite()
-    print(json.dumps(_json_safe(summary), indent=2, sort_keys=True))
-    return summary
-
-
-# ------------------------------
-# Suite Orchestration
-# ------------------------------
-
-
-def _config_from_globals() -> SimpleNamespace:
-    return SimpleNamespace(
-        device=DEVICE,
-        output_dir=OUTPUT_DIR,
-        fail_fast=FAIL_FAST,
+def main() -> Path:
+    run_dir = _create_run_dir()
+    experiment_1_config = replace(
+        Experiment1Config(device=DEVICE),  # type: ignore[arg-type]
+        workload_names=_workload_names(),
         seed=SEED,
         sample_count=SAMPLE_COUNT,
-        grid_resolution=GRID_RESOLUTION,
-        experiment_c_session_grid_resolution=EXPERIMENT_C_SESSION_GRID_RESOLUTION,
-        grid_scale=GRID_SCALE,
+        grid=GridSpec(GRID_RESOLUTION, GRID_SCALE),
+        batch_size=GPU_BATCH_SIZE,
+        repeats=REPEATS,
+        point_chunk_sizes=tuple(POINT_CHUNK_SIZES),
+        max_memory_fraction=MAX_MEMORY_FRACTION,
+        include_compile_candidates=INCLUDE_COMPILE_CANDIDATES,
+    )
+    experiment_2_config = replace(
+        Experiment2Config(device=DEVICE),  # type: ignore[arg-type]
+        workload_names=_workload_names(),
+        seed=SEED,
+        sample_count=SAMPLE_COUNT,
+        grid=GridSpec(GRID_RESOLUTION, GRID_SCALE),
         gpu_batch_size=GPU_BATCH_SIZE,
-        atol=ATOL,
-        rtol=RTOL,
-        measure_without_cache=MEASURE_WITHOUT_CACHE,
-        verbose_experiment_logs=VERBOSE_EXPERIMENT_LOGS,
+        repeats=REPEATS,
         calibration_retry=CALIBRATION_RETRY,
         max_cpu_worker_candidate=MAX_CPU_WORKER_CANDIDATE,
-        run_label=RUN_LABEL,
-        mltask_workloads=list(MLTASK_WORKLOADS),
-        functional_eval_workloads=(
-            None
-            if FUNCTIONAL_EVAL_WORKLOADS is None
-            else list(FUNCTIONAL_EVAL_WORKLOADS)
-        ),
-        functional_eval_sample_counts=list(FUNCTIONAL_EVAL_SAMPLE_COUNTS),
-        functional_eval_repeats=FUNCTIONAL_EVAL_REPEATS,
-        functional_eval_batch_size=(
-            GPU_BATCH_SIZE
-            if FUNCTIONAL_EVAL_BATCH_SIZE is None
-            else FUNCTIONAL_EVAL_BATCH_SIZE
-        ),
-        point_chunk_sizes=list(POINT_CHUNK_SIZES),
-        max_memory_fraction=MAX_MEMORY_FRACTION,
-        include_vmap_reproduction=INCLUDE_VMAP_REPRODUCTION,
-        include_full_test_set=INCLUDE_FULL_TEST_SET,
+    )
+    experiment_3_config = replace(
+        Experiment3Config(device=DEVICE),  # type: ignore[arg-type]
+        seed=SEED,
+        sample_count=SAMPLE_COUNT,
+        session_grid=GridSpec(EXPERIMENT_3_SESSION_GRID_RESOLUTION, GRID_SCALE),
+        gpu_batch_size=GPU_BATCH_SIZE,
+        calibration_retry=CALIBRATION_RETRY,
+        max_cpu_worker_candidate=MAX_CPU_WORKER_CANDIDATE,
     )
 
+    config_payload = {
+        "device": DEVICE,
+        "run_toggles": {
+            "platform_inventory": RUN_PLATFORM_INVENTORY,
+            "experiment_1": RUN_EXPERIMENT_1,
+            "experiment_2": RUN_EXPERIMENT_2,
+            "experiment_3": RUN_EXPERIMENT_3,
+            "projection": RUN_PROJECTION,
+        },
+        "experiment_1": experiment_1_config,
+        "experiment_2": experiment_2_config,
+        "experiment_3": experiment_3_config,
+    }
+    _write_json(run_dir / "config.json", config_payload)
 
-def _output_dir(raw: str | None, run_label: str | None) -> Path:
-    if raw:
-        path = Path(raw)
+    platform = _maybe_run_step(
+        name="platform_inventory",
+        enabled=RUN_PLATFORM_INVENTORY,
+        path=run_dir / "platform.json",
+        disabled_payload={"status": "disabled"},
+        fn=lambda: inventory.run(DEVICE),
+    )
+    experiment_1 = _maybe_run_step(
+        name="experiment_1",
+        enabled=RUN_EXPERIMENT_1,
+        path=run_dir / "experiment-1.json",
+        disabled_payload={"status": "disabled", "record": {"status": "disabled"}},
+        fn=lambda: exp_1_algorithm.run(experiment_1_config),
+    )
+    experiment_2 = _maybe_run_step(
+        name="experiment_2",
+        enabled=RUN_EXPERIMENT_2,
+        path=run_dir / "experiment-2.json",
+        disabled_payload={"status": "disabled", "record": {"status": "disabled"}},
+        fn=lambda: exp_2_hybrid.run(experiment_2_config),
+    )
+    experiment_3 = _maybe_run_step(
+        name="experiment_3",
+        enabled=(
+            RUN_EXPERIMENT_3
+            and not isinstance(experiment_1, dict)
+            and not isinstance(experiment_2, dict)
+        ),
+        path=run_dir / "experiment-3.json",
+        disabled_payload=_dependency_payload(
+            RUN_EXPERIMENT_3,
+            "experiment_1, experiment_2",
+        ),
+        fn=lambda: exp_3_cache.run(experiment_3_config, experiment_1, experiment_2),
+    )
+    projection = _maybe_run_step(
+        name="projection",
+        enabled=(
+            RUN_PROJECTION
+            and not isinstance(experiment_1, dict)
+            and not isinstance(experiment_2, dict)
+            and not isinstance(experiment_3, dict)
+        ),
+        path=run_dir / "projection.json",
+        disabled_payload=_projection_disabled_payload(
+            experiment_1,
+            experiment_2,
+            experiment_3,
+        ),
+        fn=lambda: project.project(experiment_1, experiment_2, experiment_3),
+    )
+
+    _write_json(
+        run_dir / "suite.json",
+        {
+            "schema_version": "platform-experiment-suite-v2",
+            "status": _suite_status(
+                platform,
+                experiment_1,
+                experiment_2,
+                experiment_3,
+                projection,
+            ),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "artifacts": {
+                "config": "config.json",
+                "platform": "platform.json",
+                "experiment_1": "experiment-1.json",
+                "experiment_2": "experiment-2.json",
+                "experiment_3": "experiment-3.json",
+                "projection": "projection.json",
+            },
+            "records": {
+                "platform": _record(platform),
+                "experiment_1": _record(experiment_1),
+                "experiment_2": _record(experiment_2),
+                "experiment_3": _record(experiment_3),
+                "projection": _record(projection),
+            },
+        },
+    )
+    print(run_dir)
+    return run_dir
+
+
+def _run_step(name: str, path: Path, fn):
+    _banner(name, "start")
+    try:
+        result = fn()
+    except Exception as exc:
+        result = {"status": "error", "error": f"{type(exc).__name__}: {exc}"}
+        _write_json(path, result)
+        _banner(name, result.get("status", "error"))
+        if FAIL_FAST:
+            raise
+        return result
+    _write_json(path, result)
+    _banner(name, _step_status(result))
+    return result
+
+
+def _maybe_run_step(
+    *,
+    name: str,
+    enabled: bool,
+    path: Path,
+    disabled_payload: dict[str, Any],
+    fn,
+):
+    if enabled:
+        return _run_step(name, path, fn)
+    _write_json(path, disabled_payload)
+    _banner(name, _step_status(disabled_payload))
+    return disabled_payload
+
+
+def _dependency_payload(requested: bool, dependency_name: str) -> dict[str, Any]:
+    if requested:
+        return {
+            "status": "skipped",
+            "skip_reason": f"requires enabled {dependency_name}",
+            "record": {
+                "status": "skipped",
+                "skip_reason": f"requires enabled {dependency_name}",
+            },
+        }
+    return {"status": "disabled", "record": {"status": "disabled"}}
+
+
+def _projection_disabled_payload(
+    experiment_1: Any,
+    experiment_2: Any,
+    experiment_3: Any,
+) -> dict[str, Any]:
+    if not RUN_PROJECTION:
+        return {"status": "disabled"}
+    missing = [
+        name
+        for name, value in (
+            ("experiment_1", experiment_1),
+            ("experiment_2", experiment_2),
+            ("experiment_3", experiment_3),
+        )
+        if isinstance(value, dict)
+    ]
+    return {
+        "status": "skipped",
+        "skip_reason": f"requires completed {', '.join(missing)}",
+    }
+
+
+def _create_run_dir() -> Path:
+    if OUTPUT_DIR:
+        run_dir = Path(OUTPUT_DIR)
     else:
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        path = (
+        run_dir = (
             Path("outputs")
             / "platform_experiment_suite"
-            / f"{_filename_label(run_label)}{timestamp}"
+            / f"{_filename_label(RUN_LABEL)}{timestamp}"
         )
-    path.mkdir(parents=True, exist_ok=True)
-    return path
+    run_dir.mkdir(parents=True, exist_ok=True)
+    return run_dir
+
+
+def _workload_names() -> tuple[str, ...]:
+    if WORKLOAD_NAMES is None:
+        return Experiment1Config().workload_names
+    return tuple(WORKLOAD_NAMES)
 
 
 def _filename_label(label: str | None) -> str:
@@ -245,316 +285,7 @@ def _filename_label(label: str | None) -> str:
     return f"{safe}-" if safe else ""
 
 
-def _runner(entry: Any) -> ExperimentRunner:
-    if callable(entry):
-        return entry
-    runner = globals().get(entry)
-    if not callable(runner):
-        raise ValueError(f"registry runner is not callable: {entry}")
-    return runner
-
-
-def _banner(name: str, marker: str) -> None:
-    print(f"\n=== {name}: [{marker}] ===")
-
-
-def _run_quietly(
-    runner: ExperimentRunner,
-    config: SimpleNamespace,
-    output_dir: Path,
-    shared_state: dict[str, Any],
-) -> dict[str, Any]:
-    previous_verbose = os.environ.get("LGC_VERBOSE_EXPERIMENT_LOGS")
-    os.environ["LGC_VERBOSE_EXPERIMENT_LOGS"] = (
-        "1" if config.verbose_experiment_logs else "0"
-    )
-    if config.verbose_experiment_logs:
-        try:
-            return runner(config, output_dir, shared_state)
-        finally:
-            _restore_verbose_env(previous_verbose)
-    try:
-        with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
-            return runner(config, output_dir, shared_state)
-    finally:
-        _restore_verbose_env(previous_verbose)
-
-
-def _restore_verbose_env(previous: str | None) -> None:
-    if previous is None:
-        os.environ.pop("LGC_VERBOSE_EXPERIMENT_LOGS", None)
-    else:
-        os.environ["LGC_VERBOSE_EXPERIMENT_LOGS"] = previous
-
-
-def _total_system_memory_bytes() -> int | None:
-    try:
-        pages = os.sysconf("SC_PHYS_PAGES")
-        page_size = os.sysconf("SC_PAGE_SIZE")
-        return int(pages * page_size)
-    except (AttributeError, OSError, ValueError):
-        return None
-
-
-def _platform_summary(
-    requested_device: str,
-    resolved_device: torch.device,
-) -> dict[str, Any]:
-    gpu: dict[str, Any] | None = None
-    if resolved_device.type == "cuda" and torch.cuda.is_available():
-        props = torch.cuda.get_device_properties(resolved_device)
-        gpu = {
-            "name": torch.cuda.get_device_name(resolved_device),
-            "device_count": int(torch.cuda.device_count()),
-            "current_device": int(torch.cuda.current_device()),
-            "capability": list(torch.cuda.get_device_capability(resolved_device)),
-            "total_memory_bytes": int(props.total_memory),
-            "multi_processor_count": int(props.multi_processor_count),
-        }
-    elif resolved_device.type == "mps":
-        gpu = {
-            "name": "Apple MPS",
-            "mps_built": bool(torch.backends.mps.is_built()),
-        }
-
-    return {
-        "requested_device": requested_device,
-        "resolved_device": str(resolved_device),
-        "host_os": platform.system(),
-        "os_release": platform.release(),
-        "machine": platform.machine(),
-        "python_version": platform.python_version(),
-        "torch_version": torch.__version__,
-        "cuda_available": bool(torch.cuda.is_available()),
-        "mps_available": bool(
-            hasattr(torch.backends, "mps") and torch.backends.mps.is_available()
-        ),
-        "cpu": {
-            "logical_cores": os.cpu_count(),
-            "model": platform.processor() or None,
-        },
-        "memory": {
-            "total_system_memory_bytes": _total_system_memory_bytes(),
-            "approx_memory_bandwidth": None,
-        },
-        "gpu": gpu,
-        "env_threads": {
-            key: os.environ.get(key)
-            for key in (
-                "OMP_NUM_THREADS",
-                "MKL_NUM_THREADS",
-                "VECLIB_MAXIMUM_THREADS",
-                "NUMEXPR_NUM_THREADS",
-            )
-        },
-    }
-
-
-def _metric_record(
-    name: str, payload: dict[str, Any], duration_s: float | None
-) -> dict[str, Any]:
-    del name
-    record = dict(payload.get("record") or {}) if isinstance(payload, dict) else {}
-    record.setdefault("status", payload.get("status") if isinstance(payload, dict) else None)
-    record["duration_s"] = duration_s
-    if isinstance(payload, dict):
-        if payload.get("output_path") is not None:
-            record.setdefault("output_path", payload.get("output_path"))
-        if payload.get("error") is not None:
-            record.setdefault("error", payload["error"])
-        if payload.get("reason") is not None:
-            record.setdefault("reason", payload["reason"])
-    return record
-
-
-def _precompute_shared_nodes(
-    config: SimpleNamespace,
-    shared_state: dict[str, Any],
-) -> None:
-    for workload_name in configured_workloads(config):
-        if workload_unavailable_reason(workload_name) is not None:
-            continue
-        outcome = vanilla_profiling.compute_vanilla_full_grid(workload_name, config)
-        if outcome is None:
-            continue
-        key, result, summary = outcome
-        put_shared_artifact(shared_state, key, result, summary)
-
-
-def run_aio_suite(config: SimpleNamespace | None = None) -> dict[str, Any]:
-    config = _config_from_globals() if config is None else config
-    output_dir = _output_dir(config.output_dir, config.run_label)
-    summary_path = output_dir / f"{_filename_label(config.run_label)}summary.json"
-    experiments: dict[str, Any] = {}
-    records: dict[str, Any] = {}
-    shared_state: dict[str, Any] = {}
-
-    def persist_summary(status: str) -> dict[str, Any]:
-        return _write_suite_summary(
-            summary_path,
-            status=status,
-            config=config,
-            shared_state=shared_state,
-            records=records,
-            experiments=experiments,
-        )
-
-    def save_intermediate_payload(stem: str, payload: dict[str, Any]) -> str:
-        output_path = _experiment_payload_path(output_dir, stem, config.run_label)
-        _write_experiment_payload(output_path, payload)
-        return str(output_path)
-
-    shared_state["_save_intermediate_payload"] = save_intermediate_payload
-    persist_summary("running")
-
-    _vanilla_full_grid_consumers = {"experiment_a_profiling", "experiment_b_hybrid_applicability"}
-    if any(
-        bool(EXPERIMENT_REGISTRY.get(name, {}).get("enabled"))
-        for name in _vanilla_full_grid_consumers
-    ):
-        _precompute_shared_nodes(config, shared_state)
-        persist_summary("running")
-
-    for name, entry in EXPERIMENT_REGISTRY.items():
-        output_path = _experiment_payload_path(
-            output_dir,
-            str(entry.get("child_stem") or name),
-            config.run_label,
-        )
-        if not bool(entry["enabled"]):
-            _banner(name, "finish")
-            experiments[name] = {
-                "status": "disabled",
-                "record": {"status": "disabled"},
-            }
-            records[name] = _metric_record(name, experiments[name], None)
-            records[name]["output_path"] = str(output_path)
-            experiments[name]["output_path"] = str(output_path)
-            experiments[name]["record"] = records[name]
-            shared_state.setdefault("_experiments", {})[name] = experiments[name]
-            _write_experiment_payload(output_path, experiments[name])
-            persist_summary("running")
-            continue
-
-        runner = _runner(entry["run"])
-        _banner(name, "start")
-        start = time.perf_counter()
-        raise_after_persist: Exception | None = None
-        try:
-            experiments[name] = _run_quietly(
-                runner,
-                config,
-                output_dir,
-                shared_state,
-            )
-        except Exception as exc:
-            experiments[name] = {
-                "status": "error",
-                "error": f"{type(exc).__name__}: {exc}",
-            }
-            if config.fail_fast:
-                raise_after_persist = exc
-        duration_s = round(time.perf_counter() - start, 6)
-        experiments[name]["duration_s"] = duration_s
-        records[name] = _metric_record(name, experiments[name], duration_s)
-        output_path = _experiment_payload_path(
-            output_dir,
-            experiments[name].get("child_stem", name),
-            config.run_label,
-        )
-        records[name]["output_path"] = str(output_path)
-        experiments[name]["output_path"] = str(output_path)
-        experiments[name]["record"] = records[name]
-        shared_state.setdefault("_experiments", {})[name] = experiments[name]
-        _write_experiment_payload(
-            output_path,
-            experiments[name],
-        )
-        persist_summary("error" if raise_after_persist else "running")
-        _banner(name, "finish")
-        if raise_after_persist is not None:
-            raise raise_after_persist
-
-    return persist_summary("completed")
-
-
-def _build_suite_summary(
-    *,
-    status: str,
-    config: SimpleNamespace,
-    shared_state: dict[str, Any],
-    records: dict[str, Any],
-    experiments: dict[str, Any],
-    summary_path: Path,
-) -> dict[str, Any]:
-    return {
-        "schema_version": "platform-experiment-suite-v1",
-        "status": status,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "platform": _platform_summary(config.device, resolve_device(config.device)),
-        "config": dict(vars(config)),
-        "registry": {
-            name: {"enabled": bool(entry["enabled"])}
-            for name, entry in EXPERIMENT_REGISTRY.items()
-        },
-        "shared_state": _shared_state_summary(shared_state),
-        "records": records,
-        "experiments": experiments,
-        "output_path": str(summary_path),
-    }
-
-
-def _write_suite_summary(
-    path: Path,
-    *,
-    status: str,
-    config: SimpleNamespace,
-    shared_state: dict[str, Any],
-    records: dict[str, Any],
-    experiments: dict[str, Any],
-) -> dict[str, Any]:
-    summary = _build_suite_summary(
-        status=status,
-        config=config,
-        shared_state=shared_state,
-        records=records,
-        experiments=experiments,
-        summary_path=path,
-    )
-    _write_json_payload(path, summary)
-    return summary
-
-
-def _shared_state_summary(shared_state: dict[str, Any]) -> dict[str, Any]:
-    return {
-        key: value
-        for key, value in _json_safe(shared_state).items()
-        if not key.startswith("_")
-    }
-
-
-# ------------------------------
-# Shared writers
-# ------------------------------
-
-
-def _experiment_payload_path(
-    output_dir: Path,
-    stem: str,
-    run_label: str | None = None,
-) -> Path:
-    return output_dir / f"{_filename_label(run_label)}{stem}.json"
-
-
-def _write_experiment_payload(
-    path: Path,
-    payload: dict[str, Any],
-) -> Path:
-    _write_json_payload(path, payload)
-    return path
-
-
-def _write_json_payload(path: Path, payload: dict[str, Any]) -> None:
+def _write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     encoded = json.dumps(_json_safe(payload), indent=2, sort_keys=True)
     tmp_path = path.with_name(f".{path.name}.tmp")
@@ -563,20 +294,61 @@ def _write_json_payload(path: Path, payload: dict[str, Any]) -> None:
         handle.flush()
         os.fsync(handle.fileno())
     tmp_path.replace(path)
-    json.loads(path.read_text(encoding="utf-8"))
+    _read_json(path)
 
 
-def _run_not_implemented(
-    config: SimpleNamespace,
-    output_dir: Path,
-    shared_state: dict[str, Any],
-) -> dict[str, Any]:
-    del config
-    del output_dir
-    del shared_state
-    return {
-        "status": "disabled",
-    }
+def _read_json(path: Path) -> Any:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _json_safe(value: Any) -> Any:
+    if is_dataclass(value):
+        return _json_safe(asdict(value))
+    if isinstance(value, Enum):
+        return value.value
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    return str(value)
+
+
+def _record(value: Any) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        return value.get("record", value)
+    return getattr(value, "record", None)
+
+
+def _suite_status(*steps: Any) -> str:
+    statuses = []
+    for step in steps:
+        if isinstance(step, dict):
+            statuses.append(step.get("status"))
+        else:
+            statuses.append(getattr(step, "status", None))
+    if any(status == "error" for status in statuses):
+        return "completed_with_errors"
+    if any(status == "unknown_workload" for status in statuses):
+        return "completed_with_errors"
+    if any(status == "planned" for status in statuses):
+        return "planned"
+    return "completed"
+
+
+def _step_status(value: Any) -> str:
+    if isinstance(value, dict):
+        return str(value.get("status", "completed"))
+    return str(getattr(value, "status", "completed"))
+
+
+def _banner(name: str, marker: str) -> None:
+    print(f"[runner] {name} {marker}", flush=True)
 
 
 if __name__ == "__main__":

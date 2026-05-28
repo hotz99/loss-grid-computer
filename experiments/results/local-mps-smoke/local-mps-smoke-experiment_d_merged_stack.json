@@ -1,0 +1,9 @@
+{
+  "output_path": "outputs/local-mps-smoke/local-mps-smoke-experiment_d_merged_stack.json",
+  "record": {
+    "duration_s": null,
+    "output_path": "outputs/local-mps-smoke/local-mps-smoke-experiment_d_merged_stack.json",
+    "status": "disabled"
+  },
+  "status": "disabled"
+}

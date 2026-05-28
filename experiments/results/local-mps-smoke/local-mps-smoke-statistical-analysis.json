@@ -1,0 +1,129 @@
+{
+  "child_stem": "statistical-analysis",
+  "duration_s": 2.9e-05,
+  "output_path": "outputs/local-mps-smoke/local-mps-smoke-statistical-analysis.json",
+  "record": {
+    "duration_s": 2.9e-05,
+    "gaps": [
+      "california_mlp_regression/functional_sequential: n=1 < 2 \u2014 insufficient for CI",
+      "california_mlp_regression/vmapped_chunk_2: n=1 < 2 \u2014 insufficient for CI"
+    ],
+    "n_significant_candidates": 0,
+    "output_path": "outputs/local-mps-smoke/local-mps-smoke-statistical-analysis.json",
+    "paper_ready": false,
+    "status": "completed"
+  },
+  "result": {
+    "exp_a": {
+      "candidate_table": [
+        {
+          "all_validations_passed": true,
+          "candidate": "functional_sequential",
+          "ci_95_hi": null,
+          "ci_95_lo": null,
+          "mean_speedup": 0.9378854070300229,
+          "n": 1,
+          "section_timings_s": {
+            "batch_eval_s": 0.007332125038374215,
+            "binding_s": 0.0001219160039909184,
+            "perturbation_s": 0.0009824169683270156,
+            "total_grid_s": 0.008446082996670157
+          },
+          "significant": false,
+          "stdev": null,
+          "workload": "california_mlp_regression"
+        },
+        {
+          "all_validations_passed": true,
+          "candidate": "vmapped_chunk_2",
+          "ci_95_hi": null,
+          "ci_95_lo": null,
+          "mean_speedup": 1.1267876523824432,
+          "n": 1,
+          "section_timings_s": {
+            "batch_eval_s": 0.00508308393182233,
+            "binding_s": 3.370799822732806e-05,
+            "perturbation_s": 0.0012073329999111593,
+            "total_grid_s": 0.007030124950688332
+          },
+          "significant": false,
+          "stdev": null,
+          "workload": "california_mlp_regression"
+        }
+      ],
+      "section_shares": [
+        {
+          "batch_eval_share": 0.3804,
+          "binding_share": 0.0051,
+          "perturbation_share": 0.6133,
+          "total_grid_s": 0.060189,
+          "workload": "california_mlp_regression"
+        }
+      ]
+    },
+    "exp_b": {
+      "workload_table": [
+        {
+          "achieved_ratio": 43.007621855418996,
+          "cpu_throughput_pts_s": 2858.163620715306,
+          "gpu_throughput_pts_s": 66.45714172068723,
+          "hybrid_speedup": 50.96634800192678,
+          "hybrid_wins": true,
+          "max_abs_error": 7.152557373046875e-06,
+          "selected_policy": "gpu_cpu_hybrid",
+          "selected_time_s": 0.0011809589923359454,
+          "slowdown_applied": 1.0,
+          "surface_valid": true,
+          "unslowed_ratio": 43.007621855418996,
+          "vanilla_time_s": 0.06018916697939858,
+          "worker_throughput_split": {
+            "cpu_point_fraction": 1.0,
+            "cpu_points_processed": 4,
+            "cpu_throughput_points_per_s": 3387.0778121499134,
+            "gpu_point_fraction": 0.0,
+            "gpu_points_processed": 0,
+            "gpu_throughput_points_per_s": 0.0,
+            "total_throughput_points_per_s": 3387.0778121499134
+          },
+          "workload": "california_mlp_regression"
+        }
+      ]
+    },
+    "exp_c": {
+      "error": null,
+      "summary": {
+        "california_mlp_regression": {
+          "amortized_calibration_per_variant_s": 0.4758,
+          "break_even_n": null,
+          "break_even_unavailable_reason": "hybrid_per_variant_not_faster",
+          "calibration_grid_resolution": 4,
+          "calibration_s": 1.903,
+          "hybrid_per_variant_grid_s": 1.946,
+          "hybrid_without_cache_penalty_vs_vanilla": 228.913,
+          "mode_selections_by_variant": [
+            "hybrid",
+            "hybrid",
+            "hybrid",
+            "hybrid"
+          ],
+          "selected_mode": "hybrid",
+          "session_grid_resolution": 2,
+          "session_speedup_vs_vanilla": 0.0071,
+          "session_total_s_vanilla": 0.069,
+          "session_total_s_with_cache": 9.735,
+          "session_total_s_without_cache": 15.795,
+          "speedup_exceeds_one": false,
+          "vanilla_per_variant_s": 0.018,
+          "variant_count": 4
+        }
+      }
+    },
+    "gaps": [
+      "california_mlp_regression/functional_sequential: n=1 < 2 \u2014 insufficient for CI",
+      "california_mlp_regression/vmapped_chunk_2: n=1 < 2 \u2014 insufficient for CI"
+    ],
+    "n_significant_candidates": 0,
+    "paper_ready": false
+  },
+  "status": "completed"
+}

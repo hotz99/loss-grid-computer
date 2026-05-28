@@ -1,0 +1,200 @@
+{
+  "child_stem": "experiment-c-calibration-cache-partial",
+  "record": {
+    "completed_workloads": [
+      "california_mlp_regression"
+    ],
+    "skipped_workloads": [],
+    "status": "running",
+    "workloads": {
+      "california_mlp_regression": {
+        "amortized_calibration_per_variant_s": 0.4758,
+        "break_even_n": null,
+        "break_even_unavailable_reason": "hybrid_per_variant_not_faster",
+        "calibration_grid_resolution": 4,
+        "calibration_s": 1.903,
+        "hybrid_per_variant_grid_s": 1.946,
+        "hybrid_without_cache_penalty_vs_vanilla": 228.913,
+        "mode_selections_by_variant": [
+          "hybrid",
+          "hybrid",
+          "hybrid",
+          "hybrid"
+        ],
+        "selected_policy": "hybrid",
+        "session_grid_resolution": 2,
+        "session_speedup_vs_vanilla": 0.0071,
+        "session_total_s_vanilla": 0.069,
+        "session_total_s_with_cache": 9.735,
+        "session_total_s_without_cache": 15.795,
+        "slowdown": 1.0,
+        "slowdown_source": "unslowed",
+        "status": "completed",
+        "vanilla_per_variant_s": 0.018,
+        "variant_count": 4
+      }
+    }
+  },
+  "result": {
+    "workloads": {
+      "california_mlp_regression": {
+        "comparison_design": {
+          "hybrid_with_cache": "calibrate_once_then_reuse_selected_policy",
+          "hybrid_without_cache": "recalibrate_each_variant_then_execute_selected_policy",
+          "vanilla_reference": "gpu_only_full_session_no_calibration"
+        },
+        "record": {
+          "amortized_calibration_per_variant_s": 0.4758,
+          "break_even_n": null,
+          "break_even_unavailable_reason": "hybrid_per_variant_not_faster",
+          "calibration_grid_resolution": 4,
+          "calibration_s": 1.903,
+          "hybrid_per_variant_grid_s": 1.946,
+          "hybrid_without_cache_penalty_vs_vanilla": 228.913,
+          "mode_selections_by_variant": [
+            "hybrid",
+            "hybrid",
+            "hybrid",
+            "hybrid"
+          ],
+          "selected_policy": "hybrid",
+          "session_grid_resolution": 2,
+          "session_speedup_vs_vanilla": 0.0071,
+          "session_total_s_vanilla": 0.069,
+          "session_total_s_with_cache": 9.735,
+          "session_total_s_without_cache": 15.795,
+          "slowdown": 1.0,
+          "slowdown_source": "unslowed",
+          "status": "completed",
+          "vanilla_per_variant_s": 0.018,
+          "variant_count": 4
+        },
+        "runtime_condition": {
+          "slowdown": 1.0,
+          "source": "unslowed"
+        },
+        "setup": {
+          "calibration_grid_resolution": 4,
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/california-mlp-0.pkl",
+          "cpu_batch_sizes": [
+            2
+          ],
+          "cpu_worker_values": [
+            1
+          ],
+          "execution_grid_resolution": 2,
+          "gpu_slowdown_factor": 1.0,
+          "measure_without_cache": true,
+          "model_variant_checkpoints": [
+            "/Users/pedro/projects/loss-grid-computer/assets/california-mlp-0.pkl",
+            "/Users/pedro/projects/loss-grid-computer/assets/california-mlp-42.pkl",
+            "/Users/pedro/projects/loss-grid-computer/assets/california-mlp-99.pkl",
+            "/Users/pedro/projects/loss-grid-computer/assets/california-mlp-1337.pkl"
+          ],
+          "retry": 1,
+          "workload": "california_mlp_regression"
+        },
+        "vanilla_reference_session": {
+          "mean_per_variant_s": 0.018,
+          "per_variant_s": [
+            0.022,
+            0.016,
+            0.016,
+            0.016
+          ],
+          "session_grid_resolution": 2,
+          "session_total_s": 0.069,
+          "source": "empirical",
+          "variants": 4
+        },
+        "with_cache_session": {
+          "baseline_s": 0.048,
+          "best_calibration_hybrid_s": 0.003515,
+          "best_hybrid_minus_gpu_only_s": -0.032572,
+          "calibration_s": 1.903,
+          "execution_mode": {
+            "_tag": "hybrid",
+            "cpu_batch_size": 2,
+            "cpu_workers": 1,
+            "gpu_batch_size": 2
+          },
+          "execution_s": 7.784,
+          "first_variant_total_s": 3.903,
+          "per_variant_grid_s": [
+            1.952,
+            1.941,
+            1.931,
+            1.96
+          ],
+          "session_total_s": 9.735,
+          "source": "empirical",
+          "subsequent_variants_total_s": 5.832,
+          "variants": 4
+        },
+        "without_cache_session": {
+          "baseline_s": 0.195,
+          "calibration_s": 7.817,
+          "execution_s": 7.782,
+          "session_total_s": 15.795,
+          "source": "empirical",
+          "variant_details": [
+            {
+              "baseline_s": 0.048,
+              "best_hybrid_minus_gpu_only_s": -0.03349,
+              "best_hybrid_s": 0.003407,
+              "calibration_s": 1.964,
+              "execution_mode": {
+                "_tag": "hybrid",
+                "cpu_batch_size": 2,
+                "cpu_workers": 1,
+                "gpu_batch_size": 2
+              },
+              "grid_s": 1.952
+            },
+            {
+              "baseline_s": 0.049,
+              "best_hybrid_minus_gpu_only_s": -0.035312,
+              "best_hybrid_s": 0.003735,
+              "calibration_s": 1.939,
+              "execution_mode": {
+                "_tag": "hybrid",
+                "cpu_batch_size": 2,
+                "cpu_workers": 1,
+                "gpu_batch_size": 2
+              },
+              "grid_s": 1.923
+            },
+            {
+              "baseline_s": 0.049,
+              "best_hybrid_minus_gpu_only_s": -0.033594,
+              "best_hybrid_s": 0.003668,
+              "calibration_s": 1.952,
+              "execution_mode": {
+                "_tag": "hybrid",
+                "cpu_batch_size": 2,
+                "cpu_workers": 1,
+                "gpu_batch_size": 2
+              },
+              "grid_s": 1.942
+            },
+            {
+              "baseline_s": 0.049,
+              "best_hybrid_minus_gpu_only_s": -0.034032,
+              "best_hybrid_s": 0.00405,
+              "calibration_s": 1.962,
+              "execution_mode": {
+                "_tag": "hybrid",
+                "cpu_batch_size": 2,
+                "cpu_workers": 1,
+                "gpu_batch_size": 2
+              },
+              "grid_s": 1.965
+            }
+          ],
+          "variants": 4
+        }
+      }
+    }
+  },
+  "status": "running"
+}

@@ -1,0 +1,181 @@
+{
+  "child_stem": "experiment-b-hybrid-applicability",
+  "duration_s": 5.683384,
+  "output_path": "outputs/local-mps-smoke/local-mps-smoke-experiment-b-hybrid-applicability.json",
+  "record": {
+    "duration_s": 5.683384,
+    "output_path": "outputs/local-mps-smoke/local-mps-smoke-experiment-b-hybrid-applicability.json",
+    "status": "completed",
+    "workloads": {
+      "california_mlp_regression": {
+        "cpu_throughput_points_per_s": 2858.163620715306,
+        "gpu_baseline_source": "precomputed",
+        "gpu_throughput_points_per_s": 66.45714172068723,
+        "parity_probe": {
+          "achieved_ratio": 43.007621855418996,
+          "claim_status": "hybrid_wins",
+          "hybrid_wins": true,
+          "max_abs_error": 7.152557373046875e-06,
+          "predicted_cpu_fraction": 0.9772766634996691,
+          "selected_policy": "gpu_cpu_hybrid",
+          "selected_runtime_s": 0.0011809589923359454,
+          "slowdown_distance_from_unity": 42.007621855418996,
+          "slowdown_used": 1.0,
+          "speedup": 50.96634800192678,
+          "surface_valid": true,
+          "vanilla_parity_baseline_derived_from": "native_unslowed",
+          "vanilla_runtime_s": 0.06018916697939858,
+          "worker_throughput_split": {
+            "cpu_point_fraction": 1.0,
+            "cpu_points_processed": 4,
+            "cpu_throughput_points_per_s": 3387.0778121499134,
+            "gpu_point_fraction": 0.0,
+            "gpu_points_processed": 0,
+            "gpu_throughput_points_per_s": 0.0,
+            "total_throughput_points_per_s": 3387.0778121499134
+          }
+        },
+        "regime_predictor": {
+          "cpu_throughput_points_per_s": 2858.163620715306,
+          "gpu_baseline_source": "precomputed",
+          "gpu_throughput_points_per_s": 66.45714172068723,
+          "predicted_cpu_fraction": 0.9772766634996691,
+          "r_native": 43.007621855418996
+        },
+        "status": "completed",
+        "unslowed_inference_ratio": 43.007621855418996
+      }
+    }
+  },
+  "result": {
+    "control": {
+      "calibration_retry": 1
+    },
+    "record": {
+      "status": "completed",
+      "workloads": {
+        "california_mlp_regression": {
+          "cpu_throughput_points_per_s": 2858.163620715306,
+          "gpu_baseline_source": "precomputed",
+          "gpu_throughput_points_per_s": 66.45714172068723,
+          "parity_probe": {
+            "achieved_ratio": 43.007621855418996,
+            "claim_status": "hybrid_wins",
+            "hybrid_wins": true,
+            "max_abs_error": 7.152557373046875e-06,
+            "predicted_cpu_fraction": 0.9772766634996691,
+            "selected_policy": "gpu_cpu_hybrid",
+            "selected_runtime_s": 0.0011809589923359454,
+            "slowdown_distance_from_unity": 42.007621855418996,
+            "slowdown_used": 1.0,
+            "speedup": 50.96634800192678,
+            "surface_valid": true,
+            "vanilla_parity_baseline_derived_from": "native_unslowed",
+            "vanilla_runtime_s": 0.06018916697939858,
+            "worker_throughput_split": {
+              "cpu_point_fraction": 1.0,
+              "cpu_points_processed": 4,
+              "cpu_throughput_points_per_s": 3387.0778121499134,
+              "gpu_point_fraction": 0.0,
+              "gpu_points_processed": 0,
+              "gpu_throughput_points_per_s": 0.0,
+              "total_throughput_points_per_s": 3387.0778121499134
+            }
+          },
+          "regime_predictor": {
+            "cpu_throughput_points_per_s": 2858.163620715306,
+            "gpu_baseline_source": "precomputed",
+            "gpu_throughput_points_per_s": 66.45714172068723,
+            "predicted_cpu_fraction": 0.9772766634996691,
+            "r_native": 43.007621855418996
+          },
+          "status": "completed",
+          "unslowed_inference_ratio": 43.007621855418996
+        }
+      }
+    },
+    "schema_version": "experiment-b-hybrid-applicability-v2",
+    "system": {
+      "cpu_workers": 10
+    },
+    "workloads": {
+      "california_mlp_regression": {
+        "result": {
+          "parity_probe": {
+            "achieved_ratio": 43.007621855418996,
+            "claim_status": "hybrid_wins",
+            "hybrid_wins": true,
+            "predicted_cpu_fraction": 0.9772766634996691,
+            "selected_mode": {
+              "_tag": "hybrid",
+              "cpu_batch_size": 2,
+              "cpu_workers": 1,
+              "gpu_batch_size": 2
+            },
+            "selected_policy": "gpu_cpu_hybrid",
+            "selected_runtime_s": 0.0011809589923359454,
+            "slowdown_distance_from_unity": 42.007621855418996,
+            "slowdown_used": 1.0,
+            "speedup_vs_vanilla": 50.96634800192678,
+            "surface_valid": true,
+            "surface_validation": {
+              "allclose": true,
+              "atol": 1e-05,
+              "max_abs_error": 7.152557373046875e-06,
+              "mismatch_count": 0,
+              "rmse": 5.1749739816542245e-06,
+              "rtol": 0.0001
+            },
+            "target_ratio": 1.0,
+            "vanilla_parity_baseline_derived_from": "native_unslowed",
+            "vanilla_runtime_s": 0.06018916697939858,
+            "worker_throughput_split": {
+              "cpu_point_fraction": 1.0,
+              "cpu_points_processed": 4,
+              "cpu_throughput_points_per_s": 3387.0778121499134,
+              "gpu_point_fraction": 0.0,
+              "gpu_points_processed": 0,
+              "gpu_throughput_points_per_s": 0.0,
+              "total_throughput_points_per_s": 3387.0778121499134
+            }
+          },
+          "regime_predictor": {
+            "cpu_throughput_points_per_s": 2858.163620715306,
+            "gpu_baseline_source": "precomputed",
+            "gpu_throughput_points_per_s": 66.45714172068723,
+            "predicted_cpu_fraction": 0.9772766634996691,
+            "r_native": 43.007621855418996
+          },
+          "unslowed_ratio": {
+            "cpu_batch_size": 2,
+            "cpu_gpu_inference_ratio": 43.007621855418996,
+            "cpu_runtime_s": 0.0013995000044815242,
+            "cpu_throughput_points_per_s": 2858.163620715306,
+            "cpu_workers": 10,
+            "gpu_baseline_source": "precomputed",
+            "gpu_runtime_s": 0.06018916697939858,
+            "gpu_throughput_points_per_s": 66.45714172068723
+          }
+        },
+        "status": "completed",
+        "workload": {
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/california-mlp-0.pkl",
+          "dataset": {
+            "input_shape": [
+              8
+            ],
+            "name": "california_housing",
+            "path": "/Users/pedro/projects/loss-grid-computer/assets",
+            "sample_count": 8
+          },
+          "loss": "mse",
+          "model": "mlp_regressor",
+          "registered": true,
+          "task": "tabular_regression",
+          "workload_name": "california_mlp_regression"
+        }
+      }
+    }
+  },
+  "status": "completed"
+}

@@ -1,0 +1,9 @@
+{
+  "output_path": "outputs/local-mps-smoke/local-mps-smoke-progressive_visualization_deferred.json",
+  "record": {
+    "duration_s": null,
+    "output_path": "outputs/local-mps-smoke/local-mps-smoke-progressive_visualization_deferred.json",
+    "status": "disabled"
+  },
+  "status": "disabled"
+}

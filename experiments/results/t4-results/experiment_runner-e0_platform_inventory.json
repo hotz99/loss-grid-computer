@@ -1,0 +1,79 @@
+{
+  "assets": {
+    "california_mlp_regression": {
+      "checkpoint_exists": true,
+      "checkpoint_path": "/content/loss-grid-computer/assets/california-mlp-0.pkl",
+      "dataset_exists": true,
+      "dataset_path": "/content/loss-grid-computer/assets"
+    },
+    "cifar10_resnet20_classification": {
+      "checkpoint_exists": true,
+      "checkpoint_path": "/content/loss-grid-computer/assets/cifar10-resnet20-0.pkl",
+      "dataset_exists": true,
+      "dataset_path": "/content/loss-grid-computer/assets/cifar-10-batches-py"
+    },
+    "cifar10_row_gru_classification": {
+      "checkpoint_exists": true,
+      "checkpoint_path": "/content/loss-grid-computer/assets/cifar10-row-gru-0.pkl",
+      "dataset_exists": true,
+      "dataset_path": "/content/loss-grid-computer/assets/cifar-10-batches-py"
+    },
+    "mnist_mlp_classification": {
+      "checkpoint_exists": true,
+      "checkpoint_path": "/content/loss-grid-computer/assets/mnist-mlp-0.pkl",
+      "dataset_exists": true,
+      "dataset_path": "/content/loss-grid-computer/assets/mnist"
+    }
+  },
+  "duration_s": 0.000665,
+  "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-e0_platform_inventory.json",
+  "platform": {
+    "cpu": {
+      "logical_cores": 2,
+      "model": "x86_64"
+    },
+    "cuda_available": true,
+    "env_threads": {
+      "MKL_NUM_THREADS": null,
+      "NUMEXPR_NUM_THREADS": null,
+      "OMP_NUM_THREADS": null,
+      "VECLIB_MAXIMUM_THREADS": null
+    },
+    "gpu": {
+      "capability": [
+        7,
+        5
+      ],
+      "current_device": 0,
+      "device_count": 1,
+      "multi_processor_count": 40,
+      "name": "Tesla T4",
+      "total_memory_bytes": 15637086208
+    },
+    "host_os": "Linux",
+    "machine": "x86_64",
+    "memory": {
+      "approx_memory_bandwidth": null,
+      "total_system_memory_bytes": 13605830656
+    },
+    "mps_available": false,
+    "os_release": "6.6.122+",
+    "python_version": "3.12.13",
+    "requested_device": "auto",
+    "resolved_device": "cuda",
+    "torch_version": "2.10.0+cu128"
+  },
+  "record": {
+    "asset_count": 4,
+    "cpu_logical_cores": 2,
+    "duration_s": 0.000665,
+    "gpu_model": "Tesla T4",
+    "missing_asset_count": 0,
+    "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-e0_platform_inventory.json",
+    "ram_bytes": 13605830656,
+    "resolved_device": "cuda",
+    "status": "completed",
+    "vram_bytes": 15637086208
+  },
+  "status": "completed"
+}

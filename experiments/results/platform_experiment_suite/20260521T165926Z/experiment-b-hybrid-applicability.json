@@ -1,0 +1,643 @@
+{
+  "child_stem": "experiment-b-hybrid-applicability",
+  "duration_s": 507.672899,
+  "output_path": "outputs/platform_experiment_suite/20260521T165926Z/experiment-b-hybrid-applicability.json",
+  "record": {
+    "duration_s": 507.672899,
+    "output_path": "outputs/platform_experiment_suite/20260521T165926Z/experiment-b-hybrid-applicability.json",
+    "status": "completed",
+    "workloads": {
+      "california_mlp_regression": {
+        "cpu_throughput_points_per_s": 297.83973075622924,
+        "gpu_baseline_source": "precomputed",
+        "gpu_throughput_points_per_s": 91.0503817016051,
+        "parity_probe": {
+          "achieved_ratio": 3.271153016495028,
+          "claim_status": "hybrid_wins",
+          "hybrid_wins": true,
+          "max_abs_error": 1.6689300537109375e-06,
+          "predicted_cpu_fraction": 0.7658711836972268,
+          "selected_policy": "gpu_cpu_hybrid",
+          "selected_runtime_s": 0.10811545798787847,
+          "slowdown_distance_from_unity": 2.271153016495028,
+          "slowdown_used": 1.0,
+          "speedup": 6.5014527532076025,
+          "surface_valid": true,
+          "vanilla_parity_baseline_derived_from": "native_unslowed",
+          "vanilla_runtime_s": 0.7029075419995934,
+          "worker_throughput_split": {
+            "cpu_point_fraction": 0.953125,
+            "cpu_points_processed": 61,
+            "cpu_throughput_points_per_s": 564.2116412885113,
+            "gpu_point_fraction": 0.046875,
+            "gpu_points_processed": 3,
+            "gpu_throughput_points_per_s": 33.57739135016607,
+            "total_throughput_points_per_s": 591.9597547945036
+          }
+        },
+        "regime_predictor": {
+          "cpu_throughput_points_per_s": 297.83973075622924,
+          "gpu_baseline_source": "precomputed",
+          "gpu_throughput_points_per_s": 91.0503817016051,
+          "predicted_cpu_fraction": 0.7658711836972268,
+          "r_native": 3.271153016495028
+        },
+        "status": "completed",
+        "unslowed_inference_ratio": 3.271153016495028
+      },
+      "cifar10_resnet20_classification": {
+        "cpu_throughput_points_per_s": 2.388690888549482,
+        "gpu_baseline_source": "precomputed",
+        "gpu_throughput_points_per_s": 7.366289296379792,
+        "parity_probe": {
+          "achieved_ratio": 1.0,
+          "claim_status": "hybrid_wins",
+          "hybrid_wins": true,
+          "max_abs_error": 0.13525390625,
+          "predicted_cpu_fraction": 0.5,
+          "selected_policy": "gpu_cpu_hybrid",
+          "selected_runtime_s": 18.113031666027382,
+          "slowdown_distance_from_unity": 0.0,
+          "slowdown_used": 3.0838185600703345,
+          "speedup": 1.479206731871799,
+          "surface_valid": true,
+          "vanilla_parity_baseline_derived_from": "unslowed_multiplied_by_s",
+          "vanilla_runtime_s": 26.79291837499477,
+          "worker_throughput_split": {
+            "cpu_point_fraction": 0.515625,
+            "cpu_points_processed": 33,
+            "cpu_throughput_points_per_s": 1.8342256458970674,
+            "gpu_point_fraction": 0.484375,
+            "gpu_points_processed": 31,
+            "gpu_throughput_points_per_s": 1.7114749519343735,
+            "total_throughput_points_per_s": 3.533367642703223
+          }
+        },
+        "regime_predictor": {
+          "cpu_throughput_points_per_s": 2.388690888549482,
+          "gpu_baseline_source": "precomputed",
+          "gpu_throughput_points_per_s": 7.366289296379792,
+          "predicted_cpu_fraction": 0.2448688611628175,
+          "r_native": 0.32427329316585746
+        },
+        "status": "completed",
+        "unslowed_inference_ratio": 0.32427329316585746
+      },
+      "cifar10_row_gru_classification": {
+        "cpu_throughput_points_per_s": 10.88266049758714,
+        "gpu_baseline_source": "precomputed",
+        "gpu_throughput_points_per_s": 6.498136097030924,
+        "parity_probe": {
+          "achieved_ratio": 1.6747356988351718,
+          "claim_status": "hybrid_wins",
+          "hybrid_wins": true,
+          "max_abs_error": 2.294778823852539e-06,
+          "predicted_cpu_fraction": 0.6261312845095338,
+          "selected_policy": "gpu_cpu_hybrid",
+          "selected_runtime_s": 2.4892028750036843,
+          "slowdown_distance_from_unity": 0.6747356988351718,
+          "slowdown_used": 1.0,
+          "speedup": 3.956679538618996,
+          "surface_valid": true,
+          "vanilla_parity_baseline_derived_from": "native_unslowed",
+          "vanilla_runtime_s": 9.848978082998656,
+          "worker_throughput_split": {
+            "cpu_point_fraction": 0.796875,
+            "cpu_points_processed": 51,
+            "cpu_throughput_points_per_s": 20.602725669664316,
+            "gpu_point_fraction": 0.203125,
+            "gpu_points_processed": 13,
+            "gpu_throughput_points_per_s": 5.222555433526389,
+            "total_throughput_points_per_s": 25.711042134283762
+          }
+        },
+        "regime_predictor": {
+          "cpu_throughput_points_per_s": 10.88266049758714,
+          "gpu_baseline_source": "precomputed",
+          "gpu_throughput_points_per_s": 6.498136097030924,
+          "predicted_cpu_fraction": 0.6261312845095338,
+          "r_native": 1.6747356988351718
+        },
+        "status": "completed",
+        "unslowed_inference_ratio": 1.6747356988351718
+      },
+      "mnist_mlp_classification": {
+        "cpu_throughput_points_per_s": 7.295106878290142,
+        "gpu_baseline_source": "precomputed",
+        "gpu_throughput_points_per_s": 24.30524194133957,
+        "parity_probe": {
+          "achieved_ratio": 1.0,
+          "claim_status": "hybrid_wins",
+          "hybrid_wins": true,
+          "max_abs_error": 4.7497451305389404e-08,
+          "predicted_cpu_fraction": 0.5,
+          "selected_policy": "gpu_cpu_hybrid",
+          "selected_runtime_s": 1.792991207970772,
+          "slowdown_distance_from_unity": 0.0,
+          "slowdown_used": 3.331718417131174,
+          "speedup": 4.892942983219615,
+          "surface_valid": true,
+          "vanilla_parity_baseline_derived_from": "unslowed_multiplied_by_s",
+          "vanilla_runtime_s": 8.77300375001505,
+          "worker_throughput_split": {
+            "cpu_point_fraction": 0.84375,
+            "cpu_points_processed": 54,
+            "cpu_throughput_points_per_s": 31.013621357023556,
+            "gpu_point_fraction": 0.15625,
+            "gpu_points_processed": 10,
+            "gpu_throughput_points_per_s": 5.577272189369828,
+            "total_throughput_points_per_s": 35.6945420119669
+          }
+        },
+        "regime_predictor": {
+          "cpu_throughput_points_per_s": 7.295106878290142,
+          "gpu_baseline_source": "precomputed",
+          "gpu_throughput_points_per_s": 24.30524194133957,
+          "predicted_cpu_fraction": 0.23085526428614989,
+          "r_native": 0.30014541290709223
+        },
+        "status": "completed",
+        "unslowed_inference_ratio": 0.30014541290709223
+      }
+    }
+  },
+  "result": {
+    "control": {
+      "calibration_retry": 3
+    },
+    "record": {
+      "status": "completed",
+      "workloads": {
+        "california_mlp_regression": {
+          "cpu_throughput_points_per_s": 297.83973075622924,
+          "gpu_baseline_source": "precomputed",
+          "gpu_throughput_points_per_s": 91.0503817016051,
+          "parity_probe": {
+            "achieved_ratio": 3.271153016495028,
+            "claim_status": "hybrid_wins",
+            "hybrid_wins": true,
+            "max_abs_error": 1.6689300537109375e-06,
+            "predicted_cpu_fraction": 0.7658711836972268,
+            "selected_policy": "gpu_cpu_hybrid",
+            "selected_runtime_s": 0.10811545798787847,
+            "slowdown_distance_from_unity": 2.271153016495028,
+            "slowdown_used": 1.0,
+            "speedup": 6.5014527532076025,
+            "surface_valid": true,
+            "vanilla_parity_baseline_derived_from": "native_unslowed",
+            "vanilla_runtime_s": 0.7029075419995934,
+            "worker_throughput_split": {
+              "cpu_point_fraction": 0.953125,
+              "cpu_points_processed": 61,
+              "cpu_throughput_points_per_s": 564.2116412885113,
+              "gpu_point_fraction": 0.046875,
+              "gpu_points_processed": 3,
+              "gpu_throughput_points_per_s": 33.57739135016607,
+              "total_throughput_points_per_s": 591.9597547945036
+            }
+          },
+          "regime_predictor": {
+            "cpu_throughput_points_per_s": 297.83973075622924,
+            "gpu_baseline_source": "precomputed",
+            "gpu_throughput_points_per_s": 91.0503817016051,
+            "predicted_cpu_fraction": 0.7658711836972268,
+            "r_native": 3.271153016495028
+          },
+          "status": "completed",
+          "unslowed_inference_ratio": 3.271153016495028
+        },
+        "cifar10_resnet20_classification": {
+          "cpu_throughput_points_per_s": 2.388690888549482,
+          "gpu_baseline_source": "precomputed",
+          "gpu_throughput_points_per_s": 7.366289296379792,
+          "parity_probe": {
+            "achieved_ratio": 1.0,
+            "claim_status": "hybrid_wins",
+            "hybrid_wins": true,
+            "max_abs_error": 0.13525390625,
+            "predicted_cpu_fraction": 0.5,
+            "selected_policy": "gpu_cpu_hybrid",
+            "selected_runtime_s": 18.113031666027382,
+            "slowdown_distance_from_unity": 0.0,
+            "slowdown_used": 3.0838185600703345,
+            "speedup": 1.479206731871799,
+            "surface_valid": true,
+            "vanilla_parity_baseline_derived_from": "unslowed_multiplied_by_s",
+            "vanilla_runtime_s": 26.79291837499477,
+            "worker_throughput_split": {
+              "cpu_point_fraction": 0.515625,
+              "cpu_points_processed": 33,
+              "cpu_throughput_points_per_s": 1.8342256458970674,
+              "gpu_point_fraction": 0.484375,
+              "gpu_points_processed": 31,
+              "gpu_throughput_points_per_s": 1.7114749519343735,
+              "total_throughput_points_per_s": 3.533367642703223
+            }
+          },
+          "regime_predictor": {
+            "cpu_throughput_points_per_s": 2.388690888549482,
+            "gpu_baseline_source": "precomputed",
+            "gpu_throughput_points_per_s": 7.366289296379792,
+            "predicted_cpu_fraction": 0.2448688611628175,
+            "r_native": 0.32427329316585746
+          },
+          "status": "completed",
+          "unslowed_inference_ratio": 0.32427329316585746
+        },
+        "cifar10_row_gru_classification": {
+          "cpu_throughput_points_per_s": 10.88266049758714,
+          "gpu_baseline_source": "precomputed",
+          "gpu_throughput_points_per_s": 6.498136097030924,
+          "parity_probe": {
+            "achieved_ratio": 1.6747356988351718,
+            "claim_status": "hybrid_wins",
+            "hybrid_wins": true,
+            "max_abs_error": 2.294778823852539e-06,
+            "predicted_cpu_fraction": 0.6261312845095338,
+            "selected_policy": "gpu_cpu_hybrid",
+            "selected_runtime_s": 2.4892028750036843,
+            "slowdown_distance_from_unity": 0.6747356988351718,
+            "slowdown_used": 1.0,
+            "speedup": 3.956679538618996,
+            "surface_valid": true,
+            "vanilla_parity_baseline_derived_from": "native_unslowed",
+            "vanilla_runtime_s": 9.848978082998656,
+            "worker_throughput_split": {
+              "cpu_point_fraction": 0.796875,
+              "cpu_points_processed": 51,
+              "cpu_throughput_points_per_s": 20.602725669664316,
+              "gpu_point_fraction": 0.203125,
+              "gpu_points_processed": 13,
+              "gpu_throughput_points_per_s": 5.222555433526389,
+              "total_throughput_points_per_s": 25.711042134283762
+            }
+          },
+          "regime_predictor": {
+            "cpu_throughput_points_per_s": 10.88266049758714,
+            "gpu_baseline_source": "precomputed",
+            "gpu_throughput_points_per_s": 6.498136097030924,
+            "predicted_cpu_fraction": 0.6261312845095338,
+            "r_native": 1.6747356988351718
+          },
+          "status": "completed",
+          "unslowed_inference_ratio": 1.6747356988351718
+        },
+        "mnist_mlp_classification": {
+          "cpu_throughput_points_per_s": 7.295106878290142,
+          "gpu_baseline_source": "precomputed",
+          "gpu_throughput_points_per_s": 24.30524194133957,
+          "parity_probe": {
+            "achieved_ratio": 1.0,
+            "claim_status": "hybrid_wins",
+            "hybrid_wins": true,
+            "max_abs_error": 4.7497451305389404e-08,
+            "predicted_cpu_fraction": 0.5,
+            "selected_policy": "gpu_cpu_hybrid",
+            "selected_runtime_s": 1.792991207970772,
+            "slowdown_distance_from_unity": 0.0,
+            "slowdown_used": 3.331718417131174,
+            "speedup": 4.892942983219615,
+            "surface_valid": true,
+            "vanilla_parity_baseline_derived_from": "unslowed_multiplied_by_s",
+            "vanilla_runtime_s": 8.77300375001505,
+            "worker_throughput_split": {
+              "cpu_point_fraction": 0.84375,
+              "cpu_points_processed": 54,
+              "cpu_throughput_points_per_s": 31.013621357023556,
+              "gpu_point_fraction": 0.15625,
+              "gpu_points_processed": 10,
+              "gpu_throughput_points_per_s": 5.577272189369828,
+              "total_throughput_points_per_s": 35.6945420119669
+            }
+          },
+          "regime_predictor": {
+            "cpu_throughput_points_per_s": 7.295106878290142,
+            "gpu_baseline_source": "precomputed",
+            "gpu_throughput_points_per_s": 24.30524194133957,
+            "predicted_cpu_fraction": 0.23085526428614989,
+            "r_native": 0.30014541290709223
+          },
+          "status": "completed",
+          "unslowed_inference_ratio": 0.30014541290709223
+        }
+      }
+    },
+    "schema_version": "experiment-b-hybrid-applicability-v2",
+    "system": {
+      "cpu_workers": 10
+    },
+    "workloads": {
+      "california_mlp_regression": {
+        "result": {
+          "parity_probe": {
+            "achieved_ratio": 3.271153016495028,
+            "claim_status": "hybrid_wins",
+            "hybrid_wins": true,
+            "predicted_cpu_fraction": 0.7658711836972268,
+            "selected_mode": {
+              "_tag": "hybrid",
+              "cpu_batch_size": 64,
+              "cpu_workers": 1,
+              "gpu_batch_size": 64
+            },
+            "selected_policy": "gpu_cpu_hybrid",
+            "selected_runtime_s": 0.10811545798787847,
+            "slowdown_distance_from_unity": 2.271153016495028,
+            "slowdown_used": 1.0,
+            "speedup_vs_vanilla": 6.5014527532076025,
+            "surface_valid": true,
+            "surface_validation": {
+              "allclose": true,
+              "atol": 1e-06,
+              "max_abs_error": 1.6689300537109375e-06,
+              "mismatch_count": 0,
+              "rmse": 3.9376922898389004e-07,
+              "rtol": 1e-05
+            },
+            "target_ratio": 1.0,
+            "vanilla_parity_baseline_derived_from": "native_unslowed",
+            "vanilla_runtime_s": 0.7029075419995934,
+            "worker_throughput_split": {
+              "cpu_point_fraction": 0.953125,
+              "cpu_points_processed": 61,
+              "cpu_throughput_points_per_s": 564.2116412885113,
+              "gpu_point_fraction": 0.046875,
+              "gpu_points_processed": 3,
+              "gpu_throughput_points_per_s": 33.57739135016607,
+              "total_throughput_points_per_s": 591.9597547945036
+            }
+          },
+          "regime_predictor": {
+            "cpu_throughput_points_per_s": 297.83973075622924,
+            "gpu_baseline_source": "precomputed",
+            "gpu_throughput_points_per_s": 91.0503817016051,
+            "predicted_cpu_fraction": 0.7658711836972268,
+            "r_native": 3.271153016495028
+          },
+          "unslowed_ratio": {
+            "cpu_batch_size": 4,
+            "cpu_gpu_inference_ratio": 3.271153016495028,
+            "cpu_runtime_s": 0.2148806669865735,
+            "cpu_throughput_points_per_s": 297.83973075622924,
+            "cpu_workers": 10,
+            "gpu_baseline_source": "precomputed",
+            "gpu_runtime_s": 0.7029075419995934,
+            "gpu_throughput_points_per_s": 91.0503817016051
+          }
+        },
+        "status": "completed",
+        "workload": {
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/california-mlp-0.pkl",
+          "dataset": {
+            "input_shape": [
+              8
+            ],
+            "name": "california_housing",
+            "path": "/Users/pedro/projects/loss-grid-computer/assets",
+            "sample_count": 1024
+          },
+          "loss": "mse",
+          "model": "mlp_regressor",
+          "registered": true,
+          "task": "tabular_regression",
+          "workload_name": "california_mlp_regression"
+        }
+      },
+      "cifar10_resnet20_classification": {
+        "result": {
+          "parity_probe": {
+            "achieved_ratio": 1.0,
+            "claim_status": "hybrid_wins",
+            "hybrid_wins": true,
+            "predicted_cpu_fraction": 0.5,
+            "selected_mode": {
+              "_tag": "hybrid",
+              "cpu_batch_size": 8,
+              "cpu_workers": 1,
+              "gpu_batch_size": 64
+            },
+            "selected_policy": "gpu_cpu_hybrid",
+            "selected_runtime_s": 18.113031666027382,
+            "slowdown_distance_from_unity": 0.0,
+            "slowdown_used": 3.0838185600703345,
+            "speedup_vs_vanilla": 1.479206731871799,
+            "surface_valid": true,
+            "surface_validation": {
+              "allclose": true,
+              "atol": 1e-06,
+              "max_abs_error": 0.13525390625,
+              "mismatch_count": 0,
+              "rmse": 0.018619809437233535,
+              "rtol": 1e-05
+            },
+            "target_ratio": 1.0,
+            "vanilla_parity_baseline_derived_from": "unslowed_multiplied_by_s",
+            "vanilla_runtime_s": 26.79291837499477,
+            "worker_throughput_split": {
+              "cpu_point_fraction": 0.515625,
+              "cpu_points_processed": 33,
+              "cpu_throughput_points_per_s": 1.8342256458970674,
+              "gpu_point_fraction": 0.484375,
+              "gpu_points_processed": 31,
+              "gpu_throughput_points_per_s": 1.7114749519343735,
+              "total_throughput_points_per_s": 3.533367642703223
+            }
+          },
+          "regime_predictor": {
+            "cpu_throughput_points_per_s": 2.388690888549482,
+            "gpu_baseline_source": "precomputed",
+            "gpu_throughput_points_per_s": 7.366289296379792,
+            "predicted_cpu_fraction": 0.2448688611628175,
+            "r_native": 0.32427329316585746
+          },
+          "unslowed_ratio": {
+            "cpu_batch_size": 4,
+            "cpu_gpu_inference_ratio": 0.32427329316585746,
+            "cpu_runtime_s": 26.79291837499477,
+            "cpu_throughput_points_per_s": 2.388690888549482,
+            "cpu_workers": 10,
+            "gpu_baseline_source": "precomputed",
+            "gpu_runtime_s": 8.688227874983568,
+            "gpu_throughput_points_per_s": 7.366289296379792
+          }
+        },
+        "status": "completed",
+        "workload": {
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/cifar10-resnet20-0.pkl",
+          "dataset": {
+            "input_shape": [
+              3,
+              32,
+              32
+            ],
+            "name": "cifar10",
+            "path": "/Users/pedro/projects/loss-grid-computer/assets/cifar-10-batches-py",
+            "sample_count": 1024
+          },
+          "loss": "cross_entropy",
+          "model": "resnet20",
+          "registered": true,
+          "task": "image_classification",
+          "workload_name": "cifar10_resnet20_classification"
+        }
+      },
+      "cifar10_row_gru_classification": {
+        "result": {
+          "parity_probe": {
+            "achieved_ratio": 1.6747356988351718,
+            "claim_status": "hybrid_wins",
+            "hybrid_wins": true,
+            "predicted_cpu_fraction": 0.6261312845095338,
+            "selected_mode": {
+              "_tag": "hybrid",
+              "cpu_batch_size": 64,
+              "cpu_workers": 2,
+              "gpu_batch_size": 64
+            },
+            "selected_policy": "gpu_cpu_hybrid",
+            "selected_runtime_s": 2.4892028750036843,
+            "slowdown_distance_from_unity": 0.6747356988351718,
+            "slowdown_used": 1.0,
+            "speedup_vs_vanilla": 3.956679538618996,
+            "surface_valid": true,
+            "surface_validation": {
+              "allclose": true,
+              "atol": 1e-06,
+              "max_abs_error": 2.294778823852539e-06,
+              "mismatch_count": 0,
+              "rmse": 3.694637177866109e-07,
+              "rtol": 1e-05
+            },
+            "target_ratio": 1.0,
+            "vanilla_parity_baseline_derived_from": "native_unslowed",
+            "vanilla_runtime_s": 9.848978082998656,
+            "worker_throughput_split": {
+              "cpu_point_fraction": 0.796875,
+              "cpu_points_processed": 51,
+              "cpu_throughput_points_per_s": 20.602725669664316,
+              "gpu_point_fraction": 0.203125,
+              "gpu_points_processed": 13,
+              "gpu_throughput_points_per_s": 5.222555433526389,
+              "total_throughput_points_per_s": 25.711042134283762
+            }
+          },
+          "regime_predictor": {
+            "cpu_throughput_points_per_s": 10.88266049758714,
+            "gpu_baseline_source": "precomputed",
+            "gpu_throughput_points_per_s": 6.498136097030924,
+            "predicted_cpu_fraction": 0.6261312845095338,
+            "r_native": 1.6747356988351718
+          },
+          "unslowed_ratio": {
+            "cpu_batch_size": 4,
+            "cpu_gpu_inference_ratio": 1.6747356988351718,
+            "cpu_runtime_s": 5.880914875015151,
+            "cpu_throughput_points_per_s": 10.88266049758714,
+            "cpu_workers": 10,
+            "gpu_baseline_source": "precomputed",
+            "gpu_runtime_s": 9.848978082998656,
+            "gpu_throughput_points_per_s": 6.498136097030924
+          }
+        },
+        "status": "completed",
+        "workload": {
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/cifar10-row-gru-0.pkl",
+          "dataset": {
+            "input_shape": [
+              3,
+              32,
+              32
+            ],
+            "name": "cifar10",
+            "path": "/Users/pedro/projects/loss-grid-computer/assets/cifar-10-batches-py",
+            "sample_count": 1024
+          },
+          "loss": "cross_entropy",
+          "model": "row_gru",
+          "registered": true,
+          "task": "image_classification",
+          "workload_name": "cifar10_row_gru_classification"
+        }
+      },
+      "mnist_mlp_classification": {
+        "result": {
+          "parity_probe": {
+            "achieved_ratio": 1.0,
+            "claim_status": "hybrid_wins",
+            "hybrid_wins": true,
+            "predicted_cpu_fraction": 0.5,
+            "selected_mode": {
+              "_tag": "hybrid",
+              "cpu_batch_size": 64,
+              "cpu_workers": 1,
+              "gpu_batch_size": 64
+            },
+            "selected_policy": "gpu_cpu_hybrid",
+            "selected_runtime_s": 1.792991207970772,
+            "slowdown_distance_from_unity": 0.0,
+            "slowdown_used": 3.331718417131174,
+            "speedup_vs_vanilla": 4.892942983219615,
+            "surface_valid": true,
+            "surface_validation": {
+              "allclose": true,
+              "atol": 1e-06,
+              "max_abs_error": 4.7497451305389404e-08,
+              "mismatch_count": 0,
+              "rmse": 1.6130350045978138e-08,
+              "rtol": 1e-05
+            },
+            "target_ratio": 1.0,
+            "vanilla_parity_baseline_derived_from": "unslowed_multiplied_by_s",
+            "vanilla_runtime_s": 8.77300375001505,
+            "worker_throughput_split": {
+              "cpu_point_fraction": 0.84375,
+              "cpu_points_processed": 54,
+              "cpu_throughput_points_per_s": 31.013621357023556,
+              "gpu_point_fraction": 0.15625,
+              "gpu_points_processed": 10,
+              "gpu_throughput_points_per_s": 5.577272189369828,
+              "total_throughput_points_per_s": 35.6945420119669
+            }
+          },
+          "regime_predictor": {
+            "cpu_throughput_points_per_s": 7.295106878290142,
+            "gpu_baseline_source": "precomputed",
+            "gpu_throughput_points_per_s": 24.30524194133957,
+            "predicted_cpu_fraction": 0.23085526428614989,
+            "r_native": 0.30014541290709223
+          },
+          "unslowed_ratio": {
+            "cpu_batch_size": 4,
+            "cpu_gpu_inference_ratio": 0.30014541290709223,
+            "cpu_runtime_s": 8.77300375001505,
+            "cpu_throughput_points_per_s": 7.295106878290142,
+            "cpu_workers": 10,
+            "gpu_baseline_source": "precomputed",
+            "gpu_runtime_s": 2.633176832983736,
+            "gpu_throughput_points_per_s": 24.30524194133957
+          }
+        },
+        "status": "completed",
+        "workload": {
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/mnist-mlp-0.pkl",
+          "dataset": {
+            "input_shape": [
+              1,
+              28,
+              28
+            ],
+            "name": "mnist",
+            "path": "/Users/pedro/projects/loss-grid-computer/assets/mnist",
+            "sample_count": 1024
+          },
+          "loss": "cross_entropy",
+          "model": "mnist_mlp",
+          "registered": true,
+          "task": "image_classification",
+          "workload_name": "mnist_mlp_classification"
+        }
+      }
+    }
+  },
+  "status": "completed"
+}

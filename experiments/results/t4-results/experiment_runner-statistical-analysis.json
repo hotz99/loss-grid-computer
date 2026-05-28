@@ -1,0 +1,400 @@
+{
+  "child_stem": "statistical-analysis",
+  "duration_s": 0.000212,
+  "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-statistical-analysis.json",
+  "record": {
+    "duration_s": 0.000212,
+    "gaps": [
+      "cifar10_resnet20_classification/functional_sequential: n=3 < 5 \u2014 CI uses df=2",
+      "cifar10_resnet20_classification/vmapped_chunk_32: n=3 < 5 \u2014 CI uses df=2",
+      "cifar10_resnet20_classification/vmapped_chunk_64: n=3 < 5 \u2014 CI uses df=2",
+      "cifar10_row_gru_classification/functional_sequential: n=3 < 5 \u2014 CI uses df=2",
+      "cifar10_row_gru_classification/vmapped_chunk_32: n=3 < 5 \u2014 CI uses df=2",
+      "cifar10_row_gru_classification/vmapped_chunk_64: n=3 < 5 \u2014 CI uses df=2",
+      "california_mlp_regression/functional_sequential: n=3 < 5 \u2014 CI uses df=2",
+      "california_mlp_regression/vmapped_chunk_32: n=3 < 5 \u2014 CI uses df=2",
+      "california_mlp_regression/vmapped_chunk_64: n=3 < 5 \u2014 CI uses df=2",
+      "mnist_mlp_classification/functional_sequential: n=3 < 5 \u2014 CI uses df=2",
+      "mnist_mlp_classification/vmapped_chunk_32: n=3 < 5 \u2014 CI uses df=2",
+      "mnist_mlp_classification/vmapped_chunk_64: n=3 < 5 \u2014 CI uses df=2"
+    ],
+    "n_significant_candidates": 8,
+    "output_path": "/content/drive/MyDrive/loss-grid-experiments/runs/experiment_runner-statistical-analysis.json",
+    "paper_ready": false,
+    "status": "completed"
+  },
+  "result": {
+    "exp_a": {
+      "candidate_table": [
+        {
+          "all_validations_passed": true,
+          "candidate": "functional_sequential",
+          "ci_95_hi": 1.092521202810104,
+          "ci_95_lo": 0.9624620355647839,
+          "mean_speedup": 1.027491619187444,
+          "n": 3,
+          "section_timings_s": {
+            "batch_eval_s": 23.335780611333576,
+            "binding_s": 0.04416483566630328,
+            "perturbation_s": 0.0064999720009382145,
+            "total_grid_s": 23.38677326299997
+          },
+          "significant": false,
+          "stdev": 0.04057440303656199,
+          "workload": "cifar10_resnet20_classification"
+        },
+        {
+          "all_validations_passed": true,
+          "candidate": "vmapped_chunk_32",
+          "ci_95_hi": 0.9290325397607927,
+          "ci_95_lo": 0.8985251888391038,
+          "mean_speedup": 0.9137788642999483,
+          "n": 3,
+          "section_timings_s": {
+            "batch_eval_s": 25.647047596000448,
+            "binding_s": 0.0009522913334573483,
+            "perturbation_s": 0.002681070999945708,
+            "total_grid_s": 26.276397952333355
+          },
+          "significant": false,
+          "stdev": 0.009517341822892343,
+          "workload": "cifar10_resnet20_classification"
+        },
+        {
+          "all_validations_passed": true,
+          "candidate": "vmapped_chunk_64",
+          "ci_95_hi": 0.9413967969720304,
+          "ci_95_lo": 0.9129900645894965,
+          "mean_speedup": 0.9271934307807634,
+          "n": 3,
+          "section_timings_s": {
+            "batch_eval_s": 25.586990016999305,
+            "binding_s": 0.00041228866666642716,
+            "perturbation_s": 0.0025168409999120436,
+            "total_grid_s": 25.896085006333426
+          },
+          "significant": false,
+          "stdev": 0.008862014366635576,
+          "workload": "cifar10_resnet20_classification"
+        },
+        {
+          "all_validations_passed": true,
+          "candidate": "functional_sequential",
+          "ci_95_hi": 1.1503604201494315,
+          "ci_95_lo": 1.0969909913041602,
+          "mean_speedup": 1.1236757057267959,
+          "n": 3,
+          "section_timings_s": {
+            "batch_eval_s": 29.11951032233249,
+            "binding_s": 0.009019498333448913,
+            "perturbation_s": 0.006284734997886214,
+            "total_grid_s": 29.13513344699989
+          },
+          "significant": true,
+          "stdev": 0.016649596961625025,
+          "workload": "cifar10_row_gru_classification"
+        },
+        {
+          "all_validations_passed": true,
+          "candidate": "vmapped_chunk_32",
+          "ci_95_hi": 26.588502928765557,
+          "ci_95_lo": 17.072172392648525,
+          "mean_speedup": 21.83033766070704,
+          "n": 3,
+          "section_timings_s": {
+            "batch_eval_s": 0.9519330050017439,
+            "binding_s": 0.0002244636668062109,
+            "perturbation_s": 0.0010914926665464009,
+            "total_grid_s": 1.5221879756665355
+          },
+          "significant": true,
+          "stdev": 2.968798269123536,
+          "workload": "cifar10_row_gru_classification"
+        },
+        {
+          "all_validations_passed": true,
+          "candidate": "vmapped_chunk_64",
+          "ci_95_hi": 48.20666830460201,
+          "ci_95_lo": 34.19850109444261,
+          "mean_speedup": 41.20258469952231,
+          "n": 3,
+          "section_timings_s": {
+            "batch_eval_s": 0.505467573333893,
+            "binding_s": 0.00013743833339200742,
+            "perturbation_s": 0.0009315606666859821,
+            "total_grid_s": 0.8004800979999042
+          },
+          "significant": true,
+          "stdev": 4.3701111903667975,
+          "workload": "cifar10_row_gru_classification"
+        },
+        {
+          "all_validations_passed": true,
+          "candidate": "functional_sequential",
+          "ci_95_hi": 1.3519489849914543,
+          "ci_95_lo": 0.5160314106845283,
+          "mean_speedup": 0.9339901978379913,
+          "n": 3,
+          "section_timings_s": {
+            "batch_eval_s": 1.913639993333921,
+            "binding_s": 0.009518097333814998,
+            "perturbation_s": 0.006245658334288843,
+            "total_grid_s": 1.929666277333278
+          },
+          "significant": false,
+          "stdev": 0.2607802070676024,
+          "workload": "california_mlp_regression"
+        },
+        {
+          "all_validations_passed": true,
+          "candidate": "vmapped_chunk_32",
+          "ci_95_hi": 29.18510902728072,
+          "ci_95_lo": 8.074361762115029,
+          "mean_speedup": 18.629735394697875,
+          "n": 3,
+          "section_timings_s": {
+            "batch_eval_s": 0.06985080933479064,
+            "binding_s": 0.00019505433328959043,
+            "perturbation_s": 0.0004944386666162851,
+            "total_grid_s": 0.0998015523335501
+          },
+          "significant": true,
+          "stdev": 6.585894605369723,
+          "workload": "california_mlp_regression"
+        },
+        {
+          "all_validations_passed": true,
+          "candidate": "vmapped_chunk_64",
+          "ci_95_hi": 55.41800942841245,
+          "ci_95_lo": 12.333730752031276,
+          "mean_speedup": 33.87587009022186,
+          "n": 3,
+          "section_timings_s": {
+            "batch_eval_s": 0.037960561666598856,
+            "binding_s": 0.00013074233326430354,
+            "perturbation_s": 0.0002889626666728873,
+            "total_grid_s": 0.054629301667015774
+          },
+          "significant": true,
+          "stdev": 13.440950950098806,
+          "workload": "california_mlp_regression"
+        },
+        {
+          "all_validations_passed": true,
+          "candidate": "functional_sequential",
+          "ci_95_hi": 1.166371744402973,
+          "ci_95_lo": 1.0695743721948958,
+          "mean_speedup": 1.1179730582989345,
+          "n": 3,
+          "section_timings_s": {
+            "batch_eval_s": 14.241696254332965,
+            "binding_s": 0.010395705333091124,
+            "perturbation_s": 0.022700363999623125,
+            "total_grid_s": 14.27511406933354
+          },
+          "significant": true,
+          "stdev": 0.030197760573405102,
+          "workload": "mnist_mlp_classification"
+        },
+        {
+          "all_validations_passed": true,
+          "candidate": "vmapped_chunk_32",
+          "ci_95_hi": 24.112479595998852,
+          "ci_95_lo": 22.31454234432403,
+          "mean_speedup": 23.21351097016144,
+          "n": 3,
+          "section_timings_s": {
+            "batch_eval_s": 0.22119298000067525,
+            "binding_s": 0.00024570100019142654,
+            "perturbation_s": 0.020009746999979445,
+            "total_grid_s": 0.6874997766667548
+          },
+          "significant": true,
+          "stdev": 0.5609003365852931,
+          "workload": "mnist_mlp_classification"
+        },
+        {
+          "all_validations_passed": true,
+          "candidate": "vmapped_chunk_64",
+          "ci_95_hi": 38.66509475989659,
+          "ci_95_lo": 35.37215625023815,
+          "mean_speedup": 37.01862550506737,
+          "n": 3,
+          "section_timings_s": {
+            "batch_eval_s": 0.18877328433336515,
+            "binding_s": 0.00011876700000357232,
+            "perturbation_s": 0.01986465066678041,
+            "total_grid_s": 0.43116690899993654
+          },
+          "significant": true,
+          "stdev": 1.0272940931067303,
+          "workload": "mnist_mlp_classification"
+        }
+      ],
+      "section_shares": [
+        {
+          "batch_eval_share": 0.9942,
+          "binding_share": 0.0029,
+          "perturbation_share": 0.0023,
+          "total_grid_s": 24.600979,
+          "workload": "cifar10_resnet20_classification"
+        },
+        {
+          "batch_eval_share": 0.9991,
+          "binding_share": 0.0003,
+          "perturbation_share": 0.0002,
+          "total_grid_s": 32.589028,
+          "workload": "cifar10_row_gru_classification"
+        },
+        {
+          "batch_eval_share": 0.9828,
+          "binding_share": 0.0068,
+          "perturbation_share": 0.004,
+          "total_grid_s": 1.548765,
+          "workload": "california_mlp_regression"
+        },
+        {
+          "batch_eval_share": 0.997,
+          "binding_share": 0.0008,
+          "perturbation_share": 0.0014,
+          "total_grid_s": 15.967384,
+          "workload": "mnist_mlp_classification"
+        }
+      ]
+    },
+    "exp_b": {
+      "workload_table": [
+        {
+          "achieved_ratio": 0.968044696627519,
+          "cpu_throughput_pts_s": 0.36692516510225287,
+          "gpu_throughput_pts_s": 2.8775747453155036,
+          "hybrid_speedup": 1.9226653878657043,
+          "hybrid_wins": true,
+          "max_abs_error": 5.25,
+          "selected_policy": "gpu_cpu_hybrid",
+          "selected_time_s": 87.82015060999993,
+          "slowdown_applied": 7.842402263452264,
+          "surface_valid": true,
+          "unslowed_ratio": 0.12751194932454218,
+          "vanilla_time_s": 168.84876393500008,
+          "worker_throughput_split": {
+            "cpu_point_fraction": 0.734375,
+            "cpu_points_processed": 47,
+            "cpu_throughput_points_per_s": 0.5351846890894331,
+            "gpu_point_fraction": 0.265625,
+            "gpu_points_processed": 17,
+            "gpu_throughput_points_per_s": 0.19724867947461075,
+            "total_throughput_points_per_s": 0.7287621298239089
+          },
+          "workload": "cifar10_resnet20_classification"
+        },
+        {
+          "achieved_ratio": 0.9706144036256847,
+          "cpu_throughput_pts_s": 0.6079150221727861,
+          "gpu_throughput_pts_s": 2.4665949398022087,
+          "hybrid_speedup": 3.7887139890566397,
+          "hybrid_wins": true,
+          "max_abs_error": 2.8014183044433594e-06,
+          "selected_policy": "gpu_cpu_hybrid",
+          "selected_time_s": 26.970686996999575,
+          "slowdown_applied": 4.0574666685916085,
+          "surface_valid": true,
+          "unslowed_ratio": 0.24645920266970694,
+          "vanilla_time_s": 102.18421912000031,
+          "worker_throughput_split": {
+            "cpu_point_fraction": 0.859375,
+            "cpu_points_processed": 55,
+            "cpu_throughput_points_per_s": 2.0392509840820376,
+            "gpu_point_fraction": 0.140625,
+            "gpu_points_processed": 9,
+            "gpu_throughput_points_per_s": 0.33594818057186915,
+            "total_throughput_points_per_s": 2.372946599659098
+          },
+          "workload": "cifar10_row_gru_classification"
+        },
+        {
+          "achieved_ratio": 1.231623404301853,
+          "cpu_throughput_pts_s": 10.663799991962852,
+          "gpu_throughput_pts_s": 54.87246411142142,
+          "hybrid_speedup": 5.1717252617705505,
+          "hybrid_wins": true,
+          "max_abs_error": 2.2649765014648438e-06,
+          "selected_policy": "gpu_cpu_hybrid",
+          "selected_time_s": 1.4292574689998219,
+          "slowdown_applied": 5.145676414859429,
+          "surface_valid": true,
+          "unslowed_ratio": 0.19433790999998554,
+          "vanilla_time_s": 7.391726958000618,
+          "worker_throughput_split": {
+            "cpu_point_fraction": 0.984375,
+            "cpu_points_processed": 63,
+            "cpu_throughput_points_per_s": 44.078832097401374,
+            "gpu_point_fraction": 0.015625,
+            "gpu_points_processed": 1,
+            "gpu_throughput_points_per_s": 0.9927696437925042,
+            "total_throughput_points_per_s": 44.77849609894743
+          },
+          "workload": "california_mlp_regression"
+        },
+        {
+          "achieved_ratio": 0.9762155543703205,
+          "cpu_throughput_pts_s": 2.0106409963360297,
+          "gpu_throughput_pts_s": 4.188258115329572,
+          "hybrid_speedup": 1.879352696651357,
+          "hybrid_wins": true,
+          "max_abs_error": 2.7939677238464355e-08,
+          "selected_policy": "gpu_cpu_hybrid",
+          "selected_time_s": 16.534188030999758,
+          "slowdown_applied": 2.083046214098783,
+          "surface_valid": true,
+          "unslowed_ratio": 0.48006616138982,
+          "vanilla_time_s": 31.073570862999986,
+          "worker_throughput_split": {
+            "cpu_point_fraction": 0.71875,
+            "cpu_points_processed": 46,
+            "cpu_throughput_points_per_s": 2.782114241942521,
+            "gpu_point_fraction": 0.28125,
+            "gpu_points_processed": 18,
+            "gpu_throughput_points_per_s": 1.1143849467363451,
+            "total_throughput_points_per_s": 3.870767640963508
+          },
+          "workload": "mnist_mlp_classification"
+        }
+      ]
+    },
+    "exp_c": {
+      "error": null,
+      "summary": {
+        "best_hybrid_minus_gpu_only_s": null,
+        "cache_saves_time": true,
+        "cache_savings_s": 279.413,
+        "calibration_grid_resolution": 4,
+        "calibration_s": 86.449,
+        "mode_selection_consistent": null,
+        "mode_selections_by_variant": null,
+        "selected_mode": "vanilla",
+        "session_total_s_with_cache": 185.754,
+        "session_total_s_without_cache": 465.167,
+        "time_saved_s": 279.413,
+        "variant_count": 4
+      }
+    },
+    "gaps": [
+      "cifar10_resnet20_classification/functional_sequential: n=3 < 5 \u2014 CI uses df=2",
+      "cifar10_resnet20_classification/vmapped_chunk_32: n=3 < 5 \u2014 CI uses df=2",
+      "cifar10_resnet20_classification/vmapped_chunk_64: n=3 < 5 \u2014 CI uses df=2",
+      "cifar10_row_gru_classification/functional_sequential: n=3 < 5 \u2014 CI uses df=2",
+      "cifar10_row_gru_classification/vmapped_chunk_32: n=3 < 5 \u2014 CI uses df=2",
+      "cifar10_row_gru_classification/vmapped_chunk_64: n=3 < 5 \u2014 CI uses df=2",
+      "california_mlp_regression/functional_sequential: n=3 < 5 \u2014 CI uses df=2",
+      "california_mlp_regression/vmapped_chunk_32: n=3 < 5 \u2014 CI uses df=2",
+      "california_mlp_regression/vmapped_chunk_64: n=3 < 5 \u2014 CI uses df=2",
+      "mnist_mlp_classification/functional_sequential: n=3 < 5 \u2014 CI uses df=2",
+      "mnist_mlp_classification/vmapped_chunk_32: n=3 < 5 \u2014 CI uses df=2",
+      "mnist_mlp_classification/vmapped_chunk_64: n=3 < 5 \u2014 CI uses df=2"
+    ],
+    "n_significant_candidates": 8,
+    "paper_ready": false
+  },
+  "status": "completed"
+}

@@ -1,67 +1,51 @@
 from __future__ import annotations
 
-from pathlib import Path
-from types import SimpleNamespace
+import os
+import platform
 from typing import Any
 
-from src.backends.base import resolve_device
-from src.workloads import WORKLOADS
+from experiments.workloads import WORKLOADS
 
 
-def asset_summary() -> dict[str, Any]:
-    assets: dict[str, Any] = {}
-    for name, definition in WORKLOADS.items():
-        dataset_path = Path(definition.spec.dataset.path)
-        checkpoint_path = (
-            None
-            if definition.spec.checkpoint_path is None
-            else Path(definition.spec.checkpoint_path)
-        )
-        assets[name] = {
-            "dataset_path": str(dataset_path),
-            "dataset_exists": dataset_path.exists(),
-            "checkpoint_path": None
-            if checkpoint_path is None
-            else str(checkpoint_path),
-            "checkpoint_exists": (
-                None if checkpoint_path is None else checkpoint_path.exists()
-            ),
+def run(device: str) -> dict[str, Any]:
+    platform_summary = {
+        "requested_device": device,
+        "host_os": platform.system(),
+        "os_release": platform.release(),
+        "machine": platform.machine(),
+        "python_version": platform.python_version(),
+        "cpu": {
+            "logical_cores": os.cpu_count(),
+            "model": platform.processor() or None,
+        },
+        "env_threads": {
+            key: os.environ.get(key)
+            for key in (
+                "OMP_NUM_THREADS",
+                "MKL_NUM_THREADS",
+                "VECLIB_MAXIMUM_THREADS",
+                "NUMEXPR_NUM_THREADS",
+            )
+        },
+    }
+    assets: dict[str, Any] = {
+        name: {
+            "dataset": workload.dataset,
+            "model": workload.model,
+            "task": workload.task,
+            "loss": workload.loss,
         }
-    return assets
-
-
-def run(
-    config: SimpleNamespace,
-    output_dir: Path,
-    shared_state: dict[str, Any],
-    *,
-    platform_summary,
-) -> dict[str, Any]:
-    del output_dir
-    del shared_state
-    resolved_device = resolve_device(config.device)
-    platform = platform_summary(config.device, resolved_device)
-    gpu = platform.get("gpu") or {}
-    cpu = platform.get("cpu") or {}
-    memory = platform.get("memory") or {}
-    assets = asset_summary()
+        for name, workload in WORKLOADS.items()
+    }
+    record = {
+        "status": "completed",
+        "requested_device": device,
+        "cpu_logical_cores": platform_summary["cpu"]["logical_cores"],
+        "workload_count": len(assets),
+    }
     return {
         "status": "completed",
-        "platform": platform,
+        "platform": platform_summary,
         "assets": assets,
-        "record": {
-            "status": "completed",
-            "resolved_device": platform.get("resolved_device"),
-            "gpu_model": gpu.get("name"),
-            "vram_bytes": gpu.get("total_memory_bytes"),
-            "ram_bytes": memory.get("total_system_memory_bytes"),
-            "cpu_logical_cores": cpu.get("logical_cores"),
-            "asset_count": len(assets),
-            "missing_asset_count": sum(
-                1
-                for item in assets.values()
-                if not item["dataset_exists"]
-                or item["checkpoint_exists"] is False
-            ),
-        },
+        "record": record,
     }

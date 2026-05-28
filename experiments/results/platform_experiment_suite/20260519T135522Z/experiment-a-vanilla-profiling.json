@@ -1,0 +1,190 @@
+{
+  "child_stem": "experiment-a-vanilla-profiling",
+  "duration_s": 0.000189,
+  "output_path": "outputs/platform_experiment_suite/20260519T135522Z/experiment-a-vanilla-profiling.json",
+  "record": {
+    "completed_workloads": 4,
+    "duration_s": 0.000189,
+    "output_path": "outputs/platform_experiment_suite/20260519T135522Z/experiment-a-vanilla-profiling.json",
+    "status": "completed",
+    "total_grid_s_by_workload": {
+      "california_mlp_regression": 0.7545685000077356,
+      "cifar10_resnet20_classification": 7.822215042018797,
+      "cifar10_row_gru_classification": 9.21101587501471,
+      "mnist_mlp_classification": 2.6043522499967366
+    },
+    "workload_count": 4
+  },
+  "result": {
+    "record": {
+      "completed_workloads": 4,
+      "status": "completed",
+      "total_grid_s_by_workload": {
+        "california_mlp_regression": 0.7545685000077356,
+        "cifar10_resnet20_classification": 7.822215042018797,
+        "cifar10_row_gru_classification": 9.21101587501471,
+        "mnist_mlp_classification": 2.6043522499967366
+      },
+      "workload_count": 4
+    },
+    "schema_version": "experiment-a-vanilla-profiling-v1",
+    "workload_count": 4,
+    "workloads": {
+      "california_mlp_regression": {
+        "candidate": "baseline_original",
+        "metadata": {
+          "backend": "vanilla",
+          "device": "mps",
+          "section_timings_available": true,
+          "workload": "california_mlp_regression",
+          "wrapped": "canonical vanilla backend"
+        },
+        "peak_cpu_memory_bytes": null,
+        "peak_cuda_memory_bytes": null,
+        "per_point_latency_s": 0.011790132812620868,
+        "section_timings": {
+          "batch_eval_s": 0.7193247889999999,
+          "binding_s": 0.0026119170000000005,
+          "perturbation_s": 0.032192502,
+          "total_grid_s": 0.7545685000077356
+        },
+        "status": "completed",
+        "total_grid_s": 0.7545685000077356,
+        "workload": {
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/california-mlp-0.pkl",
+          "dataset": {
+            "input_shape": [
+              8
+            ],
+            "name": "california_housing",
+            "path": "/Users/pedro/projects/loss-grid-computer/assets",
+            "sample_count": 1024
+          },
+          "loss": "mse",
+          "model": "mlp_regressor",
+          "registered": true,
+          "task": "tabular_regression",
+          "workload_name": "california_mlp_regression"
+        }
+      },
+      "cifar10_resnet20_classification": {
+        "candidate": "baseline_original",
+        "metadata": {
+          "backend": "vanilla",
+          "device": "mps",
+          "section_timings_available": true,
+          "workload": "cifar10_resnet20_classification",
+          "wrapped": "canonical vanilla backend"
+        },
+        "peak_cpu_memory_bytes": null,
+        "peak_cuda_memory_bytes": null,
+        "per_point_latency_s": 0.12222211003154371,
+        "section_timings": {
+          "batch_eval_s": 7.649291539999999,
+          "binding_s": 0.013669212,
+          "perturbation_s": 0.1587730020000001,
+          "total_grid_s": 7.822215042018797
+        },
+        "status": "completed",
+        "total_grid_s": 7.822215042018797,
+        "workload": {
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/cifar10-resnet20-0.pkl",
+          "dataset": {
+            "input_shape": [
+              3,
+              32,
+              32
+            ],
+            "name": "cifar10",
+            "path": "/Users/pedro/projects/loss-grid-computer/assets/cifar-10-batches-py",
+            "sample_count": 1024
+          },
+          "loss": "cross_entropy",
+          "model": "resnet20",
+          "registered": true,
+          "task": "image_classification",
+          "workload_name": "cifar10_resnet20_classification"
+        }
+      },
+      "cifar10_row_gru_classification": {
+        "candidate": "baseline_original",
+        "metadata": {
+          "backend": "vanilla",
+          "device": "mps",
+          "section_timings_available": true,
+          "workload": "cifar10_row_gru_classification",
+          "wrapped": "canonical vanilla backend"
+        },
+        "peak_cpu_memory_bytes": null,
+        "peak_cuda_memory_bytes": null,
+        "per_point_latency_s": 0.14392212304710483,
+        "section_timings": {
+          "batch_eval_s": 9.177531247000001,
+          "binding_s": 0.002502911,
+          "perturbation_s": 0.03049816900000001,
+          "total_grid_s": 9.21101587501471
+        },
+        "status": "completed",
+        "total_grid_s": 9.21101587501471,
+        "workload": {
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/cifar10-row-gru-0.pkl",
+          "dataset": {
+            "input_shape": [
+              3,
+              32,
+              32
+            ],
+            "name": "cifar10",
+            "path": "/Users/pedro/projects/loss-grid-computer/assets/cifar-10-batches-py",
+            "sample_count": 1024
+          },
+          "loss": "cross_entropy",
+          "model": "row_gru",
+          "registered": true,
+          "task": "image_classification",
+          "workload_name": "cifar10_row_gru_classification"
+        }
+      },
+      "mnist_mlp_classification": {
+        "candidate": "baseline_original",
+        "metadata": {
+          "backend": "vanilla",
+          "device": "mps",
+          "section_timings_available": true,
+          "workload": "mnist_mlp_classification",
+          "wrapped": "canonical vanilla backend"
+        },
+        "peak_cpu_memory_bytes": null,
+        "peak_cuda_memory_bytes": null,
+        "per_point_latency_s": 0.04069300390619901,
+        "section_timings": {
+          "batch_eval_s": 2.4666883380000004,
+          "binding_s": 0.0027900370000000004,
+          "perturbation_s": 0.133853247,
+          "total_grid_s": 2.6043522499967366
+        },
+        "status": "completed",
+        "total_grid_s": 2.6043522499967366,
+        "workload": {
+          "checkpoint_path": "/Users/pedro/projects/loss-grid-computer/assets/mnist-mlp-0.pkl",
+          "dataset": {
+            "input_shape": [
+              1,
+              28,
+              28
+            ],
+            "name": "mnist",
+            "path": "/Users/pedro/projects/loss-grid-computer/assets/mnist",
+            "sample_count": 1024
+          },
+          "loss": "cross_entropy",
+          "model": "mnist_mlp",
+          "registered": true,
+          "task": "image_classification",
+          "workload_name": "mnist_mlp_classification"
+        }
+      }
+    }
+  },
+  "status": "completed"
+}
