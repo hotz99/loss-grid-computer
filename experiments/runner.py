@@ -46,8 +46,8 @@ GRID_RESOLUTION = 8
 EXPERIMENT_3_SESSION_GRID_RESOLUTION = 20
 GRID_SCALE = 1.0
 GPU_BATCH_SIZE = 64
-# R = 5 for thesis results, leave at 1 for quick correctness checks
-REPEATS = 1
+# R = 1 breaks exp2->exp3 piping, since no CIs resolved
+REPEATS = 5
 POINT_CHUNK_SIZES = (32, 64)
 MAX_MEMORY_FRACTION: float | None = 0.85
 INCLUDE_COMPILE_CANDIDATES = True
@@ -77,7 +77,6 @@ def main() -> Path:
         grid=GridSpec(GRID_RESOLUTION, GRID_SCALE),
         gpu_batch_size=GPU_BATCH_SIZE,
         repeats=REPEATS,
-        calibration_retry=CALIBRATION_RETRY,
         max_cpu_worker_candidate=MAX_CPU_WORKER_CANDIDATE,
     )
     experiment_3_config = replace(
@@ -154,7 +153,11 @@ def main() -> Path:
             experiment_2,
             experiment_3,
         ),
-        fn=lambda: project.project(experiment_1, experiment_2, experiment_3),
+        fn=lambda: project.project(
+            _read_json(run_dir / "experiment-1.json"),
+            _read_json(run_dir / "experiment-2.json"),
+            _read_json(run_dir / "experiment-3.json"),
+        ),
     )
 
     _write_json(

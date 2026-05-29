@@ -24,6 +24,13 @@ def _assets_present() -> bool:
     return Path("assets/mnist/MNIST/raw/t10k-images-idx3-ubyte").exists()
 
 
+def _row_gru_assets_present() -> bool:
+    return (
+        Path("assets/cifar10-row-gru-0.pkl").exists()
+        and Path("assets/cifar-10-batches-py/test_batch").exists()
+    )
+
+
 def _run(candidate: GpuCandidate, device: torch.device):
     task = task_for_workload(_WORKLOAD, sample_count=_SAMPLE_COUNT)
     return run_standalone(candidate, task, _GRID, batch_size=_BATCH_SIZE, device=device, seed=_SEED)
@@ -70,6 +77,49 @@ class CpuSurfaceEquivalenceTest(unittest.TestCase):
                 cand = _run(GpuCandidate.compiled_vmapped(k), self._device)
                 self.assertIsNone(cand.error, f"compiled_vmapped_k{k} failed: {cand.error}")
                 _check_surface(self, cand.records, base.records, f"compiled_vmapped_k{k}")
+
+
+class CpuRowGruCompileEquivalenceTest(unittest.TestCase):
+    """Guards the row-GRU compile path.
+
+    nn.GRU as a weight container trips Dynamo's RNN guard, so the row-GRU
+    compiled candidates produced no data. The gate weights now live in a plain
+    holder with the same names and layout; this pins that torch.compile traces
+    the manual recurrence and reproduces the baseline surface.
+    """
+
+    def setUp(self) -> None:
+        if not _row_gru_assets_present():
+            self.skipTest("row_gru / CIFAR assets not present")
+        self._device = torch.device("cpu")
+
+    def _run_rg(self, candidate: GpuCandidate):
+        task = task_for_workload(
+            "cifar10_row_gru_classification", sample_count=_SAMPLE_COUNT
+        )
+        return run_standalone(
+            candidate, task, _GRID,
+            batch_size=_BATCH_SIZE, device=self._device, seed=_SEED,
+        )
+
+    def test_compiled_matches_baseline(self) -> None:
+        base = self._run_rg(GpuCandidate.baseline())
+        cand = self._run_rg(GpuCandidate.compiled())
+        self.assertIsNone(cand.error, f"compiled failed: {cand.error}")
+        _check_surface(self, cand.records, base.records, "row_gru compiled")
+
+    def test_compiled_vmapped_matches_baseline(self) -> None:
+        base = self._run_rg(GpuCandidate.baseline())
+        for k in (32, 64):
+            with self.subTest(k=k):
+                cand = self._run_rg(GpuCandidate.compiled_vmapped(k))
+                self.assertIsNone(
+                    cand.error, f"compiled_vmapped_k{k} failed: {cand.error}"
+                )
+                _check_surface(
+                    self, cand.records, base.records,
+                    f"row_gru compiled_vmapped_k{k}",
+                )
 
 
 class MpsSurfaceEquivalenceTest(unittest.TestCase):

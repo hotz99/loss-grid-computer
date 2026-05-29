@@ -1,0 +1,75 @@
+{
+  "device": "auto",
+  "experiment_1": {
+    "batch_size": 64,
+    "device": "auto",
+    "grid": {
+      "resolution": 8,
+      "scale": 1.0
+    },
+    "include_compile_candidates": true,
+    "max_memory_fraction": 0.85,
+    "point_chunk_sizes": [
+      32,
+      64
+    ],
+    "repeats": 5,
+    "sample_count": 1024,
+    "seed": 1337,
+    "surface_gate": {
+      "abs_tol": 0.0,
+      "rel_tol": 1e-05
+    },
+    "workload_names": [
+      "cifar10_resnet20_classification",
+      "cifar10_row_gru_classification",
+      "california_mlp_regression",
+      "mnist_mlp_classification"
+    ]
+  },
+  "experiment_2": {
+    "device": "auto",
+    "gpu_batch_size": 64,
+    "grid": {
+      "resolution": 8,
+      "scale": 1.0
+    },
+    "max_cpu_worker_candidate": null,
+    "repeats": 5,
+    "sample_count": 1024,
+    "seed": 1337,
+    "surface_gate": {
+      "abs_tol": 0.0,
+      "rel_tol": 1e-05
+    },
+    "workload_names": [
+      "cifar10_resnet20_classification",
+      "cifar10_row_gru_classification",
+      "california_mlp_regression",
+      "mnist_mlp_classification"
+    ]
+  },
+  "experiment_3": {
+    "calibration_retry": 3,
+    "device": "auto",
+    "gpu_batch_size": 64,
+    "max_cpu_worker_candidate": null,
+    "sample_count": 1024,
+    "seed": 1337,
+    "session_grid": {
+      "resolution": 20,
+      "scale": 1.0
+    },
+    "surface_gate": {
+      "abs_tol": 0.0,
+      "rel_tol": 1e-05
+    }
+  },
+  "run_toggles": {
+    "experiment_1": true,
+    "experiment_2": true,
+    "experiment_3": true,
+    "platform_inventory": false,
+    "projection": true
+  }
+}

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import asdict
 from typing import Any
 
 import torch
@@ -13,6 +12,7 @@ from experiments.probes import throughput as throughput_probe
 from experiments.schemas import (
     Experiment2Config,
     Experiment2Result,
+    GridSpec,
     TrialSpec,
 )
 from experiments.stats import paired_speedups, speedup_claim_status
@@ -21,6 +21,9 @@ from experiments.workloads import WORKLOADS, task_for_workload, workload_metadat
 
 
 _SCHEMA_VERSION = "experiment-2-hybrid-v1"
+# r_native is a per-point throughput ratio that only sets where the slowdown
+# lands, so a small probe grid suffices and an exact parity point is unneeded.
+_PROBE_GRID_RESOLUTION = 4
 
 
 def plan(config: Experiment2Config) -> tuple[TrialSpec, ...]:
@@ -105,7 +108,7 @@ def _run_workload(
     _progress("probe", workload=workload_name)
     cpu_batch_for_probe = max(1, min(config.gpu_batch_size, task.dataset.sample_count))
     probe = throughput_probe.measure(
-        task, config.grid,
+        task, GridSpec(_PROBE_GRID_RESOLUTION, config.grid.scale),
         gpu_batch_size=config.gpu_batch_size,
         cpu_batch_size=cpu_batch_for_probe,
         gpu_device=device, seed=config.seed,
@@ -115,13 +118,11 @@ def _run_workload(
         regimes.append(("parity", probe.slowdown_for_parity()))
 
     per_regime: dict[str, Any] = {}
-    per_r_best_b_cell: dict[str, dict[str, Any] | None] = {}
     for regime_name, slowdown in regimes:
         _progress("regime", workload=workload_name, regime=regime_name, slowdown=slowdown)
         per_regime[regime_name] = _run_regime(
             task, config, device, slowdown, probe.r_native, regime_name,
         )
-        per_r_best_b_cell[regime_name] = per_regime[regime_name].get("per_r_best_b_cell")
 
     return {
         "status": "completed",
@@ -134,7 +135,6 @@ def _run_workload(
             "gpu_total_s": probe.gpu_total_s,
         },
         "regimes": per_regime,
-        "per_r_best_b_cell": per_r_best_b_cell,
     }
 
 
@@ -152,31 +152,17 @@ def _run_regime(
     r_native: float,
     regime_name: str,
 ) -> dict[str, Any]:
-    baseline_seed_result = baseline_candidate.run(
-        task, config.grid,
-        batch_size=config.gpu_batch_size, device=device, seed=config.seed,
-        gpu_slowdown_factor=slowdown,
-    )
-    workers = calibration_mod.cpu_worker_candidates(config.max_cpu_worker_candidate)
-    batches = calibration_mod.cpu_batch_size_candidates(
-        task.dataset.sample_count, config.gpu_batch_size,
-    )
-    cell = calibration_mod.calibrate(
-        task, config.grid,
-        gpu_batch_size=config.gpu_batch_size,
-        baseline_total_s=baseline_seed_result.total_grid_s,
-        cpu_workers=workers, cpu_batch_sizes=batches,
-        patience=config.calibration_retry,
-        device=device, seed=config.seed,
-        gpu_slowdown_factor=slowdown,
-    )
+    # RQ2 fixes the scheduler config: p = p_max CPU workers and CPU batch equal
+    # to the GPU batch (same batch policy, methods-scheduling). Policy tuning is
+    # RQ3's question, so RQ2 runs no calibration sweep.
+    cpu_workers = calibration_mod.max_cpu_workers(config.max_cpu_worker_candidate)
+    cpu_batch_size = config.gpu_batch_size
 
     vanilla_times: dict[int, float] = {}
     hybrid_times: dict[int, float] = {}
     vanilla_records_first = None
     hybrid_records_first = None
     worker_split_first = None
-    achieved_ratio = None
     repeats_log: list[dict[str, Any]] = []
 
     for repeat in range(config.repeats):
@@ -194,12 +180,12 @@ def _run_regime(
                     batch_size=config.gpu_batch_size, device=device, seed=config.seed,
                     gpu_slowdown_factor=slowdown,
                 )
-            elif candidate == "hybrid" and cell.selected_policy == "gpu_cpu_hybrid":
+            elif candidate == "hybrid":
                 hybrid = hybrid_candidate.run(
                     task, config.grid,
-                    gpu_batch_size=cell.gpu_batch_size,
-                    cpu_batch_size=int(cell.cpu_batch_size or 0),
-                    cpu_workers=int(cell.cpu_workers or 0),
+                    gpu_batch_size=config.gpu_batch_size,
+                    cpu_batch_size=cpu_batch_size,
+                    cpu_workers=cpu_workers,
                     device=device, seed=config.seed,
                     gpu_slowdown_factor=slowdown,
                 )
@@ -212,11 +198,6 @@ def _run_regime(
             if hybrid_records_first is None:
                 hybrid_records_first = hybrid.records
                 worker_split_first = hybrid.worker_throughput_split
-                if hybrid.worker_throughput_split is not None:
-                    cpu_pts = float(hybrid.worker_throughput_split.get("cpu_points", 0))
-                    gpu_pts = float(hybrid.worker_throughput_split.get("gpu_points", 0))
-                    if gpu_pts > 0 and vanilla is not None:
-                        achieved_ratio = (cpu_pts / max(gpu_pts, 1.0)) * 1.0  # placeholder; see below
         repeats_log.append(
             {
                 "repeat": repeat,
@@ -235,41 +216,26 @@ def _run_regime(
 
     speedups = paired_speedups(vanilla_times, hybrid_times)
     base_status, mean_, low, high = speedup_claim_status(
-        speedups, surface_valid=surface_valid or cell.selected_policy == "gpu_only",
+        speedups, surface_valid=surface_valid,
     )
     claim_status = _b_claim_status(
         base_status=base_status,
-        cell_policy=cell.selected_policy,
         surface_validation=surface_validation,
         r_native=r_native,
         regime_name=regime_name,
         ci_low=low,
-        ci_high=high,
     )
 
     achieved_ratio = _achieved_ratio(worker_split_first, vanilla_times, hybrid_times)
     slowdown_distance = abs((achieved_ratio or 1.0) - 1.0)
 
-    per_r_best = (
-        {
-            "gpu_batch_size": cell.gpu_batch_size,
-            "cpu_batch_size": cell.cpu_batch_size,
-            "cpu_workers": cell.cpu_workers,
-            "selected_policy": cell.selected_policy,
-        }
-        if cell.selected_policy == "gpu_cpu_hybrid"
-        else None
-    )
-
     return {
         "slowdown_factor": slowdown,
-        "calibration": {
-            "cell": asdict(cell),
-            "cpu_worker_candidates": list(workers),
-            "cpu_batch_size_candidates": list(batches),
-            "calibration_retry": config.calibration_retry,
+        "fixed_cell": {
+            "gpu_batch_size": config.gpu_batch_size,
+            "cpu_batch_size": cpu_batch_size,
+            "cpu_workers": cpu_workers,
         },
-        "selected_policy": cell.selected_policy,
         "vanilla": {
             "per_repeat_total_s": vanilla_times,
         },
@@ -285,7 +251,6 @@ def _run_regime(
         "speedup_ci_low": low,
         "speedup_ci_high": high,
         "claim_status": claim_status,
-        "per_r_best_b_cell": per_r_best,
         "repeats": repeats_log,
     }
 
@@ -313,18 +278,13 @@ def _achieved_ratio(
 def _b_claim_status(
     *,
     base_status: str,
-    cell_policy: str,
     surface_validation: dict[str, Any] | None,
     r_native: float,
     regime_name: str,
     ci_low: float | None,
-    ci_high: float | None,
 ) -> str:
     if surface_validation is not None and not surface_validation.get("valid", False):
         return "invalid_surface"
-    if cell_policy == "gpu_only":
-        # calibration rejected hybrid at this regime
-        return "hybrid_loses_at_parity"
     if r_native >= 1.0 and regime_name == "native":
         # predictor falsification: r ≥ 1 but hybrid CI fails to exceed 1.0
         if ci_low is None or ci_low <= 1.0:
@@ -333,5 +293,5 @@ def _b_claim_status(
     if base_status == "speedup":
         return "hybrid_wins"
     if base_status == "regression":
-        return "hybrid_loses_at_parity"
+        return "hybrid_regresses"
     return "inconclusive"

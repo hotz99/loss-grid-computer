@@ -122,7 +122,7 @@ class RunnerPipelineContractTest(unittest.TestCase):
         self.assertEqual("experiment-2-hybrid-v1", exp2["schema_version"])
         workload = exp2["record"]["workloads"][_WORKLOAD]
         self.assertEqual("completed", workload["status"])
-        for key in ("regime_predictor", "regimes", "per_r_best_b_cell"):
+        for key in ("regime_predictor", "regimes"):
             self.assertIn(key, workload)
 
     def test_experiment_3_contract(self) -> None:
@@ -136,7 +136,7 @@ class RunnerPipelineContractTest(unittest.TestCase):
 
     def test_projection_wires_rq3_config_from_experiment_1(self) -> None:
         projection = self._artifacts["projection"]
-        self.assertEqual("paper-projection-v1", projection["schema_version"])
+        self.assertEqual("paper-projection-v2", projection["schema_version"])
         self.assertEqual(
             self._artifacts["experiment-1"]["record"]["rq3_config"],
             projection["rq1"]["rq3_config"],

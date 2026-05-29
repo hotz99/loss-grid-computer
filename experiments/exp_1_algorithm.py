@@ -14,7 +14,7 @@ from experiments.schemas import (
     TrialSpec,
 )
 from experiments.stats import (
-    mean,
+    geometric_mean,
     paired_speedups,
     speedup_claim_status,
     t_interval_95,
@@ -408,7 +408,7 @@ def _composition(
                 continue
             ratios.append(speedup_cv / denominator)
 
-        mean_ratio = mean(ratios)
+        mean_ratio = geometric_mean(ratios)
         interval = t_interval_95(ratios)
         low = interval[0] if interval else None
         high = interval[1] if interval else None

@@ -49,6 +49,13 @@ def stdev(values: Iterable[float]) -> float | None:
     return statistics.stdev(items) if len(items) >= 2 else None
 
 
+def geometric_mean(values: Iterable[float]) -> float | None:
+    items = [float(v) for v in values if v > 0]
+    if not items:
+        return None
+    return math.exp(statistics.mean([math.log(v) for v in items]))
+
+
 def paired_speedups(
     baseline_times: dict[Hashable, float],
     candidate_times: dict[Hashable, float],
@@ -63,15 +70,19 @@ def paired_speedups(
 
 
 def t_interval_95(values: Iterable[float]) -> tuple[float, float] | None:
-    items = list(values)
+    # Ratios are summarized on the log scale: the t-interval is built on
+    # log(ratio) and exponentiated, so the center is the geometric mean and
+    # the bounds respect the ratio's multiplicative geometry.
+    items = [float(v) for v in values if v > 0]
     if len(items) < 2:
         return None
-    sample_mean = statistics.mean(items)
-    sample_stdev = statistics.stdev(items)
-    df = len(items) - 1
+    logs = [math.log(v) for v in items]
+    mean_log = statistics.mean(logs)
+    stdev_log = statistics.stdev(logs)
+    df = len(logs) - 1
     critical = _T_CRITICAL_95_TWO_SIDED.get(df, 1.96)
-    half_width = critical * sample_stdev / math.sqrt(len(items))
-    return sample_mean - half_width, sample_mean + half_width
+    half_width = critical * stdev_log / math.sqrt(len(logs))
+    return math.exp(mean_log - half_width), math.exp(mean_log + half_width)
 
 
 def speedup_claim_status(
@@ -80,7 +91,7 @@ def speedup_claim_status(
     surface_valid: bool,
 ) -> tuple[str, float | None, float | None, float | None]:
     items = list(values)
-    sample_mean = mean(items)
+    sample_mean = geometric_mean(items)
     interval = t_interval_95(items)
     low = None if interval is None else interval[0]
     high = None if interval is None else interval[1]

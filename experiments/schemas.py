@@ -69,7 +69,6 @@ class Experiment2Config:
     grid: GridSpec = field(default_factory=lambda: GridSpec(8, 1.0))
     gpu_batch_size: int = 64
     repeats: int = 5
-    calibration_retry: int = 3
     max_cpu_worker_candidate: int | None = None
     surface_gate: SurfaceGateConfig = field(default_factory=SurfaceGateConfig)
 
