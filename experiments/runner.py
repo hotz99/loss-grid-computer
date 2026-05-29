@@ -46,6 +46,7 @@ GRID_RESOLUTION = 8
 EXPERIMENT_3_SESSION_GRID_RESOLUTION = 20
 GRID_SCALE = 1.0
 GPU_BATCH_SIZE = 64
+# R = 5 for thesis results, leave at 1 for quick correctness checks
 REPEATS = 1
 POINT_CHUNK_SIZES = (32, 64)
 MAX_MEMORY_FRACTION: float | None = 0.85

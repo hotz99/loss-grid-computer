@@ -36,9 +36,12 @@ def _flat_to_param_dict(flat_vector: torch.Tensor, layout) -> dict:
 
 def _move_batch(batch, device: torch.device):
     inputs, targets = batch
+    # non_blocking is only safe from pinned host memory (CUDA dataloaders).
+    # On MPS, async copies from pageable memory race the kernel and yield garbage.
+    non_blocking = device.type == "cuda"
     return (
-        inputs.to(device, dtype=torch.float32, non_blocking=True),
-        targets.to(device, non_blocking=True),
+        inputs.to(device, dtype=torch.float32, non_blocking=non_blocking),
+        targets.to(device, non_blocking=non_blocking),
     )
 
 

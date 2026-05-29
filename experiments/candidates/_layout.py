@@ -67,31 +67,12 @@ def flat_chunk_to_batched_param_dict(
     return OrderedDict(
         (
             entry.name,
-            flat_vectors.as_strided(
-                size=(chunk_size, *entry.shape),
-                stride=(
-                    flat_vectors.stride(0),
-                    *(
-                        stride * flat_vectors.stride(1)
-                        for stride in _contiguous_strides(entry.shape)
-                    ),
-                ),
-                storage_offset=(
-                    flat_vectors.storage_offset() + entry.offset * flat_vectors.stride(1)
-                ),
-            ),
+            flat_vectors[:, entry.offset : entry.offset + entry.numel]
+            .reshape(chunk_size, *entry.shape)
+            .contiguous(),
         )
         for entry in layout.entries
     )
-
-
-def _contiguous_strides(shape: tuple[int, ...]) -> tuple[int, ...]:
-    stride = 1
-    strides: list[int] = []
-    for size in reversed(shape):
-        strides.append(stride)
-        stride *= size
-    return tuple(reversed(strides))
 
 
 def materialize_flat_chunk(

@@ -17,15 +17,18 @@ def compute_loss(
     task: MLTaskSpec,
 ) -> tuple[torch.Tensor, int]:
     inputs, targets = batch
+    # non_blocking is only safe from pinned host memory (CUDA dataloaders).
+    # On MPS, async copies from pageable memory race the kernel and yield garbage.
+    non_blocking = device.type == "cuda"
     if task.loss == "cross_entropy":
-        inputs = inputs.to(device, dtype=torch.float32, non_blocking=True)
-        targets = targets.to(device, non_blocking=True)
+        inputs = inputs.to(device, dtype=torch.float32, non_blocking=non_blocking)
+        targets = targets.to(device, non_blocking=non_blocking)
         logits = model(inputs)
         loss = F.cross_entropy(logits, targets, reduction="mean")
         return loss, int(targets.shape[0])
     if task.loss == "mse":
-        inputs = inputs.to(device, dtype=torch.float32, non_blocking=True)
-        targets = targets.to(device, dtype=torch.float32, non_blocking=True)
+        inputs = inputs.to(device, dtype=torch.float32, non_blocking=non_blocking)
+        targets = targets.to(device, dtype=torch.float32, non_blocking=non_blocking)
         predictions = model(inputs).squeeze(-1)
         loss = F.mse_loss(predictions, targets, reduction="mean")
         return loss, int(targets.shape[0])
