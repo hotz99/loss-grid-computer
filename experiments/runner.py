@@ -23,6 +23,7 @@ from experiments import (  # noqa: E402
 from experiments.schemas import (  # noqa: E402
     Experiment1Config,
     Experiment2Config,
+    Experiment2Result,
     Experiment3Config,
     GridSpec,
 )
@@ -38,6 +39,11 @@ RUN_EXPERIMENT_1 = True
 RUN_EXPERIMENT_2 = True
 RUN_EXPERIMENT_3 = True
 RUN_PROJECTION = True
+
+# Reuse a prior experiment-2.json instead of recomputing it. Set to the path of
+# a completed exp2 artifact and RUN_EXPERIMENT_2 to False to rerun exp1+exp3
+# against a frozen RQ2 selection (exp3 consumes exp2's selected workload/regime).
+REUSE_EXPERIMENT_2_FROM: str | None = None
 
 WORKLOAD_NAMES: tuple[str, ...] | None = None
 SEED = 1337
@@ -118,13 +124,19 @@ def main() -> Path:
         disabled_payload={"status": "disabled", "record": {"status": "disabled"}},
         fn=lambda: exp_1_algorithm.run(experiment_1_config),
     )
-    experiment_2 = _maybe_run_step(
-        name="experiment_2",
-        enabled=RUN_EXPERIMENT_2,
-        path=run_dir / "experiment-2.json",
-        disabled_payload={"status": "disabled", "record": {"status": "disabled"}},
-        fn=lambda: exp_2_hybrid.run(experiment_2_config),
-    )
+    if not RUN_EXPERIMENT_2 and REUSE_EXPERIMENT_2_FROM:
+        experiment_2 = _reuse_experiment_2(
+            Path(REUSE_EXPERIMENT_2_FROM), experiment_2_config,
+            run_dir / "experiment-2.json",
+        )
+    else:
+        experiment_2 = _maybe_run_step(
+            name="experiment_2",
+            enabled=RUN_EXPERIMENT_2,
+            path=run_dir / "experiment-2.json",
+            disabled_payload={"status": "disabled", "record": {"status": "disabled"}},
+            fn=lambda: exp_2_hybrid.run(experiment_2_config),
+        )
     experiment_3 = _maybe_run_step(
         name="experiment_3",
         enabled=(
@@ -222,6 +234,30 @@ def _maybe_run_step(
     _write_json(path, disabled_payload)
     _banner(name, _step_status(disabled_payload))
     return disabled_payload
+
+
+def _reuse_experiment_2(
+    source: Path, config: Experiment2Config, dest: Path
+) -> Experiment2Result:
+    """Load a completed experiment-2.json and rebuild its result so exp3 can
+    consume the frozen RQ2 selection without recomputing exp2. The artifact is
+    copied into the run directory so projection and the suite manifest read a
+    consistent exp2."""
+    payload = _read_json(source)
+    if payload.get("status") != "completed":
+        raise SystemExit(
+            f"reuse exp2: {source} has status {payload.get('status')!r}, expected 'completed'"
+        )
+    result = Experiment2Result(
+        status=payload["status"],
+        schema_version=payload["schema_version"],
+        config=config,
+        result=payload.get("result", {}),
+        record=payload.get("record", {}),
+    )
+    _write_json(dest, result)
+    _banner("experiment_2", f"reused:{_step_status(payload)}")
+    return result
 
 
 def _dependency_payload(requested: bool, dependency_name: str) -> dict[str, Any]:
