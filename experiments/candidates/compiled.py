@@ -78,6 +78,7 @@ class CompiledEvaluator:
         return functional_loss(logits_or_predictions, targets, self._task)
 
     def warmup(self) -> float | None:
+        _dynamo.reset()
         _dynamo.reset_counters()
         device_mod.synchronize(self._device)
         start = perf_counter()

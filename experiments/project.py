@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from experiments.stats import speedup_claim_status
+from experiments.stats import geometric_mean, speedup_claim_status, t_interval_95
 
 
 _SCHEMA_VERSION = "paper-projection-v2"
@@ -37,18 +37,20 @@ def _project_rq1(exp1: dict) -> dict[str, Any]:
             diagnostics.get("speedups") or [],
             surface_valid=diagnostics.get("surface_valid", True),
         )
-        candidates.append(
-            {
-                "workload": aggregate.get("workload_name"),
-                "candidate": aggregate.get("candidate"),
-                "role": aggregate.get("role"),
-                "verdict": status,
-                "speedup_geomean": geomean,
-                "ci_low": low,
-                "ci_high": high,
-                "repeats": aggregate.get("repeats"),
-            }
-        )
+        entry = {
+            "workload": aggregate.get("workload_name"),
+            "candidate": aggregate.get("candidate"),
+            "role": aggregate.get("role"),
+            "verdict": status,
+            "speedup_geomean": geomean,
+            "ci_low": low,
+            "ci_high": high,
+            "repeats": aggregate.get("repeats"),
+        }
+        compile_cost = _compile_cost(diagnostics)
+        if compile_cost is not None:
+            entry["compile_cost"] = compile_cost
+        candidates.append(entry)
     composition = [
         {
             "workload": workload,
@@ -67,6 +69,34 @@ def _project_rq1(exp1: dict) -> dict[str, Any]:
         "rq3_config_by_workload": record.get("rq3_config_by_workload"),
         "candidates": candidates,
         "composition": composition,
+    }
+
+
+def _compile_cost(diagnostics: dict) -> dict[str, Any] | None:
+    """Paper-facing compile-cost view for candidates that compile. The
+    cold-inclusive speedup CI and break-even grid size are recomputed from the
+    stored per-repeat arrays so they track the current stats.py, mirroring how
+    the steady-state speedup is recomputed above."""
+    amort = (diagnostics or {}).get("compile_amortization")
+    if not amort:
+        return None
+    cold_list = amort.get("cold_inclusive_speedups") or []
+    cold_interval = t_interval_95(cold_list)
+    break_even = geometric_mean(amort.get("break_even_points") or [])
+    grid_points = amort.get("grid_points")
+    return {
+        "cold_start_mean_s": amort.get("compile_cold_start_mean_s"),
+        "cold_inclusive_speedup_geomean": geometric_mean(cold_list),
+        "cold_inclusive_ci_low": cold_interval[0] if cold_interval else None,
+        "cold_inclusive_ci_high": cold_interval[1] if cold_interval else None,
+        "break_even_grid_points": break_even,
+        "grid_points": grid_points,
+        "amortizes_within_grid": (
+            break_even is not None
+            and grid_points is not None
+            and break_even <= grid_points
+        ),
+        "recompile_count_max": amort.get("recompile_count_max"),
     }
 
 

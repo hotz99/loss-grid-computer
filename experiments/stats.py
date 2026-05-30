@@ -69,6 +69,54 @@ def paired_speedups(
     return values
 
 
+def cold_inclusive_speedups(
+    baseline_times: dict[Hashable, float],
+    candidate_times: dict[Hashable, float],
+    compile_times: dict[Hashable, float],
+) -> list[float]:
+    """Speedup at the measured grid size with the one-time compile cost folded
+    into the candidate: T_baseline / (compile + warm grid). This is the honest
+    total-wall-clock ratio for a single grid sweep, paired per repeat."""
+    values: list[float] = []
+    for repeat, baseline_s in baseline_times.items():
+        candidate_s = candidate_times.get(repeat)
+        compile_s = compile_times.get(repeat)
+        if candidate_s is None or compile_s is None:
+            continue
+        total = compile_s + candidate_s
+        if total <= 0:
+            continue
+        values.append(baseline_s / total)
+    return values
+
+
+def break_even_points(
+    baseline_times: dict[Hashable, float],
+    candidate_times: dict[Hashable, float],
+    compile_times: dict[Hashable, float],
+    grid_points: int,
+) -> list[float]:
+    """Grid size at which compile + warm evaluation breaks even with the
+    baseline, paired per repeat. With per-point warm times t_cand = T_cand / N
+    and t_base = T_base / N, the compiled path costs C + t_cand * n and the
+    baseline costs t_base * n, so n* = C / (t_base - t_cand) = C * N /
+    (T_base - T_cand). Only defined when the warm candidate is faster than the
+    baseline; repeats where it is not are dropped (compile never amortizes)."""
+    if grid_points <= 0:
+        return []
+    values: list[float] = []
+    for repeat, baseline_s in baseline_times.items():
+        candidate_s = candidate_times.get(repeat)
+        compile_s = compile_times.get(repeat)
+        if candidate_s is None or compile_s is None:
+            continue
+        margin = baseline_s - candidate_s
+        if margin <= 0:
+            continue
+        values.append(compile_s * grid_points / margin)
+    return values
+
+
 def t_interval_95(values: Iterable[float]) -> tuple[float, float] | None:
     # Ratios are summarized on the log scale: the t-interval is built on
     # log(ratio) and exponentiated, so the center is the geometric mean and

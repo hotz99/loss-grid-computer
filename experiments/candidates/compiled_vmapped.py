@@ -88,10 +88,21 @@ class CompiledVmappedEvaluator:
         )(batched_params)
 
     def warmup(self) -> float | None:
+        # Compile from cold on the exact shape evaluate() uses: a full
+        # point_chunk_size batch of perturbed parameters against a full data
+        # batch. The previous warmup compiled a single-point batch, so the first
+        # real chunk recompiled inside the timed grid region and leaked compile
+        # cost into the measured eval. With the matching shape compiled here, the
+        # whole compile cost lands in cold_start_s and evaluate() runs with
+        # recompile_count == 0, which is the witness that timing is steady-state.
+        _dynamo.reset()
         _dynamo.reset_counters()
-        first_chunk = [GridPoint(linear_idx=0, row=0, col=0, alpha=0.0, beta=0.0)]
+        warm_chunk = [
+            GridPoint(linear_idx=idx, row=0, col=0, alpha=0.0, beta=0.0)
+            for idx in range(self._point_chunk_size)
+        ]
         flat_vectors = materialize_flat_chunk(
-            first_chunk, self._base, self._direction_a, self._direction_b, self._device
+            warm_chunk, self._base, self._direction_a, self._direction_b, self._device
         )
         batched_parameters = flat_chunk_to_batched_param_dict(flat_vectors, self._layout)
         first_batch = next(iter(self._data_loader))

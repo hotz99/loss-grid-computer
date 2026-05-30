@@ -14,7 +14,10 @@ from experiments.schemas import (
     TrialSpec,
 )
 from experiments.stats import (
+    break_even_points,
+    cold_inclusive_speedups,
     geometric_mean,
+    mean,
     paired_speedups,
     speedup_claim_status,
     t_interval_95,
@@ -140,7 +143,7 @@ def run(config: Experiment1Config) -> Experiment1Result:
         )
 
     _progress("aggregate", workload_count=len(config.workload_names))
-    aggregates = _aggregate(config, candidates, raw_times, raw_records)
+    aggregates = _aggregate(config, candidates, raw_times, raw_records, raw_diagnostics)
     composition = _composition(config, aggregates, raw_times)
     a_config_by_workload = {
         workload: _rq3_config(aggregates, workload)
@@ -258,7 +261,9 @@ def _aggregate(
     candidates: tuple[_Candidate, ...],
     raw_times: dict[tuple[str, str, int], float],
     raw_records: dict[tuple[str, str, int], list[tuple[int, int, float]]],
+    raw_diagnostics: dict[tuple[str, str, int], dict[str, Any]],
 ) -> list[CandidateAggregate]:
+    grid_points = config.grid.resolution * config.grid.resolution
     aggregates: list[CandidateAggregate] = []
     for workload in config.workload_names:
         baseline_times = {
@@ -295,6 +300,18 @@ def _aggregate(
             status, mean_, low, high = speedup_claim_status(
                 speedups, surface_valid=surface_valid
             )
+            diagnostics: dict[str, Any] = {
+                **candidate.control,
+                "surface_valid": surface_valid,
+                "surface_validations": surface_validations,
+                "speedups": speedups,
+            }
+            amortization = _compile_amortization(
+                workload, candidate.name, config, raw_diagnostics,
+                baseline_times, candidate_times, grid_points,
+            )
+            if amortization is not None:
+                diagnostics["compile_amortization"] = amortization
             aggregates.append(
                 CandidateAggregate(
                     workload_name=workload,
@@ -305,15 +322,67 @@ def _aggregate(
                     speedup_ci_high=high,
                     claim_status=status,
                     repeats=len(speedups),
-                    diagnostics={
-                        **candidate.control,
-                        "surface_valid": surface_valid,
-                        "surface_validations": surface_validations,
-                        "speedups": speedups,
-                    },
+                    diagnostics=diagnostics,
                 )
             )
     return aggregates
+
+
+def _compile_amortization(
+    workload: str,
+    candidate: str,
+    config: Experiment1Config,
+    raw_diagnostics: dict[tuple[str, str, int], dict[str, Any]],
+    baseline_times: dict[int, float],
+    candidate_times: dict[int, float],
+    grid_points: int,
+) -> dict[str, Any] | None:
+    """Compile-cost view for candidates that compile (compiled / compiled_vmapped).
+
+    Steady-state speedup lives on the aggregate already (warm grid). Here we add
+    the one-time compile cost, the cold-inclusive speedup at this grid size, and
+    the break-even grid size where compile + warm evaluation overtakes the
+    baseline. recompile_count is carried through as the witness that the warm
+    grid timing was measured with no compilation leaking into it."""
+    compile_times: dict[int, float] = {}
+    recompiles: list[int] = []
+    for repeat in range(config.repeats):
+        diag = raw_diagnostics.get((workload, candidate, repeat))
+        if not diag:
+            continue
+        cold = diag.get("compile_cold_start_s")
+        if cold is not None:
+            compile_times[repeat] = float(cold)
+        rc = diag.get("recompile_count")
+        if rc is not None:
+            recompiles.append(int(rc))
+    if not compile_times:
+        return None
+
+    cold_inclusive = cold_inclusive_speedups(
+        baseline_times, candidate_times, compile_times
+    )
+    cold_interval = t_interval_95(cold_inclusive)
+    break_even = break_even_points(
+        baseline_times, candidate_times, compile_times, grid_points
+    )
+    break_even_geomean = geometric_mean(break_even)
+    return {
+        "compile_cold_start_s": [compile_times[r] for r in sorted(compile_times)],
+        "compile_cold_start_mean_s": mean(compile_times.values()),
+        "recompile_counts": recompiles,
+        "recompile_count_max": max(recompiles) if recompiles else None,
+        "grid_points": grid_points,
+        "cold_inclusive_speedups": cold_inclusive,
+        "cold_inclusive_geomean": geometric_mean(cold_inclusive),
+        "cold_inclusive_ci_low": cold_interval[0] if cold_interval else None,
+        "cold_inclusive_ci_high": cold_interval[1] if cold_interval else None,
+        "break_even_points": break_even,
+        "break_even_geomean": break_even_geomean,
+        "amortizes_within_grid": (
+            break_even_geomean is not None and break_even_geomean <= grid_points
+        ),
+    }
 
 
 # --------------------------------------------------------------------------
