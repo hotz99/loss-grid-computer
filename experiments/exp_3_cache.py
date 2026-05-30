@@ -5,10 +5,12 @@ import re
 from dataclasses import replace as _replace
 from typing import Any
 
+import torch
+
 from experiments import calibration as calibration_mod
 from experiments import device as device_mod
 from experiments import sessions as sessions_mod
-from experiments.candidates import GpuCandidate
+from experiments.candidates import GpuCandidate, run_standalone
 from experiments.candidates import baseline as baseline_candidate
 from experiments.data import list_same_family_checkpoints
 from experiments.schemas import (
@@ -26,6 +28,7 @@ _SCHEMA_VERSION = "experiment-3-cache-v1"
 _N_CHECKPOINTS = 4
 _PATIENCE = 3
 _CANDIDATE_K_RE = re.compile(r"_k(\d+)$")
+_COMPILING_ROLES = {"compiled", "compiled_vmapped"}
 
 
 def run(
@@ -102,11 +105,18 @@ def run(
         gpu_candidate=a_config,
     )
 
+    compile_s = _measure_compile_cost(
+        a_config, task_at_ckpt0, probe_grid,
+        gpu_batch_size=config.gpu_batch_size, device=device,
+        seed=config.seed, gpu_slowdown_factor=slowdown,
+    )
+    _progress("compile_cost", workload=workload_name, candidate=a_config_name, compile_s=compile_s)
+
     _progress("cached_composed_session", workload=workload_name, checkpoints=len(checkpoints))
     composed = sessions_mod.cached_composed_session(
         task, config.session_grid, checkpoints,
         cell=cached_cell, gpu_candidate=a_config, device=device, seed=config.seed,
-        gpu_slowdown_factor=slowdown,
+        gpu_slowdown_factor=slowdown, compile_s=compile_s,
     )
     _progress("vanilla_session", workload=workload_name, checkpoints=len(checkpoints))
     vanilla = sessions_mod.vanilla_session(
@@ -119,11 +129,12 @@ def run(
     surface_validations = _validate_session_surfaces(composed, vanilla)
     surface_valid = all(item["valid"] for item in surface_validations)
 
+    one_time_setup_s = cached_cell.calibration_s + compile_s
     session_speedup = (
         vanilla.total_s / composed.total_s if composed.total_s > 0 else None
     )
     break_even = sessions_mod.break_even_n(
-        vanilla.mean_t_grid_s, composed.mean_t_grid_s, cached_cell.calibration_s,
+        vanilla.mean_t_grid_s, composed.mean_t_grid_s, one_time_setup_s,
     )
     amortization_label = _amortization_label(session_speedup, break_even, surface_valid)
 
@@ -138,6 +149,9 @@ def run(
         "rq3_config": a_config_name,
         "selected_b_cell": cached_cell.__dict__,
         "calibration_s": cached_cell.calibration_s,
+        "compile_cold_start_s": compile_s,
+        "a_config_compiles": a_config.role in _COMPILING_ROLES,
+        "one_time_setup_s": one_time_setup_s,
         "n_checkpoints": _N_CHECKPOINTS,
         "session_grid_resolution": config.session_grid.resolution,
         "calibration_grid_resolution": probe_grid.resolution,
@@ -171,6 +185,8 @@ def run(
             "break_even_n": break_even,
             "operating_point": operating_point,
             "amortization_label": amortization_label,
+            "compile_cold_start_s": compile_s,
+            "one_time_setup_s": one_time_setup_s,
         },
         "calibration": cached_cell.__dict__,
     }
@@ -298,6 +314,31 @@ def _progress(event: str, **fields: Any) -> None:
 def _resolve_rq3_config(experiment_1: Experiment1Result, workload_name: str) -> str:
     by_workload = experiment_1.record.get("rq3_config_by_workload") or {}
     return by_workload.get(workload_name) or experiment_1.rq3_config or "baseline"
+
+
+def _measure_compile_cost(
+    a_config: GpuCandidate,
+    task: Any,
+    grid: GridSpec,
+    *,
+    gpu_batch_size: int,
+    device: torch.device,
+    seed: int,
+    gpu_slowdown_factor: float,
+) -> float:
+    """Compile cold-start (s) for the A config, measured once at the session GPU
+    operating point. The cold-start is the torch.compile graph-build time, which
+    depends on the model and chunk shape but not on grid size, so a small probe
+    grid reproduces the session's compile. Returns 0.0 for A configs that do not
+    compile, so the one-time setup cost stays uniform across workloads."""
+    if a_config.role not in _COMPILING_ROLES:
+        return 0.0
+    output = run_standalone(
+        a_config, task, grid,
+        batch_size=gpu_batch_size, device=device, seed=seed,
+        gpu_slowdown_factor=gpu_slowdown_factor,
+    )
+    return float(output.compile_cold_start_s or 0.0)
 
 
 def _parse_gpu_candidate(name: str) -> GpuCandidate:

@@ -120,8 +120,16 @@ def cached_composed_session(
     device: torch.device,
     seed: int,
     gpu_slowdown_factor: float = 1.0,
+    compile_s: float = 0.0,
 ) -> SessionRecord:
-    """T_session = calibration_s + sum(per-checkpoint T_grid) per calibration-cache-plan L283-290."""
+    """T_session = calibration_s + compile_s + sum(per-checkpoint T_grid).
+
+    The cached one-time setup cost is calibration plus the A config's compile
+    cold-start: both are paid once, cached, and reused across the session. The
+    per-checkpoint T_grid is the warm steady-state time (compile is excluded
+    from total_grid_s in every candidate path). compile_s is 0 for A configs
+    that do not compile, so the model is uniform across workloads.
+    """
     per: list[CheckpointTime] = []
     for path in checkpoints:
         result = _run_with_cell(
@@ -130,11 +138,13 @@ def cached_composed_session(
             gpu_slowdown_factor=gpu_slowdown_factor,
         )
         per.append(CheckpointTime(checkpoint_path=path, t_grid_s=result.total_grid_s, records=result.records))
-    return _summarize(per, extra_s=cell.calibration_s)
+    return _summarize(per, extra_s=cell.calibration_s + compile_s)
 
 
-def break_even_n(t_v: float, t_p: float, calibration_s: float) -> int | None:
-    """⌈calibration_s / (T_v − T_p)⌉ when T_v > T_p, else absent."""
+def break_even_n(t_v: float, t_p: float, one_time_s: float) -> int | None:
+    """⌈one_time_s / (T_v − T_p)⌉ when T_v > T_p, else absent.
+
+    one_time_s is the cached setup cost (calibration plus compile cold-start)."""
     if t_v <= t_p:
         return None
-    return int(math.ceil(calibration_s / (t_v - t_p)))
+    return int(math.ceil(one_time_s / (t_v - t_p)))

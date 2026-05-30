@@ -148,6 +148,9 @@ def _project_rq3(exp3: dict) -> dict[str, Any]:
         "cpu_workers": cell.get("cpu_workers"),
         "cpu_batch_size": cell.get("cpu_batch_size"),
         "calibration_s": record.get("calibration_s"),
+        "compile_cold_start_s": record.get("compile_cold_start_s"),
+        "a_config_compiles": record.get("a_config_compiles"),
+        "one_time_setup_s": record.get("one_time_setup_s"),
         "T_v": record.get("T_v"),
         "T_p": record.get("T_p"),
         "cached_composed_session_total_s": record.get(
