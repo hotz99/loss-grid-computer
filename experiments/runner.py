@@ -22,11 +22,19 @@ from experiments import (  # noqa: E402
 )
 from experiments.schemas import (  # noqa: E402
     Experiment1Config,
+    Experiment1Result,
     Experiment2Config,
     Experiment2Result,
     Experiment3Config,
     GridSpec,
 )
+
+
+class PipelineContractError(RuntimeError):
+    """An upstream result does not match the shape a downstream experiment
+    consumes. Raised before the downstream step runs so a malformed producer
+    fails fast instead of wasting downstream runtime or emitting an invalid
+    RQ3 verdict."""
 
 
 OUTPUT_DIR: str | None = None
@@ -137,13 +145,16 @@ def main() -> Path:
             disabled_payload={"status": "disabled", "record": {"status": "disabled"}},
             fn=lambda: exp_2_hybrid.run(experiment_2_config),
         )
+    experiment_3_inputs_ready = (
+        RUN_EXPERIMENT_3
+        and not isinstance(experiment_1, dict)
+        and not isinstance(experiment_2, dict)
+    )
+    if experiment_3_inputs_ready:
+        _assert_experiment_3_inputs(experiment_1, experiment_2)
     experiment_3 = _maybe_run_step(
         name="experiment_3",
-        enabled=(
-            RUN_EXPERIMENT_3
-            and not isinstance(experiment_1, dict)
-            and not isinstance(experiment_2, dict)
-        ),
+        enabled=experiment_3_inputs_ready,
         path=run_dir / "experiment-3.json",
         disabled_payload=_dependency_payload(
             RUN_EXPERIMENT_3,
@@ -258,6 +269,72 @@ def _reuse_experiment_2(
     _write_json(dest, result)
     _banner("experiment_2", f"reused:{_step_status(payload)}")
     return result
+
+
+def _require(condition: bool, message: str) -> None:
+    if not condition:
+        raise PipelineContractError(message)
+
+
+def _assert_experiment_3_inputs(
+    experiment_1: Experiment1Result,
+    experiment_2: Experiment2Result,
+) -> None:
+    """Validate the exp1/exp2 -> exp3 boundary before exp3 runs. exp3 reads
+    exp1.rq3_config to resolve the GPU config and selects a hybrid-affinity
+    (workload, regime) from exp2.record['workloads']. A missing or malformed
+    structure would make RQ3 silently report no hybrid affinity instead of a
+    real verdict, so the shape is checked here and the run stops if it does not
+    hold."""
+    _require(
+        isinstance(experiment_1.record, dict),
+        f"exp1.record must be a dict, got {type(experiment_1.record).__name__}",
+    )
+    _require(
+        isinstance(experiment_1.rq3_config, str) and experiment_1.rq3_config != "",
+        "exp1.rq3_config must be a non-empty config name for exp3 to resolve the GPU config",
+    )
+
+    record = experiment_2.record
+    _require(
+        isinstance(record, dict),
+        f"exp2.record must be a dict, got {type(record).__name__}",
+    )
+    workloads = record.get("workloads")
+    _require(
+        isinstance(workloads, dict) and bool(workloads),
+        "exp2.record['workloads'] must be a non-empty dict for RQ3 selection",
+    )
+    for name, payload in workloads.items():
+        _require(
+            isinstance(payload, dict),
+            f"exp2 workload {name!r} payload must be a dict",
+        )
+        if payload.get("status") != "completed":
+            continue
+        regimes = payload.get("regimes")
+        _require(
+            isinstance(regimes, dict) and bool(regimes),
+            f"exp2 workload {name!r} is completed but exposes no regimes for RQ3 to select from",
+        )
+        for regime_name, regime in regimes.items():
+            _require(
+                isinstance(regime, dict),
+                f"exp2 {name!r}/{regime_name!r} regime must be a dict",
+            )
+            _require(
+                "claim_status" in regime,
+                f"exp2 {name!r}/{regime_name!r} regime missing claim_status",
+            )
+            if regime.get("claim_status") == "hybrid_wins":
+                _require(
+                    regime.get("slowdown_factor") is not None,
+                    f"exp2 {name!r}/{regime_name!r} is hybrid_wins but missing slowdown_factor",
+                )
+                _require(
+                    isinstance(regime.get("speedup_ci_low"), (int, float)),
+                    f"exp2 {name!r}/{regime_name!r} is hybrid_wins but speedup_ci_low is not numeric",
+                )
 
 
 def _dependency_payload(requested: bool, dependency_name: str) -> dict[str, Any]:
