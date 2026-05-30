@@ -69,13 +69,10 @@ def _normalize_filterwise(
     parameter: torch.Tensor,
     direction: torch.Tensor,
 ) -> torch.Tensor:
+    # Li et al. ignore='biasbn': zero the direction for 1D parameters (biases
+    # and BatchNorm affine weights), perturbing only conv/linear filters.
     if parameter.ndim <= 1:
-        param_norm = torch.linalg.vector_norm(parameter.reshape(-1))
-        dir_norm = torch.linalg.vector_norm(direction.reshape(-1))
-        if float(dir_norm) == 0.0:
-            return direction
-        scale = (param_norm / dir_norm) if float(param_norm) > 0.0 else torch.tensor(1.0)
-        return direction * scale.to(direction.dtype)
+        return torch.zeros_like(direction)
 
     flattened_param = parameter.reshape(parameter.shape[0], -1)
     flattened_dir = direction.reshape(direction.shape[0], -1)

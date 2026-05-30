@@ -85,7 +85,17 @@ class CpuRowGruCompileEquivalenceTest(unittest.TestCase):
     nn.GRU as a weight container trips Dynamo's RNN guard, so the row-GRU
     compiled candidates produced no data. The gate weights now live in a plain
     holder with the same names and layout; this pins that torch.compile traces
-    the manual recurrence and reproduces the baseline surface.
+    the manual recurrence.
+
+    The ``compiled`` (non-vmapped) path reproduces the eager baseline surface
+    within the gate. The ``compiled_vmapped`` path does not: vmap+compile
+    evaluates the recurrence through a different kernel sequence, and the GRU's
+    per-row recurrence amplifies float32 round-off to ~7e-5 absolute (~1.5e-5
+    relative) at the largest-perturbation grid corner, just past the rtol=1e-5
+    gate. That gate matches the torch.allclose float32 default, so it is not
+    loosened; the honest consequence is that row-GRU compiled_vmapped fails
+    surface validation and its timing claim is suppressed. This test pins that
+    divergence: present but float-scale, not a gross semantic break.
     """
 
     def setUp(self) -> None:
@@ -108,7 +118,7 @@ class CpuRowGruCompileEquivalenceTest(unittest.TestCase):
         self.assertIsNone(cand.error, f"compiled failed: {cand.error}")
         _check_surface(self, cand.records, base.records, "row_gru compiled")
 
-    def test_compiled_vmapped_matches_baseline(self) -> None:
+    def test_compiled_vmapped_diverges_from_baseline(self) -> None:
         base = self._run_rg(GpuCandidate.baseline())
         for k in (32, 64):
             with self.subTest(k=k):
@@ -116,9 +126,18 @@ class CpuRowGruCompileEquivalenceTest(unittest.TestCase):
                 self.assertIsNone(
                     cand.error, f"compiled_vmapped_k{k} failed: {cand.error}"
                 )
-                _check_surface(
-                    self, cand.records, base.records,
-                    f"row_gru compiled_vmapped_k{k}",
+                result = validate_surface(cand.records, base.records, _GATE)
+                self.assertGreater(
+                    result["mismatch_count"], 0,
+                    f"row_gru compiled_vmapped_k{k}: expected the recurrence to "
+                    f"exceed the rtol=1e-5 gate, but it matched "
+                    f"(max_abs={result['max_abs_error']:.2e})",
+                )
+                self.assertLess(
+                    result["max_abs_error"], 1e-3,
+                    f"row_gru compiled_vmapped_k{k}: divergence "
+                    f"{result['max_abs_error']:.2e} exceeds float-margin scale, "
+                    f"indicating a real semantic break rather than round-off",
                 )
 
 
