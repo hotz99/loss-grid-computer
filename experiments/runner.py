@@ -21,6 +21,7 @@ from experiments import (  # noqa: E402
     project,
 )
 from experiments.schemas import (  # noqa: E402
+    CandidateRunResult,
     Experiment1Config,
     Experiment1Result,
     Experiment2Config,
@@ -28,6 +29,7 @@ from experiments.schemas import (  # noqa: E402
     Experiment3Config,
     GridSpec,
 )
+from experiments.surface_gate import validate_surface  # noqa: E402
 
 
 class PipelineContractError(RuntimeError):
@@ -223,6 +225,7 @@ def _run_step(name: str, path: Path, fn):
     _banner(name, "start")
     try:
         result = fn()
+        _assert_output_surfaces(name, result)
     except Exception as exc:
         result = {"status": "error", "error": f"{type(exc).__name__}: {exc}"}
         _write_json(path, result)
@@ -269,6 +272,7 @@ def _reuse_experiment_2(
         result=payload.get("result", {}),
         record=payload.get("record", {}),
     )
+    _assert_output_surfaces("experiment_2", result)
     _write_json(dest, result)
     _banner("experiment_2", f"reused:{_step_status(payload)}")
     return result
@@ -277,6 +281,178 @@ def _reuse_experiment_2(
 def _require(condition: bool, message: str) -> None:
     if not condition:
         raise PipelineContractError(message)
+
+
+def _assert_output_surfaces(name: str, result: Any) -> None:
+    if name not in {"experiment_1", "experiment_2", "experiment_3"}:
+        return
+    if _step_status(result) != "completed":
+        return
+
+    config = getattr(result, "config", None)
+    surface_gate = getattr(config, "surface_gate", None)
+    _require(
+        surface_gate is not None,
+        f"{name} completed but exposes no surface gate config",
+    )
+
+    pairs = list(_surface_pairs(name, result))
+    _require(
+        bool(pairs) or name == "experiment_1",
+        f"{name} completed but emitted no runner-verifiable surface pairs",
+    )
+    validations = []
+    for pair in pairs:
+        label = _surface_pair_label(name, pair)
+        baseline = _surface_records(pair, "baseline_records", label)
+        candidate = _surface_records(pair, "candidate_records", label)
+        try:
+            validation = validate_surface(candidate, baseline, surface_gate)
+        except AssertionError as exc:
+            raise PipelineContractError(
+                f"{label} failed surface gate shape check: {exc}"
+            ) from exc
+        if not validation["valid"]:
+            raise PipelineContractError(
+                f"{label} failed surface gate: "
+                f"mismatches={validation['mismatch_count']} "
+                f"max_abs_error={validation['max_abs_error']} "
+                f"rtol={surface_gate.rel_tol} atol={surface_gate.abs_tol}"
+            )
+        validations.append({"label": label, **validation})
+
+    if validations:
+        _attach_runner_surface_validation(result, validations)
+
+
+def _surface_pairs(name: str, result: Any):
+    if name == "experiment_1":
+        yield from _experiment_1_surface_pairs(result)
+    elif name == "experiment_2":
+        yield from _experiment_2_surface_pairs(result)
+    elif name == "experiment_3":
+        yield from _experiment_3_surface_pairs(result)
+
+
+def _experiment_1_surface_pairs(result: Experiment1Result):
+    baseline_by_key: dict[tuple[str, int], CandidateRunResult] = {}
+    for run in result.runs:
+        if run.status == "ok" and run.role == "baseline":
+            baseline_by_key[(run.workload_name, run.repeat)] = run
+
+    for run in result.runs:
+        if run.status != "ok" or run.role == "baseline":
+            continue
+        key = (run.workload_name, run.repeat)
+        baseline = baseline_by_key.get(key)
+        _require(
+            baseline is not None,
+            "experiment_1 completed with candidate grid "
+            f"{run.candidate!r} repeat={run.repeat} but no baseline grid",
+        )
+        yield {
+            "workload": run.workload_name,
+            "candidate": run.candidate,
+            "baseline": baseline.candidate,
+            "repeat": run.repeat,
+            "baseline_records": baseline.records,
+            "candidate_records": run.records,
+        }
+
+
+def _experiment_2_surface_pairs(result: Experiment2Result):
+    workloads = _experiment_workloads(result)
+    for workload_name, workload in workloads.items():
+        if not isinstance(workload, dict) or workload.get("status") != "completed":
+            continue
+        ladder = workload.get("ladder")
+        _require(
+            isinstance(ladder, list) and bool(ladder),
+            f"experiment_2 workload {workload_name!r} has no ladder surface pairs",
+        )
+        for rung_index, rung in enumerate(ladder):
+            _require(
+                isinstance(rung, dict),
+                f"experiment_2 workload {workload_name!r} ladder[{rung_index}] is not a dict",
+            )
+            pairs = rung.get("surface_pairs")
+            _require(
+                isinstance(pairs, list) and bool(pairs),
+                "experiment_2 completed rung missing runner-verifiable surface pairs: "
+                f"workload={workload_name!r} rung={rung_index}",
+            )
+            for pair in pairs:
+                _require(
+                    isinstance(pair, dict),
+                    "experiment_2 emitted malformed surface pair: "
+                    f"workload={workload_name!r} rung={rung_index}",
+                )
+                yield {
+                    "workload": workload_name,
+                    "slowdown_factor": rung.get("slowdown_factor"),
+                    **pair,
+                }
+
+
+def _experiment_3_surface_pairs(result: Experiment3Result):
+    pairs = result.result.get("surface_pairs") if isinstance(result.result, dict) else None
+    _require(
+        isinstance(pairs, list) and bool(pairs),
+        "experiment_3 completed but emitted no runner-verifiable surface pairs",
+    )
+    for pair in pairs:
+        _require(isinstance(pair, dict), "experiment_3 emitted malformed surface pair")
+        yield pair
+
+
+def _experiment_workloads(result: Experiment2Result) -> dict[str, Any]:
+    if isinstance(result.result, dict) and isinstance(result.result.get("workloads"), dict):
+        return result.result["workloads"]
+    if isinstance(result.record, dict) and isinstance(result.record.get("workloads"), dict):
+        return result.record["workloads"]
+    raise PipelineContractError("experiment_2 completed but exposes no workloads")
+
+
+def _surface_records(pair: dict[str, Any], key: str, label: str):
+    _require(key in pair, f"{label} missing {key}")
+    records = pair[key]
+    _require(
+        isinstance(records, (list, tuple)),
+        f"{label} {key} must be a sequence",
+    )
+    return records
+
+
+def _surface_pair_label(name: str, pair: dict[str, Any]) -> str:
+    parts = [name]
+    for key in (
+        "workload",
+        "candidate",
+        "baseline",
+        "repeat",
+        "checkpoint_path",
+        "slowdown_factor",
+    ):
+        if pair.get(key) is not None:
+            parts.append(f"{key}={pair[key]}")
+    return " ".join(parts)
+
+
+def _attach_runner_surface_validation(
+    result: Any,
+    validations: list[dict[str, Any]],
+) -> None:
+    payload = {
+        "valid": True,
+        "surface_pair_count": len(validations),
+        "validations": validations,
+    }
+    record = getattr(result, "record", None)
+    if isinstance(record, dict):
+        record["runner_surface_validation"] = payload
+    result_payload = getattr(result, "result", None)
+    if isinstance(result_payload, dict):
+        result_payload["runner_surface_validation"] = payload
 
 
 def _assert_experiment_3_inputs(

@@ -1,12 +1,22 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
+import torch
+
+from experiments import calibration as calibration_mod
 from experiments.calibration import CalibratedCell
 from experiments.candidates import GpuCandidate
-from experiments.exp_3_cache import _measure_compile_cost, _select_from_experiment_2
-from experiments.schemas import Experiment2Config, Experiment2Result
-from experiments.sessions import break_even_n
+from experiments.candidates.base import CandidateRunOutput
+from experiments.exp_3_cache import (
+    _amortization_label,
+    _measure_compile_cost,
+    _probe_grid_for,
+    _select_from_experiment_2,
+)
+from experiments.schemas import DatasetSpec, Experiment2Config, Experiment2Result, GridSpec, MLTaskSpec
+from experiments.sessions import break_even_n, gpu_only_session
 
 
 def _exp2(workloads: dict) -> Experiment2Result:
@@ -41,6 +51,58 @@ class BreakEvenOneTimeCostTest(unittest.TestCase):
         self.assertIsNone(break_even_n(7.0, 8.0, 10.0))
 
 
+class ComponentLabelTest(unittest.TestCase):
+    def test_three_way_component_labels(self) -> None:
+        self.assertEqual("supported", _amortization_label(4))
+        self.assertEqual("asymptotic_only", _amortization_label(5))
+        self.assertEqual("refuted", _amortization_label(float("inf")))
+
+
+class ProbeGridTest(unittest.TestCase):
+    def test_probe_grid_accounts_for_gpu_chunk_and_cpu_workers(self) -> None:
+        self.assertEqual(9, _probe_grid_for(2, 64).resolution)
+        self.assertEqual(3, _probe_grid_for(2, 1).resolution)
+
+
+class CalibrationStarvationGuardTest(unittest.TestCase):
+    def test_calibration_records_max_hybrid_cpu_points(self) -> None:
+        task = MLTaskSpec(
+            name="unit",
+            dataset=DatasetSpec("unit", "unused", (2,), 1),
+            model="unit",
+            task="regression",
+            loss="mse",
+        )
+        outputs = iter(
+            [
+                CandidateRunOutput(
+                    records=[],
+                    total_grid_s=9.0,
+                    worker_throughput_split={"cpu_points": 0},
+                ),
+                CandidateRunOutput(
+                    records=[],
+                    total_grid_s=8.0,
+                    worker_throughput_split={"cpu_points": 3},
+                ),
+            ]
+        )
+        with patch("experiments.calibration.hybrid.run", lambda *_args, **_kwargs: next(outputs)):
+            cell = calibration_mod.calibrate(
+                task,
+                GridSpec(3, 1.0),
+                gpu_batch_size=1,
+                baseline_total_s=10.0,
+                cpu_workers=(1,),
+                cpu_batch_sizes=(1, 2),
+                patience=3,
+                device=torch.device("cpu"),
+                seed=0,
+            )
+        self.assertEqual("gpu_cpu_hybrid", cell.selected_policy)
+        self.assertEqual(3, cell.max_hybrid_cpu_points)
+
+
 class MeasureCompileCostTest(unittest.TestCase):
     def test_non_compiling_roles_cost_zero_without_running(self) -> None:
         # baseline/vmapped never compile: the helper must short-circuit to 0.0
@@ -63,6 +125,65 @@ class OneTimeSetupCellTest(unittest.TestCase):
             selected_total_s=None,
         )
         self.assertEqual(4.0, cell.calibration_s)
+
+
+class WarmGpuOnlySessionTest(unittest.TestCase):
+    def test_compiled_vmapped_session_reuses_evaluator_without_recompile(self) -> None:
+        task = MLTaskSpec(
+            name="unit",
+            dataset=DatasetSpec("unit", "unused", (2,), 1),
+            model="unit",
+            task="regression",
+            loss="mse",
+            checkpoint_path="ckpt-0.pkl",
+        )
+        checkpoints = ("ckpt-0.pkl", "ckpt-1.pkl")
+        evaluator = _FakeCompiledVmappedEvaluator()
+
+        with patch("experiments.sessions.device_mod.seed_all", lambda _device, _seed: None), \
+             patch("experiments.sessions.device_mod.synchronize", lambda _device: None), \
+             patch("experiments.sessions.device_mod.apply_gpu_slowdown", lambda *_args: None), \
+             patch("experiments.sessions.build_model", return_value=torch.nn.Linear(2, 1)), \
+             patch("experiments.sessions.load_checkpoint", lambda _model, _path: None), \
+             patch("experiments.sessions.build_dataset", return_value=[(torch.zeros(2), torch.zeros(1))]), \
+             patch("experiments.sessions.build_dataloader", return_value=[]), \
+             patch("experiments.sessions.make_chunk_evaluator", return_value=evaluator) as make_eval:
+            session = gpu_only_session(
+                task,
+                GridSpec(3, 1.0),
+                checkpoints,
+                gpu_candidate=GpuCandidate.compiled_vmapped(64),
+                batch_size=1,
+                device=torch.device("cpu"),
+                seed=0,
+            )
+
+        self.assertEqual(1, make_eval.call_count)
+        self.assertEqual(1, evaluator.warmup_count)
+        self.assertEqual(2, evaluator.evaluate_count)
+        self.assertTrue(
+            all(
+                item.diagnostics.get("recompile_count") == 0
+                for item in session.per_checkpoint
+            )
+        )
+
+
+class _FakeCompiledVmappedEvaluator:
+    def __init__(self) -> None:
+        self.warmup_count = 0
+        self.evaluate_count = 0
+
+    def warmup(self) -> float:
+        self.warmup_count += 1
+        return 0.01
+
+    def evaluate(self, chunk):
+        self.evaluate_count += 1
+        return [(point.row, point.col, float(self.evaluate_count)) for point in chunk]
+
+    def diagnostics(self) -> dict:
+        return {"recompile_count": 0}
 
 
 class SelectFromExperiment2Test(unittest.TestCase):

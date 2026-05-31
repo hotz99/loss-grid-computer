@@ -226,58 +226,73 @@ def _run_rung(
 
     vanilla_times: dict[int, float] = {}
     hybrid_times: dict[int, float] = {}
-    vanilla_records_first = None
-    hybrid_records_first = None
     worker_split_first = None
+    surface_pairs: list[dict[str, Any]] = []
+    surface_validations: list[dict[str, Any]] = []
     repeats_log: list[dict[str, Any]] = []
 
-    for repeat in range(config.repeats):
-        order = (
-            ("vanilla", "hybrid")
-            if repeat % 2 == 0
-            else ("hybrid", "vanilla")
-        )
-        vanilla = None
-        hybrid = None
-        for candidate in order:
-            if candidate == "vanilla":
-                vanilla = baseline_candidate.run(
-                    task, config.grid,
-                    batch_size=config.gpu_batch_size, device=device, seed=config.seed,
-                    gpu_slowdown_factor=slowdown,
+    with hybrid_candidate.HybridPool(
+        task,
+        config.grid,
+        gpu_batch_size=config.gpu_batch_size,
+        cpu_batch_size=cpu_batch_size,
+        cpu_workers=cpu_workers,
+        device=device,
+        seed=config.seed,
+        gpu_slowdown_factor=slowdown,
+    ) as pool:
+        for repeat in range(config.repeats):
+            order = (
+                ("vanilla", "hybrid")
+                if repeat % 2 == 0
+                else ("hybrid", "vanilla")
+            )
+            vanilla = None
+            hybrid = None
+            for candidate in order:
+                if candidate == "vanilla":
+                    vanilla = baseline_candidate.run(
+                        task, config.grid,
+                        batch_size=config.gpu_batch_size, device=device, seed=config.seed,
+                        gpu_slowdown_factor=slowdown,
+                    )
+                elif candidate == "hybrid":
+                    hybrid = pool.run_grid(task.checkpoint_path)
+            if vanilla is not None:
+                vanilla_times[repeat] = vanilla.total_grid_s
+            if hybrid is not None:
+                hybrid_times[repeat] = hybrid.total_grid_s
+                if worker_split_first is None:
+                    worker_split_first = hybrid.worker_throughput_split
+            repeat_validation = None
+            if hybrid is not None and vanilla is not None:
+                surface_pairs.append(
+                    {
+                        "baseline": "vanilla",
+                        "candidate": "hybrid",
+                        "repeat": repeat,
+                        "baseline_records": vanilla.records,
+                        "candidate_records": hybrid.records,
+                    }
                 )
-            elif candidate == "hybrid":
-                hybrid = hybrid_candidate.run(
-                    task, config.grid,
-                    gpu_batch_size=config.gpu_batch_size,
-                    cpu_batch_size=cpu_batch_size,
-                    cpu_workers=cpu_workers,
-                    device=device, seed=config.seed,
-                    gpu_slowdown_factor=slowdown,
-                )
-        if vanilla is not None:
-            vanilla_times[repeat] = vanilla.total_grid_s
-            if vanilla_records_first is None:
-                vanilla_records_first = vanilla.records
-        if hybrid is not None:
-            hybrid_times[repeat] = hybrid.total_grid_s
-            if hybrid_records_first is None:
-                hybrid_records_first = hybrid.records
-                worker_split_first = hybrid.worker_throughput_split
-        repeats_log.append(
-            {
-                "repeat": repeat,
-                "trial_order": list(order),
-                "vanilla_total_s": vanilla.total_grid_s if vanilla else None,
-                "hybrid_total_s": hybrid.total_grid_s if hybrid else None,
-            }
-        )
+                repeat_validation = {
+                    "repeat": repeat,
+                    **validate_surface(
+                        hybrid.records, vanilla.records, config.surface_gate,
+                    ),
+                }
+                surface_validations.append(repeat_validation)
+            repeats_log.append(
+                {
+                    "repeat": repeat,
+                    "trial_order": list(order),
+                    "vanilla_total_s": vanilla.total_grid_s if vanilla else None,
+                    "hybrid_total_s": hybrid.total_grid_s if hybrid else None,
+                    "surface_validation": repeat_validation,
+                }
+            )
 
-    surface_validation = None
-    if hybrid_records_first is not None and vanilla_records_first is not None:
-        surface_validation = validate_surface(
-            hybrid_records_first, vanilla_records_first, config.surface_gate,
-        )
+    surface_validation = _surface_validation_summary(surface_validations)
     surface_valid = bool(surface_validation["valid"]) if surface_validation else False
 
     speedups = paired_speedups(vanilla_times, hybrid_times)
@@ -304,12 +319,37 @@ def _run_rung(
         },
         "achieved_ratio": achieved_ratio,
         "surface_validation": surface_validation,
+        "surface_validations": surface_validations,
+        "surface_pairs": surface_pairs,
         "speedups": speedups,
         "speedup_mean": mean_,
         "speedup_ci_low": low,
         "speedup_ci_high": high,
         "claim_status": claim_status,
         "repeats": repeats_log,
+    }
+
+
+def _surface_validation_summary(
+    validations: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    if not validations:
+        return None
+    invalid = [item for item in validations if not item.get("valid")]
+    return {
+        "valid": not invalid,
+        "repeat_count": len(validations),
+        "valid_count": len(validations) - len(invalid),
+        "invalid_count": len(invalid),
+        "max_abs_error": max(
+            float(item.get("max_abs_error") or 0.0)
+            for item in validations
+        ),
+        "max_rmse": max(
+            float(item.get("rmse") or 0.0)
+            for item in validations
+        ),
+        "first_invalid": invalid[0] if invalid else None,
     }
 
 

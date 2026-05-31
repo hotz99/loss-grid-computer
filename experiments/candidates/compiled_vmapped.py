@@ -122,12 +122,16 @@ class CompiledVmappedEvaluator:
         return records
 
     def _evaluate_sub(self, sub: Sequence[GridPoint]) -> Surface:
+        sub_size = len(sub)
+        eval_sub: Sequence[GridPoint] = sub
+        if 0 < sub_size < self._point_chunk_size:
+            eval_sub = [*sub, *([sub[-1]] * (self._point_chunk_size - sub_size))]
         flat_vectors = materialize_flat_chunk(
-            sub, self._base, self._direction_a, self._direction_b, self._device
+            eval_sub, self._base, self._direction_a, self._direction_b, self._device
         )
         batched_parameters = flat_chunk_to_batched_param_dict(flat_vectors, self._layout)
-        sub_size = len(sub)
-        weighted_loss_sum = torch.zeros(sub_size, device=self._device, dtype=torch.float32)
+        eval_size = len(eval_sub)
+        weighted_loss_sum = torch.zeros(eval_size, device=self._device, dtype=torch.float32)
         total_examples = 0
 
         with torch.no_grad():
@@ -138,7 +142,12 @@ class CompiledVmappedEvaluator:
                 weighted_loss_sum += losses.detach().to(torch.float32) * batch_size
                 total_examples += batch_size
 
-        averages = (weighted_loss_sum / max(1, total_examples)).detach().cpu().tolist()
+        averages = (
+            (weighted_loss_sum / max(1, total_examples))
+            .detach()
+            .cpu()
+            .tolist()[:sub_size]
+        )
         return [(point.row, point.col, float(avg)) for point, avg in zip(sub, averages)]
 
     def diagnostics(self) -> dict[str, Any]:

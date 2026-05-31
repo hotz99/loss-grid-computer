@@ -294,16 +294,19 @@ def _project_rq3(exp3: dict) -> dict[str, Any]:
         "cpu_batch_size": cell.get("cpu_batch_size"),
         "calibration_s": record.get("calibration_s"),
         "compile_cold_start_s": record.get("compile_cold_start_s"),
+        "pool_startup_s": record.get("pool_startup_s"),
+        "rq3_config_compiles": record.get("rq3_config_compiles"),
         "a_config_compiles": record.get("a_config_compiles"),
-        "one_time_setup_s": record.get("one_time_setup_s"),
-        "T_v": record.get("T_v"),
-        "T_p": record.get("T_p"),
-        "cached_composed_session_total_s": record.get(
-            "cached_composed_session_total_s"
-        ),
+        "point_chunk_size_K": record.get("point_chunk_size_K"),
+        "T_vanilla": record.get("T_vanilla", record.get("T_v")),
+        "T_gpu_only": record.get("T_gpu_only"),
+        "T_hybrid": record.get("T_hybrid"),
+        "deployed_session_total_s": record.get("deployed_session_total_s"),
         "session_speedup_vs_vanilla": record.get("session_speedup_vs_vanilla"),
-        "break_even_n": record.get("break_even_n"),
-        "amortization_label": record.get("amortization_label"),
+        "break_even_compile": record.get("break_even_compile"),
+        "compile_label": record.get("compile_label"),
+        "break_even_hybrid": record.get("break_even_hybrid"),
+        "hybrid_label": record.get("hybrid_label"),
     }
 
 

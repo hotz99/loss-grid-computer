@@ -20,6 +20,7 @@ class CalibratedCell:
     calibration_s: float
     baseline_total_s: float
     selected_total_s: float | None
+    max_hybrid_cpu_points: int = 0
 
 
 def available_cpu_cores() -> int:
@@ -85,6 +86,7 @@ def calibrate(
     rolling_min = baseline_total_s
     consecutive_non_improvements = 0
     early_stop = False
+    max_hybrid_cpu_points = 0
 
     for workers in cpu_workers:
         if early_stop:
@@ -101,6 +103,10 @@ def calibrate(
                 gpu_candidate=gpu_candidate,
             )
             calibration_s += float(result.total_grid_s)
+            split = result.worker_throughput_split or {}
+            max_hybrid_cpu_points = max(
+                max_hybrid_cpu_points, int(split.get("cpu_points", 0) or 0)
+            )
             total = float(result.total_grid_s)
             if best_for_workers is None or total < best_for_workers:
                 best_for_workers = total
@@ -125,6 +131,7 @@ def calibrate(
             calibration_s=calibration_s,
             baseline_total_s=baseline_total_s,
             selected_total_s=None,
+            max_hybrid_cpu_points=max_hybrid_cpu_points,
         )
     return CalibratedCell(
         selected_policy="gpu_cpu_hybrid",
@@ -134,4 +141,5 @@ def calibrate(
         calibration_s=calibration_s,
         baseline_total_s=baseline_total_s,
         selected_total_s=best_total,
+        max_hybrid_cpu_points=max_hybrid_cpu_points,
     )

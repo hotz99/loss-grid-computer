@@ -7,6 +7,11 @@ from pathlib import Path
 from unittest.mock import patch
 
 from experiments import runner
+from experiments.schemas import (
+    CandidateRunResult,
+    Experiment1Config,
+    Experiment1Result,
+)
 
 
 class ExperimentRunnerTest(unittest.TestCase):
@@ -48,6 +53,94 @@ class ExperimentRunnerTest(unittest.TestCase):
         self.assertEqual("disabled", suite["records"]["experiment_1"]["status"])
         self.assertEqual("disabled", projection["status"])
         self.assertEqual("projection.json", suite["artifacts"]["projection"])
+
+    def test_run_step_fails_fast_on_invalid_surface_pair(self) -> None:
+        result = Experiment1Result(
+            status="completed",
+            schema_version="experiment-1-algorithm-v1",
+            config=Experiment1Config(workload_names=("toy",), repeats=1),
+            trials=(),
+            runs=(
+                CandidateRunResult(
+                    workload_name="toy",
+                    candidate="baseline",
+                    role="baseline",
+                    repeat=0,
+                    status="ok",
+                    trial_order=(),
+                    records=((0, 0, 1.0),),
+                ),
+                CandidateRunResult(
+                    workload_name="toy",
+                    candidate="vmapped_k32",
+                    role="vmapped",
+                    repeat=0,
+                    status="ok",
+                    trial_order=(),
+                    records=((0, 0, 2.0),),
+                ),
+            ),
+            aggregates=(),
+            rq3_config="baseline",
+            composition={},
+            record={"status": "completed"},
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "experiment-1.json"
+            with (
+                patch.object(runner, "FAIL_FAST", True),
+                patch.object(runner, "_banner", lambda _name, _marker: None),
+                self.assertRaises(runner.PipelineContractError),
+            ):
+                runner._run_step("experiment_1", path, lambda: result)
+
+            error_payload = json.loads(path.read_text())
+
+        self.assertEqual("error", error_payload["status"])
+        self.assertIn("failed surface gate", error_payload["error"])
+
+    def test_run_step_records_runner_surface_validation(self) -> None:
+        result = Experiment1Result(
+            status="completed",
+            schema_version="experiment-1-algorithm-v1",
+            config=Experiment1Config(workload_names=("toy",), repeats=1),
+            trials=(),
+            runs=(
+                CandidateRunResult(
+                    workload_name="toy",
+                    candidate="baseline",
+                    role="baseline",
+                    repeat=0,
+                    status="ok",
+                    trial_order=(),
+                    records=((0, 0, 1.0),),
+                ),
+                CandidateRunResult(
+                    workload_name="toy",
+                    candidate="vmapped_k32",
+                    role="vmapped",
+                    repeat=0,
+                    status="ok",
+                    trial_order=(),
+                    records=((0, 0, 1.0),),
+                ),
+            ),
+            aggregates=(),
+            rq3_config="baseline",
+            composition={},
+            record={"status": "completed"},
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "experiment-1.json"
+            with patch.object(runner, "_banner", lambda _name, _marker: None):
+                runner._run_step("experiment_1", path, lambda: result)
+            payload = json.loads(path.read_text())
+
+        validation = payload["record"]["runner_surface_validation"]
+        self.assertTrue(validation["valid"])
+        self.assertEqual(1, validation["surface_pair_count"])
 
 
 if __name__ == "__main__":

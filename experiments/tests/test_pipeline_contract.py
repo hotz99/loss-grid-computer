@@ -100,6 +100,9 @@ class RunnerPipelineContractTest(unittest.TestCase):
         for cand in candidates.values():
             self.assertIn("claim_status", cand)
             self.assertIn("speedup_mean", cand)
+        runner_validation = record["runner_surface_validation"]
+        self.assertTrue(runner_validation["valid"])
+        self.assertGreater(runner_validation["surface_pair_count"], 0)
         composition = exp1["composition"]["per_workload"][_WORKLOAD]
         self.assertIn("composition_status", composition)
 
@@ -134,14 +137,21 @@ class RunnerPipelineContractTest(unittest.TestCase):
                 rung["claim_status"],
                 {"hybrid_wins", "inconclusive", "hybrid_regresses", "invalid_surface"},
             )
+        runner_validation = exp2["record"]["runner_surface_validation"]
+        self.assertTrue(runner_validation["valid"])
+        self.assertGreater(runner_validation["surface_pair_count"], 0)
 
     def test_experiment_3_contract(self) -> None:
         exp3 = self._artifacts["experiment-3"]
         self.assertEqual("experiment-3-cache-v1", exp3["schema_version"])
-        self.assertIn(exp3["status"], {"completed", "skipped"})
+        self.assertIn(exp3["status"], {"completed", "skipped", "calibration_starvation"})
         record = exp3["record"]
         if exp3["status"] == "skipped":
             self.assertIn("skip_reason", record)
+        if exp3["status"] == "completed":
+            runner_validation = record["runner_surface_validation"]
+            self.assertTrue(runner_validation["valid"])
+            self.assertGreater(runner_validation["surface_pair_count"], 0)
         self.assertIn("headline", exp3["result"])
 
     def test_projection_wires_rq3_config_from_experiment_1(self) -> None:
