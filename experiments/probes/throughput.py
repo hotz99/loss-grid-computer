@@ -18,12 +18,6 @@ class ThroughputProbe:
     gpu_total_s: float
     probe_grid_points: int
 
-    def slowdown_for_parity(self) -> float:
-        """s = 1 / r_native when r_native < 1 else 1.0 (per hybrid-scheduler-plan L72)."""
-        if self.r_native >= 1.0:
-            return 1.0
-        return 1.0 / max(self.r_native, 1e-9)
-
 
 def _throughput(grid_points: int, total_s: float) -> float:
     return float(grid_points) / max(total_s, 1e-9)

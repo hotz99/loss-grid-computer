@@ -21,31 +21,45 @@ from experiments.workloads import WORKLOADS, task_for_workload, workload_metadat
 
 
 _SCHEMA_VERSION = "experiment-2-hybrid-v1"
-# r_native is a per-point throughput ratio that only sets where the slowdown
-# lands, so a small probe grid suffices and an exact parity point is unneeded.
+# r_native is a per-point throughput ratio that only locates the expected
+# crossing, so a small probe grid suffices.
 _PROBE_GRID_RESOLUTION = 4
+
+
+def _slowdown_ladder(config: Experiment2Config) -> tuple[int, ...]:
+    """Base-2 geometric ladder {1, 2, 4, 8, ...} up to the configured ceiling,
+    always swept in full from slow=1. The ladder start does not depend on
+    r_native, so the isolated probe's miscalibration cannot move the sweep past
+    the true crossing."""
+    rungs: list[int] = []
+    rung = 1
+    while rung <= config.slowdown_ceiling:
+        rungs.append(rung)
+        rung *= 2
+    return tuple(rungs)
 
 
 def plan(config: Experiment2Config) -> tuple[TrialSpec, ...]:
     trials: list[TrialSpec] = []
     for workload_name in config.workload_names:
-        for repeat in range(config.repeats):
-            order = (
-                ("vanilla", "hybrid")
-                if repeat % 2 == 0
-                else ("hybrid", "vanilla")
-            )
-            for candidate in order:
-                trials.append(
-                    TrialSpec(
-                        experiment="B",
-                        workload_name=workload_name,
-                        candidate=candidate,
-                        repeat=repeat,
-                        trial_order=order,
-                        control={"regime": "native_and_parity_probe"},
-                    )
+        for slowdown in _slowdown_ladder(config):
+            for repeat in range(config.repeats):
+                order = (
+                    ("vanilla", "hybrid")
+                    if repeat % 2 == 0
+                    else ("hybrid", "vanilla")
                 )
+                for candidate in order:
+                    trials.append(
+                        TrialSpec(
+                            experiment="B",
+                            workload_name=workload_name,
+                            candidate=candidate,
+                            repeat=repeat,
+                            trial_order=order,
+                            control={"slowdown": slowdown},
+                        )
+                    )
     return tuple(trials)
 
 
@@ -113,16 +127,13 @@ def _run_workload(
         cpu_batch_size=cpu_batch_for_probe,
         gpu_device=device, seed=config.seed,
     )
-    regimes: list[tuple[str, float]] = [("native", 1.0)]
-    if probe.r_native < 1.0:
-        regimes.append(("parity", probe.slowdown_for_parity()))
 
-    per_regime: dict[str, Any] = {}
-    for regime_name, slowdown in regimes:
-        _progress("regime", workload=workload_name, regime=regime_name, slowdown=slowdown)
-        per_regime[regime_name] = _run_regime(
-            task, config, device, slowdown, probe.r_native, regime_name,
-        )
+    ladder: list[dict[str, Any]] = []
+    for slowdown in _slowdown_ladder(config):
+        _progress("rung", workload=workload_name, slowdown=slowdown)
+        ladder.append(_run_rung(task, config, device, slowdown))
+
+    threshold = _threshold_summary(ladder)
 
     return {
         "status": "completed",
@@ -134,7 +145,64 @@ def _run_workload(
             "cpu_total_s": probe.cpu_total_s,
             "gpu_total_s": probe.gpu_total_s,
         },
-        "regimes": per_regime,
+        "ladder": ladder,
+        **threshold,
+    }
+
+
+def _threshold_summary(ladder: list[dict[str, Any]]) -> dict[str, Any]:
+    """Reduce the swept ladder to the per-workload threshold summary.
+
+    threshold_slowdown is the smallest rung whose paired CI clears 1.0
+    (CI_low > 1.0). threshold_status distinguishes a native win, a win that
+    needs slowdown, a ladder that never clears within the ceiling, and a
+    monotonicity violation where a winning rung is followed by a regressing
+    rung (CI_high < 1.0). threshold_bracket is the open-below interval
+    (previous_rung, threshold_slowdown] that contains the true crossover.
+    """
+    crossing_index = None
+    for index, rung in enumerate(ladder):
+        ci_low = rung.get("speedup_ci_low")
+        if isinstance(ci_low, (int, float)) and ci_low > 1.0:
+            crossing_index = index
+            break
+
+    if crossing_index is None:
+        return {
+            "threshold_slowdown": None,
+            "threshold_status": "above_explored_range",
+            "threshold_bracket": None,
+            "achieved_ratio_at_threshold": None,
+        }
+
+    # A win followed by a higher rung that regresses violates the monotonicity
+    # the single-threshold report relies on.
+    for rung in ladder[crossing_index + 1:]:
+        ci_high = rung.get("speedup_ci_high")
+        if isinstance(ci_high, (int, float)) and ci_high < 1.0:
+            crossing = ladder[crossing_index]
+            return {
+                "threshold_slowdown": crossing["slowdown_factor"],
+                "threshold_status": "non_monotone",
+                "threshold_bracket": None,
+                "achieved_ratio_at_threshold": crossing.get("achieved_ratio"),
+            }
+
+    crossing = ladder[crossing_index]
+    threshold_slowdown = crossing["slowdown_factor"]
+    if crossing_index == 0:
+        return {
+            "threshold_slowdown": threshold_slowdown,
+            "threshold_status": "wins_at_native",
+            "threshold_bracket": [None, threshold_slowdown],
+            "achieved_ratio_at_threshold": crossing.get("achieved_ratio"),
+        }
+    previous_rung = ladder[crossing_index - 1]["slowdown_factor"]
+    return {
+        "threshold_slowdown": threshold_slowdown,
+        "threshold_status": "crosses_within_range",
+        "threshold_bracket": [previous_rung, threshold_slowdown],
+        "achieved_ratio_at_threshold": crossing.get("achieved_ratio"),
     }
 
 
@@ -144,13 +212,11 @@ def _progress(event: str, **fields: Any) -> None:
     print(f"[exp_2] {event}{suffix}", flush=True)
 
 
-def _run_regime(
+def _run_rung(
     task,
     config: Experiment2Config,
     device: torch.device,
     slowdown: float,
-    r_native: float,
-    regime_name: str,
 ) -> dict[str, Any]:
     # RQ2 fixes the scheduler config: p = p_max CPU workers and CPU batch equal
     # to the GPU batch (same batch policy, methods-scheduling). Policy tuning is
@@ -218,16 +284,9 @@ def _run_regime(
     base_status, mean_, low, high = speedup_claim_status(
         speedups, surface_valid=surface_valid,
     )
-    claim_status = _b_claim_status(
-        base_status=base_status,
-        surface_validation=surface_validation,
-        r_native=r_native,
-        regime_name=regime_name,
-        ci_low=low,
-    )
+    claim_status = _b_claim_status(base_status)
 
     achieved_ratio = _achieved_ratio(worker_split_first, vanilla_times, hybrid_times)
-    slowdown_distance = abs((achieved_ratio or 1.0) - 1.0)
 
     return {
         "slowdown_factor": slowdown,
@@ -244,7 +303,6 @@ def _run_regime(
             "worker_throughput_split": worker_split_first,
         },
         "achieved_ratio": achieved_ratio,
-        "slowdown_distance_from_unity": slowdown_distance,
         "surface_validation": surface_validation,
         "speedups": speedups,
         "speedup_mean": mean_,
@@ -275,21 +333,12 @@ def _achieved_ratio(
     return cpu_throughput / gpu_throughput
 
 
-def _b_claim_status(
-    *,
-    base_status: str,
-    surface_validation: dict[str, Any] | None,
-    r_native: float,
-    regime_name: str,
-    ci_low: float | None,
-) -> str:
-    if surface_validation is not None and not surface_validation.get("valid", False):
+def _b_claim_status(base_status: str) -> str:
+    """Per-rung verdict from the paired CI and the surface gate, in one pass.
+    The predictor (r_native) plays no verdict role: it does not gate the sweep
+    and cannot mark a rung invalid."""
+    if base_status == "invalid_surface":
         return "invalid_surface"
-    if r_native >= 1.0 and regime_name == "native":
-        # predictor falsification: r ≥ 1 but hybrid CI fails to exceed 1.0
-        if ci_low is None or ci_low <= 1.0:
-            if base_status in ("regression", "inconclusive"):
-                return "predictor_invalid"
     if base_status == "speedup":
         return "hybrid_wins"
     if base_status == "regression":

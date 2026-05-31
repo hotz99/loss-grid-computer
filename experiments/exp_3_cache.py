@@ -37,10 +37,11 @@ def run(
     experiment_2: Experiment2Result,
 ) -> Experiment3Result:
     """Calibrate-once-cache for the hetero scheduler on top of A's RQ1 winner
-    (canonical-overview.md L231-243). RQ3 filters RQ2 for a hybrid-affinity
-    (workload, regime), inherits that regime's slowdown as a uniform operating
-    point, and measures whether the one-time calibration cost amortizes over
-    the session. Bounded calibration discipline [ansel2014opentuner]; the
+    (canonical-overview.md L231-243). RQ3 selects the workload whose RQ2 hybrid
+    threshold is reached, inherits that threshold rung's slowdown as a uniform
+    operating point, and measures whether the one-time calibration cost
+    amortizes over the session. Bounded calibration discipline
+    [ansel2014opentuner]; the
     headline is cumulative T_session speedup at the LossLens-scoped session
     size, with break-even N as context."""
     _progress("start")
@@ -55,7 +56,8 @@ def run(
     slowdown = selection["slowdown_factor"]
     operating_point = selection["operating_point"]
     _progress(
-        "selected", workload=workload_name, regime=selection["regime"],
+        "selected", workload=workload_name,
+        threshold_status=selection["threshold_status"],
         slowdown=slowdown, operating_point=operating_point,
     )
     if workload_name not in WORKLOADS:
@@ -249,42 +251,56 @@ def _skipped(
     )
 
 
+_THRESHOLD_REACHED = {"crosses_within_range", "wins_at_native", "non_monotone"}
+
+
 def _select_from_experiment_2(experiment_2: Experiment2Result) -> dict[str, Any] | None:
-    """Filter RQ2 for a hybrid-affinity (workload, regime): a `hybrid_wins`
-    verdict. Prefer a native regime (slowdown 1.0), where the win is a
-    practical-hardware claim; fall back to a slowed regime, where the win is a
-    controlled demonstration. Among candidates take the strongest supported win
-    (highest speedup CI low bound). Returns None when no regime has hybrid
-    affinity, which means calibration cannot pay off anywhere."""
+    """Select the workload whose hybrid threshold is reached within the swept
+    ladder and run RQ3 at that threshold operating point (the threshold rung's
+    slowdown). Prefer a native threshold (slowdown 1.0), where the win is a
+    practical-hardware claim; fall back to a slowed threshold, a controlled
+    demonstration. Among candidates take the lowest threshold slowdown (hybrid
+    pays off earliest), breaking ties by the strongest win at that rung.
+    Returns None when no workload's threshold is reached, which means
+    calibration cannot pay off anywhere in the explored range."""
     workloads = (experiment_2.record or {}).get("workloads") or {}
     eligible: list[dict[str, Any]] = []
     for workload_name, payload in workloads.items():
         if not isinstance(payload, dict) or payload.get("status") != "completed":
             continue
-        regimes = payload.get("regimes") or {}
-        for regime_name, regime in regimes.items():
-            if not isinstance(regime, dict) or regime.get("claim_status") != "hybrid_wins":
-                continue
-            eligible.append(
-                {
-                    "workload_name": workload_name,
-                    "regime": regime_name,
-                    "slowdown_factor": float(regime.get("slowdown_factor") or 1.0),
-                    "speedup_ci_low": regime.get("speedup_ci_low"),
-                }
-            )
+        if payload.get("threshold_status") not in _THRESHOLD_REACHED:
+            continue
+        threshold_slowdown = payload.get("threshold_slowdown")
+        if threshold_slowdown is None:
+            continue
+        threshold_rung = _rung_at(payload.get("ladder") or [], threshold_slowdown)
+        eligible.append(
+            {
+                "workload_name": workload_name,
+                "threshold_status": payload.get("threshold_status"),
+                "slowdown_factor": float(threshold_slowdown),
+                "achieved_ratio_at_threshold": payload.get("achieved_ratio_at_threshold"),
+                "speedup_ci_low": (threshold_rung or {}).get("speedup_ci_low"),
+            }
+        )
     if not eligible:
         return None
 
-    def _key(item: dict[str, Any]) -> tuple[int, float]:
-        is_slowed = 0 if item["regime"] == "native" else 1
+    def _key(item: dict[str, Any]) -> tuple[float, float]:
         ci_low = item["speedup_ci_low"]
         ci_low = ci_low if isinstance(ci_low, (int, float)) else float("-inf")
-        return (is_slowed, -ci_low)
+        return (item["slowdown_factor"], -ci_low)
 
     best = sorted(eligible, key=_key)[0]
     best["operating_point"] = "native" if best["slowdown_factor"] == 1.0 else "slowed"
     return best
+
+
+def _rung_at(ladder: list[dict[str, Any]], slowdown: float) -> dict[str, Any] | None:
+    for rung in ladder:
+        if isinstance(rung, dict) and rung.get("slowdown_factor") == slowdown:
+            return rung
+    return None
 
 
 def _amortization_label(

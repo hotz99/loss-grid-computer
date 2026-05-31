@@ -389,21 +389,6 @@ def _compile_amortization(
 #   Headline K + composition + winner
 # --------------------------------------------------------------------------
 
-def _headline_for_role(
-    aggregates: list[CandidateAggregate], workload: str, role: str,
-) -> CandidateAggregate | None:
-    qualified = [
-        aggregate for aggregate in aggregates
-        if aggregate.workload_name == workload
-        and aggregate.role == role
-        and aggregate.speedup_ci_low is not None
-        and aggregate.speedup_ci_low > 1.0
-    ]
-    if not qualified:
-        return None
-    return max(qualified, key=lambda aggregate: aggregate.speedup_ci_low or 0.0)
-
-
 def _rq3_config(aggregates: list[CandidateAggregate], workload: str) -> str:
     """Resolve selection rule per (workload, platform):
     highest supported speedup CI low bound, smaller K on ties for
@@ -442,55 +427,73 @@ def _composition(
     aggregates: list[CandidateAggregate],
     raw_times: dict[tuple[str, str, int], float],
 ) -> dict[str, Any]:
-    """q_compose per workload: speedup(compiled_vmapped) / max(speedup(vmapped), speedup(compiled)).
-    Verdict is the standard CI taxonomy on q_compose (Section methods-redesign)."""
+    """q_compose per (workload, K): speedup(compiled_vmapped_kK) / speedup(vmapped_kK),
+    measured as the paired per-repeat ratio of grid times vmap_t / cv_t and reduced by
+    geometric mean. It isolates the marginal benefit of torch.compile applied on top of
+    vmap at a matched chunk size K, independent of whether compile alone is a standalone
+    speedup. The verdict follows the standard CI taxonomy: improvement when the ratio CI
+    low bound exceeds 1, regression when its high bound is below 1, otherwise unresolved
+    (compile is neutral on top of vmap). The headline mirrors the K of the workload's
+    rq3_config so it reflects the configuration RQ3 inherits."""
     per_workload: dict[str, dict[str, Any]] = {}
     for workload in config.workload_names:
-        vmapped_head = _headline_for_role(aggregates, workload, "vmapped")
-        compiled_head = _headline_for_role(aggregates, workload, "compiled")
-        cv_head = _headline_for_role(aggregates, workload, "compiled_vmapped")
-        if not (vmapped_head and compiled_head and cv_head):
-            per_workload[workload] = {
-                "composition_status": "unresolved",
-                "composition_ratio_mean": None,
-                "composition_ratio_ci_low": None,
-                "composition_ratio_ci_high": None,
-                "vmapped_headline_candidate": vmapped_head.candidate if vmapped_head else None,
-                "compiled_headline_candidate": compiled_head.candidate if compiled_head else None,
-                "compiled_vmapped_headline_candidate": cv_head.candidate if cv_head else None,
+        by_k: dict[str, Any] = {}
+        for chunk in config.point_chunk_sizes:
+            vmap_cand = f"vmapped_k{chunk}"
+            cv_cand = f"compiled_vmapped_k{chunk}"
+            ratios: list[float] = []
+            for repeat in range(config.repeats):
+                vmap_t = raw_times.get((workload, vmap_cand, repeat))
+                cv_t = raw_times.get((workload, cv_cand, repeat))
+                if not (vmap_t and cv_t):
+                    continue
+                ratios.append(vmap_t / cv_t)
+            if not ratios:
+                continue
+            interval = t_interval_95(ratios)
+            low = interval[0] if interval else None
+            high = interval[1] if interval else None
+            by_k[str(chunk)] = {
+                "status": _composition_status(low, high),
+                "ratio_geomean": geometric_mean(ratios),
+                "ci_low": low,
+                "ci_high": high,
+                "vmapped_candidate": vmap_cand,
+                "compiled_vmapped_candidate": cv_cand,
             }
-            continue
-
-        ratios: list[float] = []
-        for repeat in range(config.repeats):
-            base = raw_times.get((workload, "baseline", repeat))
-            vmap_t = raw_times.get((workload, vmapped_head.candidate, repeat))
-            comp_t = raw_times.get((workload, compiled_head.candidate, repeat))
-            cv_t = raw_times.get((workload, cv_head.candidate, repeat))
-            if not (base and vmap_t and comp_t and cv_t):
-                continue
-            speedup_vmap = base / vmap_t
-            speedup_comp = base / comp_t
-            speedup_cv = base / cv_t
-            denominator = max(speedup_vmap, speedup_comp)
-            if denominator <= 0:
-                continue
-            ratios.append(speedup_cv / denominator)
-
-        mean_ratio = geometric_mean(ratios)
-        interval = t_interval_95(ratios)
-        low = interval[0] if interval else None
-        high = interval[1] if interval else None
+        headline_k = _composition_headline_k(aggregates, workload, by_k)
+        headline = by_k.get(headline_k, {}) if headline_k else {}
         per_workload[workload] = {
-            "composition_status": _composition_status(low, high),
-            "composition_ratio_mean": mean_ratio,
-            "composition_ratio_ci_low": low,
-            "composition_ratio_ci_high": high,
-            "vmapped_headline_candidate": vmapped_head.candidate,
-            "compiled_headline_candidate": compiled_head.candidate,
-            "compiled_vmapped_headline_candidate": cv_head.candidate,
+            "composition_status": headline.get("status", "unresolved"),
+            "composition_ratio_mean": headline.get("ratio_geomean"),
+            "composition_ratio_ci_low": headline.get("ci_low"),
+            "composition_ratio_ci_high": headline.get("ci_high"),
+            "headline_chunk_size": int(headline_k) if headline_k else None,
+            "by_k": by_k,
         }
     return {"per_workload": per_workload}
+
+
+def _chunk_from_candidate(candidate: str) -> int | None:
+    marker = "_k"
+    idx = candidate.rfind(marker)
+    if idx == -1:
+        return None
+    tail = candidate[idx + len(marker):]
+    return int(tail) if tail.isdigit() else None
+
+
+def _composition_headline_k(
+    aggregates: list[CandidateAggregate], workload: str, by_k: dict[str, Any],
+) -> str | None:
+    """Resolve the headline chunk size: the K of the workload's rq3_config when it is
+    a vmap-bearing config measured here, otherwise the largest measured K."""
+    if not by_k:
+        return None
+    chunk = _chunk_from_candidate(_rq3_config(aggregates, workload))
+    if chunk is not None and str(chunk) in by_k:
+        return str(chunk)
+    return str(max(int(key) for key in by_k))
 
 
 def _composition_status(low: float | None, high: float | None) -> str:

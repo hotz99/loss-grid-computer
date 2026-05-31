@@ -33,6 +33,7 @@ def _run_tiny_suite(out_dir: str) -> Path:
         "EXPERIMENT_3_SESSION_GRID_RESOLUTION": 3,
         "GPU_BATCH_SIZE": 32,
         "REPEATS": 2,
+        "SLOWDOWN_CEILING": 2,
         "POINT_CHUNK_SIZES": (32,),
         "INCLUDE_COMPILE_CANDIDATES": False,
         "MAX_CPU_WORKER_CANDIDATE": 1,
@@ -122,8 +123,17 @@ class RunnerPipelineContractTest(unittest.TestCase):
         self.assertEqual("experiment-2-hybrid-v1", exp2["schema_version"])
         workload = exp2["record"]["workloads"][_WORKLOAD]
         self.assertEqual("completed", workload["status"])
-        for key in ("regime_predictor", "regimes"):
+        for key in ("regime_predictor", "ladder", "threshold_status",
+                    "threshold_slowdown"):
             self.assertIn(key, workload)
+        # The ladder is swept in full from slow=1, independent of r_native.
+        self.assertEqual(1, workload["ladder"][0]["slowdown_factor"])
+        for rung in workload["ladder"]:
+            self.assertIn("claim_status", rung)
+            self.assertIn(
+                rung["claim_status"],
+                {"hybrid_wins", "inconclusive", "hybrid_regresses", "invalid_surface"},
+            )
 
     def test_experiment_3_contract(self) -> None:
         exp3 = self._artifacts["experiment-3"]

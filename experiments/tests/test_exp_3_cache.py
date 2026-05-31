@@ -4,8 +4,29 @@ import unittest
 
 from experiments.calibration import CalibratedCell
 from experiments.candidates import GpuCandidate
-from experiments.exp_3_cache import _measure_compile_cost
+from experiments.exp_3_cache import _measure_compile_cost, _select_from_experiment_2
+from experiments.schemas import Experiment2Config, Experiment2Result
 from experiments.sessions import break_even_n
+
+
+def _exp2(workloads: dict) -> Experiment2Result:
+    return Experiment2Result(
+        status="completed",
+        schema_version="experiment-2-hybrid-v1",
+        config=Experiment2Config(),
+        result={},
+        record={"workloads": workloads},
+    )
+
+
+def _workload(status_threshold: str, slowdown, ladder, achieved=None) -> dict:
+    return {
+        "status": "completed",
+        "threshold_status": status_threshold,
+        "threshold_slowdown": slowdown,
+        "achieved_ratio_at_threshold": achieved,
+        "ladder": ladder,
+    }
 
 
 class BreakEvenOneTimeCostTest(unittest.TestCase):
@@ -42,6 +63,61 @@ class OneTimeSetupCellTest(unittest.TestCase):
             selected_total_s=None,
         )
         self.assertEqual(4.0, cell.calibration_s)
+
+
+class SelectFromExperiment2Test(unittest.TestCase):
+    def test_none_when_no_threshold_reached(self) -> None:
+        exp2 = _exp2(
+            {
+                "w_a": _workload("above_explored_range", None, [
+                    {"slowdown_factor": 1, "speedup_ci_low": 0.8},
+                ]),
+            }
+        )
+        self.assertIsNone(_select_from_experiment_2(exp2))
+
+    def test_selects_reached_threshold_at_its_operating_point(self) -> None:
+        exp2 = _exp2(
+            {
+                "w_a": _workload("crosses_within_range", 4, [
+                    {"slowdown_factor": 1, "speedup_ci_low": 0.8},
+                    {"slowdown_factor": 4, "speedup_ci_low": 1.3},
+                ], achieved=0.7),
+            }
+        )
+        sel = _select_from_experiment_2(exp2)
+        self.assertEqual("w_a", sel["workload_name"])
+        self.assertEqual(4.0, sel["slowdown_factor"])
+        self.assertEqual("slowed", sel["operating_point"])
+        self.assertEqual(0.7, sel["achieved_ratio_at_threshold"])
+
+    def test_prefers_lowest_threshold_then_native_operating_point(self) -> None:
+        exp2 = _exp2(
+            {
+                "slowed": _workload("crosses_within_range", 4, [
+                    {"slowdown_factor": 4, "speedup_ci_low": 2.0},
+                ]),
+                "native": _workload("wins_at_native", 1, [
+                    {"slowdown_factor": 1, "speedup_ci_low": 1.1},
+                ]),
+            }
+        )
+        sel = _select_from_experiment_2(exp2)
+        self.assertEqual("native", sel["workload_name"])
+        self.assertEqual(1.0, sel["slowdown_factor"])
+        self.assertEqual("native", sel["operating_point"])
+
+    def test_non_monotone_threshold_is_still_selectable(self) -> None:
+        exp2 = _exp2(
+            {
+                "w_a": _workload("non_monotone", 2, [
+                    {"slowdown_factor": 2, "speedup_ci_low": 1.2},
+                ]),
+            }
+        )
+        sel = _select_from_experiment_2(exp2)
+        self.assertEqual("w_a", sel["workload_name"])
+        self.assertEqual(2.0, sel["slowdown_factor"])
 
 
 if __name__ == "__main__":

@@ -60,6 +60,8 @@ GRID_RESOLUTION = 8
 EXPERIMENT_3_SESSION_GRID_RESOLUTION = 20
 GRID_SCALE = 1.0
 GPU_BATCH_SIZE = 64
+# RQ2 slowdown ladder ceiling (base-2 rungs from slow=1 up to this value)
+SLOWDOWN_CEILING = 16
 # R = 1 breaks exp2->exp3 piping, since no CIs resolved
 REPEATS = 5
 POINT_CHUNK_SIZES = (32, 64)
@@ -91,6 +93,7 @@ def main() -> Path:
         grid=GridSpec(GRID_RESOLUTION, GRID_SCALE),
         gpu_batch_size=GPU_BATCH_SIZE,
         repeats=REPEATS,
+        slowdown_ceiling=SLOWDOWN_CEILING,
         max_cpu_worker_candidate=MAX_CPU_WORKER_CANDIDATE,
     )
     experiment_3_config = replace(
@@ -312,29 +315,35 @@ def _assert_experiment_3_inputs(
         )
         if payload.get("status") != "completed":
             continue
-        regimes = payload.get("regimes")
+        ladder = payload.get("ladder")
         _require(
-            isinstance(regimes, dict) and bool(regimes),
-            f"exp2 workload {name!r} is completed but exposes no regimes for RQ3 to select from",
+            isinstance(ladder, list) and bool(ladder),
+            f"exp2 workload {name!r} is completed but exposes no ladder for RQ3 to select from",
         )
-        for regime_name, regime in regimes.items():
+        _require(
+            "threshold_status" in payload,
+            f"exp2 workload {name!r} is completed but missing threshold_status",
+        )
+        for index, rung in enumerate(ladder):
             _require(
-                isinstance(regime, dict),
-                f"exp2 {name!r}/{regime_name!r} regime must be a dict",
+                isinstance(rung, dict),
+                f"exp2 {name!r} ladder[{index}] must be a dict",
             )
             _require(
-                "claim_status" in regime,
-                f"exp2 {name!r}/{regime_name!r} regime missing claim_status",
+                "claim_status" in rung,
+                f"exp2 {name!r} ladder[{index}] missing claim_status",
             )
-            if regime.get("claim_status") == "hybrid_wins":
-                _require(
-                    regime.get("slowdown_factor") is not None,
-                    f"exp2 {name!r}/{regime_name!r} is hybrid_wins but missing slowdown_factor",
-                )
-                _require(
-                    isinstance(regime.get("speedup_ci_low"), (int, float)),
-                    f"exp2 {name!r}/{regime_name!r} is hybrid_wins but speedup_ci_low is not numeric",
-                )
+            _require(
+                rung.get("slowdown_factor") is not None,
+                f"exp2 {name!r} ladder[{index}] missing slowdown_factor",
+            )
+        # A reached threshold is the RQ3 selection key; it must carry a usable
+        # operating point (slowdown + CI) for RQ3 to run there.
+        if payload.get("threshold_slowdown") is not None:
+            _require(
+                isinstance(payload.get("achieved_ratio_at_threshold"), (int, float, type(None))),
+                f"exp2 {name!r} reached a threshold but achieved_ratio_at_threshold is malformed",
+            )
 
 
 def _dependency_payload(requested: bool, dependency_name: str) -> dict[str, Any]:

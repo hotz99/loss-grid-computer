@@ -69,6 +69,9 @@ class Experiment2Config:
     grid: GridSpec = field(default_factory=lambda: GridSpec(8, 1.0))
     gpu_batch_size: int = 64
     repeats: int = 5
+    # Base-2 geometric slowdown ladder {1, 2, 4, 8, 16} swept in full from
+    # slow=1; the ceiling caps the highest rung. r_native does not gate it.
+    slowdown_ceiling: int = 16
     max_cpu_worker_candidate: int | None = None
     surface_gate: SurfaceGateConfig = field(default_factory=SurfaceGateConfig)
 
