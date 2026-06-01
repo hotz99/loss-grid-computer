@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import re
+from contextlib import AbstractContextManager, nullcontext
 from dataclasses import replace as _replace
 from typing import Any
 
@@ -479,15 +480,40 @@ def _measure_compile_cost(
     """Compile cold-start (s) for the rq3_config, measured once at native r. The
     cold-start is the torch.compile graph-build time, which depends on the model
     and chunk shape but not on grid size, so a small probe grid reproduces the
-    session's compile. Returns 0.0 for configs that do not compile."""
+    session's compile. Returns 0.0 for configs that do not compile.
+
+    The measurement runs inside a fresh Inductor cache. _dynamo.reset() inside
+    warmup() clears only the in-memory guard cache; the on-disk FX-graph and
+    AOTAutograd caches persist across exp_1, exp_2, and the runner process, so a
+    plain measurement here hits warm kernels and understates the true one-time
+    compile cost. fresh_cache() isolates a temporary cache dir for the duration,
+    so the codegen runs cold and compile_s reflects the cost the deployed stack
+    actually pays on first use."""
     if a_config.role not in _COMPILING_ROLES:
         return 0.0
-    output = run_standalone(
-        a_config, task, grid,
-        batch_size=gpu_batch_size, device=device, seed=seed,
-        gpu_slowdown_factor=_NATIVE_SLOWDOWN,
-    )
+    with _fresh_inductor_cache():
+        output = run_standalone(
+            a_config, task, grid,
+            batch_size=gpu_batch_size, device=device, seed=seed,
+            gpu_slowdown_factor=_NATIVE_SLOWDOWN,
+        )
     return float(output.compile_cold_start_s or 0.0)
+
+
+def _fresh_inductor_cache() -> AbstractContextManager:
+    """Temporary, empty Inductor on-disk cache. Falls back to a no-op context if
+    the private torch helper is unavailable, so the measurement still runs (warm)
+    rather than crashing on torch builds that lack it."""
+    try:
+        from torch._inductor.utils import fresh_cache
+    except ImportError:
+        try:
+            from torch._inductor.utils import (
+                fresh_inductor_cache as fresh_cache,
+            )
+        except ImportError:
+            return nullcontext()
+    return fresh_cache()
 
 
 def _parse_gpu_candidate(name: str) -> GpuCandidate:
