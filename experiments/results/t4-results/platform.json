@@ -1,0 +1,86 @@
+{
+  "assets": {
+    "california_mlp_regression": {
+      "dataset": {
+        "input_shape": [
+          8
+        ],
+        "name": "california_housing",
+        "path": "assets",
+        "sample_count": 1024
+      },
+      "loss": "mse",
+      "model": "mlp_regressor",
+      "task": "tabular_regression"
+    },
+    "cifar10_resnet20_classification": {
+      "dataset": {
+        "input_shape": [
+          3,
+          32,
+          32
+        ],
+        "name": "cifar10",
+        "path": "assets/cifar-10-batches-py",
+        "sample_count": 1024
+      },
+      "loss": "cross_entropy",
+      "model": "resnet20",
+      "task": "image_classification"
+    },
+    "cifar10_row_gru_classification": {
+      "dataset": {
+        "input_shape": [
+          3,
+          32,
+          32
+        ],
+        "name": "cifar10",
+        "path": "assets/cifar-10-batches-py",
+        "sample_count": 1024
+      },
+      "loss": "cross_entropy",
+      "model": "row_gru",
+      "task": "image_classification"
+    },
+    "mnist_mlp_classification": {
+      "dataset": {
+        "input_shape": [
+          1,
+          28,
+          28
+        ],
+        "name": "mnist",
+        "path": "assets/mnist",
+        "sample_count": 1024
+      },
+      "loss": "cross_entropy",
+      "model": "mlp",
+      "task": "image_classification"
+    }
+  },
+  "platform": {
+    "cpu": {
+      "logical_cores": 2,
+      "model": "x86_64"
+    },
+    "env_threads": {
+      "MKL_NUM_THREADS": null,
+      "NUMEXPR_NUM_THREADS": null,
+      "OMP_NUM_THREADS": null,
+      "VECLIB_MAXIMUM_THREADS": null
+    },
+    "host_os": "Linux",
+    "machine": "x86_64",
+    "os_release": "6.6.122+",
+    "python_version": "3.12.13",
+    "requested_device": "auto"
+  },
+  "record": {
+    "cpu_logical_cores": 2,
+    "requested_device": "auto",
+    "status": "completed",
+    "workload_count": 4
+  },
+  "status": "completed"
+}
