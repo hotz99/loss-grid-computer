@@ -44,16 +44,18 @@ RUN_LABEL: str | None = None
 DEVICE = "auto"
 FAIL_FAST = True
 
-RUN_PLATFORM_INVENTORY = False
+RUN_PLATFORM_INVENTORY = True
 RUN_EXPERIMENT_1 = True
 RUN_EXPERIMENT_2 = True
 RUN_EXPERIMENT_3 = True
 RUN_PROJECTION = True
 
-# Reuse a prior experiment-2.json instead of recomputing it. Set to the path of
-# a completed exp2 artifact and RUN_EXPERIMENT_2 to False to rerun exp1+exp3
-# against a frozen RQ2 selection (exp3 consumes exp2's selected workload/regime).
-REUSE_EXPERIMENT_2_FROM: str | None = None
+# Optional reuse sources for posthoc runs. Set these to completed upstream
+# artifact paths and disable the matching experiment toggle to run exp3 or
+# projection against frozen experiment-1/experiment-2 records.
+src = "./outputs/platform_experiment_suite/20260531T120708Z"
+REUSE_EXPERIMENT_1_FROM: str | None = None  # f"{src}/experiment-1.json"
+REUSE_EXPERIMENT_2_FROM: str | None = None  # f"{src}/experiment-2.json"
 
 WORKLOAD_NAMES: tuple[str, ...] | None = None
 SEED = 1337
@@ -69,7 +71,7 @@ REPEATS = 5
 POINT_CHUNK_SIZES = (32, 64)
 MAX_MEMORY_FRACTION: float | None = 0.85
 INCLUDE_COMPILE_CANDIDATES = True
-CALIBRATION_RETRY = 3
+COMPOSITION_SELECTION_PATIENCE = 3
 MAX_CPU_WORKER_CANDIDATE: int | None = None
 
 
@@ -104,7 +106,7 @@ def main() -> Path:
         sample_count=SAMPLE_COUNT,
         session_grid=GridSpec(EXPERIMENT_3_SESSION_GRID_RESOLUTION, GRID_SCALE),
         gpu_batch_size=GPU_BATCH_SIZE,
-        calibration_retry=CALIBRATION_RETRY,
+        composition_selection_patience=COMPOSITION_SELECTION_PATIENCE,
         max_cpu_worker_candidate=MAX_CPU_WORKER_CANDIDATE,
     )
 
@@ -116,6 +118,10 @@ def main() -> Path:
             "experiment_2": RUN_EXPERIMENT_2,
             "experiment_3": RUN_EXPERIMENT_3,
             "projection": RUN_PROJECTION,
+        },
+        "reuse_sources": {
+            "experiment_1": REUSE_EXPERIMENT_1_FROM,
+            "experiment_2": REUSE_EXPERIMENT_2_FROM,
         },
         "experiment_1": experiment_1_config,
         "experiment_2": experiment_2_config,
@@ -130,16 +136,24 @@ def main() -> Path:
         disabled_payload={"status": "disabled"},
         fn=lambda: inventory.run(DEVICE),
     )
-    experiment_1 = _maybe_run_step(
-        name="experiment_1",
-        enabled=RUN_EXPERIMENT_1,
-        path=run_dir / "experiment-1.json",
-        disabled_payload={"status": "disabled", "record": {"status": "disabled"}},
-        fn=lambda: exp_1_algorithm.run(experiment_1_config),
-    )
+    if not RUN_EXPERIMENT_1 and REUSE_EXPERIMENT_1_FROM:
+        experiment_1 = _reuse_experiment_1(
+            Path(REUSE_EXPERIMENT_1_FROM),
+            experiment_1_config,
+            run_dir / "experiment-1.json",
+        )
+    else:
+        experiment_1 = _maybe_run_step(
+            name="experiment_1",
+            enabled=RUN_EXPERIMENT_1,
+            path=run_dir / "experiment-1.json",
+            disabled_payload={"status": "disabled", "record": {"status": "disabled"}},
+            fn=lambda: exp_1_algorithm.run(experiment_1_config),
+        )
     if not RUN_EXPERIMENT_2 and REUSE_EXPERIMENT_2_FROM:
         experiment_2 = _reuse_experiment_2(
-            Path(REUSE_EXPERIMENT_2_FROM), experiment_2_config,
+            Path(REUSE_EXPERIMENT_2_FROM),
+            experiment_2_config,
             run_dir / "experiment-2.json",
         )
     else:
@@ -253,11 +267,56 @@ def _maybe_run_step(
     return disabled_payload
 
 
+def _reuse_experiment_1(
+    source: Path, config: Experiment1Config, dest: Path
+) -> Experiment1Result:
+    """Load a completed experiment-1.json so exp3 can consume a frozen RQ1
+    winner without rerunning the algorithm sweep."""
+    payload = _read_json(source)
+    if payload.get("status") != "completed":
+        raise SystemExit(
+            f"reuse exp1: {source} has status {payload.get('status')!r}, expected 'completed'"
+        )
+    runs = tuple(
+        CandidateRunResult(
+            workload_name=item["workload_name"],
+            candidate=item["candidate"],
+            role=item["role"],
+            repeat=int(item["repeat"]),
+            status=item["status"],
+            trial_order=tuple(item.get("trial_order") or ()),
+            total_grid_s=item.get("total_grid_s"),
+            records=tuple(tuple(record) for record in (item.get("records") or ())),
+            validation=item.get("validation"),
+            diagnostics=item.get("diagnostics") or {},
+            error=item.get("error"),
+        )
+        for item in payload.get("runs", ())
+    )
+    result = Experiment1Result(
+        status=payload["status"],
+        schema_version=payload["schema_version"],
+        config=config,
+        trials=tuple(payload.get("trials", ())),
+        runs=runs,
+        aggregates=tuple(payload.get("aggregates", ())),
+        rq3_config=payload.get("rq3_config")
+        or (payload.get("record") or {}).get("rq3_config")
+        or "baseline",
+        composition=payload.get("composition", {}),
+        record=payload.get("record", {}),
+    )
+    _assert_output_surfaces("experiment_1", result)
+    _write_json(dest, result)
+    _banner("experiment_1", f"reused:{_step_status(payload)}")
+    return result
+
+
 def _reuse_experiment_2(
     source: Path, config: Experiment2Config, dest: Path
 ) -> Experiment2Result:
     """Load a completed experiment-2.json and rebuild its result so exp3 can
-    consume the frozen RQ2 selection without recomputing exp2. The artifact is
+    consume r_native per workload without recomputing exp2. The artifact is
     copied into the run directory so projection and the suite manifest read a
     consistent exp2."""
     payload = _read_json(source)
@@ -395,7 +454,9 @@ def _experiment_2_surface_pairs(result: Experiment2Result):
 
 
 def _experiment_3_surface_pairs(result: Experiment3Result):
-    pairs = result.result.get("surface_pairs") if isinstance(result.result, dict) else None
+    pairs = (
+        result.result.get("surface_pairs") if isinstance(result.result, dict) else None
+    )
     _require(
         isinstance(pairs, list) and bool(pairs),
         "experiment_3 completed but emitted no runner-verifiable surface pairs",
@@ -406,9 +467,13 @@ def _experiment_3_surface_pairs(result: Experiment3Result):
 
 
 def _experiment_workloads(result: Experiment2Result) -> dict[str, Any]:
-    if isinstance(result.result, dict) and isinstance(result.result.get("workloads"), dict):
+    if isinstance(result.result, dict) and isinstance(
+        result.result.get("workloads"), dict
+    ):
         return result.result["workloads"]
-    if isinstance(result.record, dict) and isinstance(result.record.get("workloads"), dict):
+    if isinstance(result.record, dict) and isinstance(
+        result.record.get("workloads"), dict
+    ):
         return result.record["workloads"]
     raise PipelineContractError("experiment_2 completed but exposes no workloads")
 
@@ -459,12 +524,14 @@ def _assert_experiment_3_inputs(
     experiment_1: Experiment1Result,
     experiment_2: Experiment2Result,
 ) -> None:
-    """Validate the exp1/exp2 -> exp3 boundary before exp3 runs. exp3 reads
-    exp1.rq3_config to resolve the GPU config and selects a hybrid-affinity
-    (workload, regime) from exp2.record['workloads']. A missing or malformed
-    structure would make RQ3 silently report no hybrid affinity instead of a
-    real verdict, so the shape is checked here and the run stops if it does not
-    hold."""
+    """Validate the exp1/exp2 -> exp3 boundary before exp3 runs. The composition
+    sweep runs the full workload set with no affinity filter, so the old
+    hybrid-affinity selection gate is gone. exp3 reads exp1's per-workload
+    rq3_config map (falling back to exp1.rq3_config) to fix the GPU evaluator per
+    cell, and consumes exp2 only for r_native per workload, the native-r
+    reference the optional slowdown overlay maps against. The shape checked here
+    is the minimum that keeps those two reads well-formed; a reached threshold is
+    no longer required, since the sweep does not select on it."""
     _require(
         isinstance(experiment_1.record, dict),
         f"exp1.record must be a dict, got {type(experiment_1.record).__name__}",
@@ -482,7 +549,7 @@ def _assert_experiment_3_inputs(
     workloads = record.get("workloads")
     _require(
         isinstance(workloads, dict) and bool(workloads),
-        "exp2.record['workloads'] must be a non-empty dict for RQ3 selection",
+        "exp2.record['workloads'] must be a non-empty dict for RQ3 to read r_native per cell",
     )
     for name, payload in workloads.items():
         _require(
@@ -491,35 +558,11 @@ def _assert_experiment_3_inputs(
         )
         if payload.get("status") != "completed":
             continue
-        ladder = payload.get("ladder")
+        predictor = payload.get("regime_predictor")
         _require(
-            isinstance(ladder, list) and bool(ladder),
-            f"exp2 workload {name!r} is completed but exposes no ladder for RQ3 to select from",
+            isinstance(predictor, dict),
+            f"exp2 workload {name!r} is completed but exposes no regime_predictor for r_native",
         )
-        _require(
-            "threshold_status" in payload,
-            f"exp2 workload {name!r} is completed but missing threshold_status",
-        )
-        for index, rung in enumerate(ladder):
-            _require(
-                isinstance(rung, dict),
-                f"exp2 {name!r} ladder[{index}] must be a dict",
-            )
-            _require(
-                "claim_status" in rung,
-                f"exp2 {name!r} ladder[{index}] missing claim_status",
-            )
-            _require(
-                rung.get("slowdown_factor") is not None,
-                f"exp2 {name!r} ladder[{index}] missing slowdown_factor",
-            )
-        # A reached threshold is the RQ3 selection key; it must carry a usable
-        # operating point (slowdown + CI) for RQ3 to run there.
-        if payload.get("threshold_slowdown") is not None:
-            _require(
-                isinstance(payload.get("achieved_ratio_at_threshold"), (int, float, type(None))),
-                f"exp2 {name!r} reached a threshold but achieved_ratio_at_threshold is malformed",
-            )
 
 
 def _dependency_payload(requested: bool, dependency_name: str) -> dict[str, Any]:

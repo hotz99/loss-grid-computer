@@ -25,6 +25,8 @@ class ExperimentRunnerTest(unittest.TestCase):
                 patch.object(runner, "RUN_EXPERIMENT_2", False),
                 patch.object(runner, "RUN_EXPERIMENT_3", False),
                 patch.object(runner, "RUN_PROJECTION", False),
+                patch.object(runner, "REUSE_EXPERIMENT_1_FROM", None),
+                patch.object(runner, "REUSE_EXPERIMENT_2_FROM", None),
                 patch.object(runner, "_banner", lambda _name, _marker: None),
             ):
                 run_dir = runner.main()

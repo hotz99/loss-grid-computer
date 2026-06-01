@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 import statistics
 from dataclasses import dataclass, field, replace
 from time import perf_counter
@@ -10,11 +9,11 @@ import torch
 from torch.nn.utils import vector_to_parameters
 
 from experiments import device as device_mod
-from experiments.calibration import CalibratedCell
-from experiments.candidates import GpuCandidate, make_chunk_evaluator, run_standalone
+from experiments.composition_selection import CompositionSelection
+from experiments.candidates import GpuCandidate, make_chunk_evaluator
 from experiments.candidates import baseline as baseline_candidate
 from experiments.candidates import hybrid as hybrid_candidate
-from experiments.candidates.base import CandidateRunOutput, Surface
+from experiments.candidates.base import Surface
 from experiments.data import build_dataloader, build_dataset
 from experiments.grid import build_direction_vectors, build_grid_points
 from experiments.models import build_model, load_checkpoint
@@ -180,83 +179,25 @@ def gpu_only_session(
     return _summarize(per, extra_s=0.0)
 
 
-def _run_with_cell(
-    task: MLTaskSpec,
-    grid: GridSpec,
-    *,
-    cell: CalibratedCell,
-    gpu_candidate: GpuCandidate,
-    device: torch.device,
-    seed: int,
-    gpu_slowdown_factor: float = 1.0,
-) -> CandidateRunOutput:
-    if cell.selected_policy == "gpu_only":
-        return run_standalone(
-            gpu_candidate, task, grid,
-            batch_size=cell.gpu_batch_size, device=device, seed=seed,
-            gpu_slowdown_factor=gpu_slowdown_factor,
-        )
-    return hybrid_candidate.run(
-        task, grid,
-        gpu_batch_size=cell.gpu_batch_size,
-        cpu_batch_size=int(cell.cpu_batch_size or 0),
-        cpu_workers=int(cell.cpu_workers or 0),
-        device=device, seed=seed,
-        gpu_slowdown_factor=gpu_slowdown_factor,
-        gpu_candidate=gpu_candidate,
-    )
-
-
-def cached_composed_session(
-    task: MLTaskSpec,
-    grid: GridSpec,
-    checkpoints: tuple[str, ...],
-    *,
-    cell: CalibratedCell,
-    gpu_candidate: GpuCandidate,
-    device: torch.device,
-    seed: int,
-    gpu_slowdown_factor: float = 1.0,
-    compile_s: float = 0.0,
-) -> SessionRecord:
-    """T_session = calibration_s + compile_s + sum(per-checkpoint T_grid).
-
-    The cached one-time setup cost is calibration plus the A config's compile
-    cold-start: both are paid once, cached, and reused across the session. The
-    per-checkpoint T_grid is the warm steady-state time (compile is excluded
-    from total_grid_s in every candidate path). compile_s is 0 for A configs
-    that do not compile, so the model is uniform across workloads.
-    """
-    per: list[CheckpointTime] = []
-    for path in checkpoints:
-        result = _run_with_cell(
-            _at_checkpoint(task, path), grid,
-            cell=cell, gpu_candidate=gpu_candidate, device=device, seed=seed,
-            gpu_slowdown_factor=gpu_slowdown_factor,
-        )
-        per.append(CheckpointTime(checkpoint_path=path, t_grid_s=result.total_grid_s, records=result.records))
-    return _summarize(per, extra_s=cell.calibration_s + compile_s)
-
-
 def hybrid_pool_session(
     task: MLTaskSpec,
     grid: GridSpec,
     checkpoints: tuple[str, ...],
     *,
-    cell: CalibratedCell,
+    selection: CompositionSelection,
     gpu_candidate: GpuCandidate,
     device: torch.device,
     seed: int,
     gpu_slowdown_factor: float = 1.0,
 ) -> tuple[SessionRecord, float]:
-    if cell.selected_policy != "gpu_cpu_hybrid":
-        raise ValueError("hybrid_pool_session requires a gpu_cpu_hybrid cell")
+    if selection.selected_path != "gpu_cpu_hybrid":
+        raise ValueError("hybrid_pool_session requires a gpu_cpu_hybrid selection")
     with hybrid_candidate.HybridPool(
         task,
         grid,
-        gpu_batch_size=cell.gpu_batch_size,
-        cpu_batch_size=int(cell.cpu_batch_size or 0),
-        cpu_workers=int(cell.cpu_workers or 0),
+        gpu_batch_size=selection.gpu_batch_size,
+        cpu_batch_size=int(selection.cpu_batch_size or 0),
+        cpu_workers=int(selection.cpu_workers or 0),
         device=device,
         seed=seed,
         gpu_slowdown_factor=gpu_slowdown_factor,
@@ -277,12 +218,3 @@ def hybrid_pool_session(
                 )
             )
         return _summarize(per, extra_s=0.0), pool.pool_startup_s
-
-
-def break_even_n(t_v: float, t_p: float, one_time_s: float) -> int | None:
-    """⌈one_time_s / (T_v − T_p)⌉ when T_v > T_p, else absent.
-
-    one_time_s is the cached setup cost (calibration plus compile cold-start)."""
-    if t_v <= t_p:
-        return None
-    return int(math.ceil(one_time_s / (t_v - t_p)))

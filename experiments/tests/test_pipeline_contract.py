@@ -38,6 +38,12 @@ def _run_tiny_suite(out_dir: str) -> Path:
         "INCLUDE_COMPILE_CANDIDATES": False,
         "MAX_CPU_WORKER_CANDIDATE": 1,
         "RUN_PLATFORM_INVENTORY": False,
+        "RUN_EXPERIMENT_1": True,
+        "RUN_EXPERIMENT_2": True,
+        "RUN_EXPERIMENT_3": True,
+        "RUN_PROJECTION": True,
+        "REUSE_EXPERIMENT_1_FROM": None,
+        "REUSE_EXPERIMENT_2_FROM": None,
     }
     with patch.object(runner, "_banner", lambda _name, _marker: None):
         with _patched(overrides):
@@ -143,20 +149,37 @@ class RunnerPipelineContractTest(unittest.TestCase):
 
     def test_experiment_3_contract(self) -> None:
         exp3 = self._artifacts["experiment-3"]
-        self.assertEqual("experiment-3-cache-v1", exp3["schema_version"])
-        self.assertIn(exp3["status"], {"completed", "skipped", "calibration_starvation"})
+        self.assertEqual("experiment-3-composition-v1", exp3["schema_version"])
+        self.assertEqual("completed", exp3["status"])
         record = exp3["record"]
-        if exp3["status"] == "skipped":
-            self.assertIn("skip_reason", record)
-        if exp3["status"] == "completed":
-            runner_validation = record["runner_surface_validation"]
-            self.assertTrue(runner_validation["valid"])
-            self.assertGreater(runner_validation["surface_pair_count"], 0)
-        self.assertIn("headline", exp3["result"])
+        runner_validation = record["runner_surface_validation"]
+        self.assertTrue(runner_validation["valid"])
+        self.assertGreater(runner_validation["surface_pair_count"], 0)
+        # The composition sweep reports one cell per workload, no affinity filter.
+        cells = record["cells"]
+        self.assertIn(_WORKLOAD, cells)
+        cell = cells[_WORKLOAD]
+        self.assertIn(
+            cell["status"], {"completed", "skipped", "selection_starvation"}
+        )
+        self.assertNotIn("achieved_r", cell["cell"])
+        self.assertNotIn("slowdown_factor", cell["cell"])
+        if cell["status"] == "completed":
+            self.assertIn(
+                cell["composition_verdict"], {"complement", "dominate", "surface_invalid"}
+            )
+            self.assertIn("q_cross", cell)
+            self.assertIn("selected_path", cell)
+            self.assertIn("selection_probe_s", cell)
+            self.assertIn("N_star_compile", cell)
+            self.assertIn("compile_reuse_label", cell)
+            # Retired RQ3 setup-recovery fields must be gone.
+            self.assertNotIn("break_even_hybrid", cell)
+            self.assertNotIn("hybrid_label", cell)
 
     def test_projection_wires_rq3_config_from_experiment_1(self) -> None:
         projection = self._artifacts["projection"]
-        self.assertEqual("paper-projection-v2", projection["schema_version"])
+        self.assertEqual("paper-projection-v3", projection["schema_version"])
         self.assertEqual(
             self._artifacts["experiment-1"]["record"]["rq3_config"],
             projection["rq1"]["rq3_config"],
@@ -164,6 +187,9 @@ class RunnerPipelineContractTest(unittest.TestCase):
         claims = projection["claims"]
         for ready in ("rq1_ready", "rq2_ready", "rq3_ready"):
             self.assertTrue(claims[ready], f"{ready} should be true")
+        rq3_cell = projection["rq3"]["cells"][0]
+        self.assertNotIn("achieved_r", rq3_cell)
+        self.assertNotIn("slowdown_factor", rq3_cell)
 
     def test_suite_contract(self) -> None:
         suite = self._artifacts["suite"]

@@ -1,49 +1,27 @@
 from __future__ import annotations
 
-import os
-from dataclasses import dataclass
-from typing import Literal
+from dataclasses import dataclass, field
+from typing import Any, Literal
 
 import torch
 
 from experiments.candidates import hybrid
 from experiments.candidates.base import GpuCandidate
+from experiments.cpu_resources import cpu_worker_candidates
 from experiments.schemas import GridSpec, MLTaskSpec
 
 
 @dataclass(frozen=True)
-class CalibratedCell:
-    selected_policy: Literal["gpu_only", "gpu_cpu_hybrid"]
+class CompositionSelection:
+    selected_path: Literal["gpu_only", "gpu_cpu_hybrid"]
     gpu_batch_size: int
     cpu_batch_size: int | None
     cpu_workers: int | None
-    calibration_s: float
+    selection_probe_s: float
     baseline_total_s: float
     selected_total_s: float | None
     max_hybrid_cpu_points: int = 0
-
-
-def available_cpu_cores() -> int:
-    return max(1, os.cpu_count() or 1)
-
-
-def max_cpu_workers(max_workers: int | None = None) -> int:
-    """Worker count p_max used when no sweep is run (RQ2 fixes p=p_max)."""
-    upper = available_cpu_cores() if max_workers is None else min(int(max_workers), available_cpu_cores())
-    return max(1, upper)
-
-
-def cpu_worker_candidates(max_workers: int | None = None) -> tuple[int, ...]:
-    upper = available_cpu_cores() if max_workers is None else min(int(max_workers), available_cpu_cores())
-    upper = max(1, upper)
-    values: list[int] = []
-    candidate = 1
-    while candidate < upper:
-        values.append(candidate)
-        candidate *= 2
-    if not values or values[-1] != upper:
-        values.append(upper)
-    return tuple(values)
+    selection_trials: tuple[dict[str, Any], ...] = field(default_factory=tuple)
 
 
 def cpu_batch_size_candidates(sample_count: int, gpu_batch_size: int) -> tuple[int, ...]:
@@ -60,7 +38,7 @@ def cpu_batch_size_candidates(sample_count: int, gpu_batch_size: int) -> tuple[i
     return tuple(values)
 
 
-def calibrate(
+def select_composition(
     task: MLTaskSpec,
     grid: GridSpec,
     *,
@@ -73,13 +51,13 @@ def calibrate(
     seed: int,
     gpu_slowdown_factor: float = 1.0,
     gpu_candidate: GpuCandidate = GpuCandidate.baseline(),
-) -> CalibratedCell:
-    """Patience-bounded B-cell sweep [ansel2014opentuner].
+) -> CompositionSelection:
+    """Patience-bounded native composition selection probe.
 
     Stops after `patience` consecutive non-improvements over the rolling minimum.
-    If no hybrid combination beats `baseline_total_s`, returns a `gpu_only` cell.
+    If no hybrid combination beats `baseline_total_s`, selects `gpu_only`.
     """
-    calibration_s = 0.0
+    selection_probe_s = 0.0
     best_total: float | None = None
     best_workers: int | None = None
     best_batch: int | None = None
@@ -87,6 +65,7 @@ def calibrate(
     consecutive_non_improvements = 0
     early_stop = False
     max_hybrid_cpu_points = 0
+    selection_trials: list[dict[str, Any]] = []
 
     for workers in cpu_workers:
         if early_stop:
@@ -102,12 +81,26 @@ def calibrate(
                 gpu_slowdown_factor=gpu_slowdown_factor,
                 gpu_candidate=gpu_candidate,
             )
-            calibration_s += float(result.total_grid_s)
+            spawn_inclusive_total_s = float(result.total_grid_s)
+            selection_total_s = _steady_state_selection_total_s(result)
+            selection_probe_s += spawn_inclusive_total_s
             split = result.worker_throughput_split or {}
             max_hybrid_cpu_points = max(
                 max_hybrid_cpu_points, int(split.get("cpu_points", 0) or 0)
             )
-            total = float(result.total_grid_s)
+            selection_trials.append(
+                {
+                    "cpu_workers": int(workers),
+                    "cpu_batch_size": int(batch),
+                    "spawn_inclusive_total_s": spawn_inclusive_total_s,
+                    "steady_state_selection_total_s": selection_total_s,
+                    "cpu_points": int(split.get("cpu_points", 0) or 0),
+                    "gpu_points": int(split.get("gpu_points", 0) or 0),
+                    "cpu_max_wall_s": float(split.get("cpu_max_wall_s", 0.0) or 0.0),
+                    "gpu_wall_s": float(split.get("gpu_wall_s", 0.0) or 0.0),
+                }
+            )
+            total = selection_total_s
             if best_for_workers is None or total < best_for_workers:
                 best_for_workers = total
             if total < rolling_min:
@@ -123,23 +116,37 @@ def calibrate(
                 break
 
     if best_total is None or best_total >= baseline_total_s:
-        return CalibratedCell(
-            selected_policy="gpu_only",
+        return CompositionSelection(
+            selected_path="gpu_only",
             gpu_batch_size=int(gpu_batch_size),
             cpu_batch_size=None,
             cpu_workers=None,
-            calibration_s=calibration_s,
+            selection_probe_s=selection_probe_s,
             baseline_total_s=baseline_total_s,
             selected_total_s=None,
             max_hybrid_cpu_points=max_hybrid_cpu_points,
+            selection_trials=tuple(selection_trials),
         )
-    return CalibratedCell(
-        selected_policy="gpu_cpu_hybrid",
+    return CompositionSelection(
+        selected_path="gpu_cpu_hybrid",
         gpu_batch_size=int(gpu_batch_size),
         cpu_batch_size=int(best_batch),
         cpu_workers=int(best_workers),
-        calibration_s=calibration_s,
+        selection_probe_s=selection_probe_s,
         baseline_total_s=baseline_total_s,
         selected_total_s=best_total,
         max_hybrid_cpu_points=max_hybrid_cpu_points,
+        selection_trials=tuple(selection_trials),
     )
+
+
+def _steady_state_selection_total_s(result) -> float:
+    split = result.worker_throughput_split or {}
+    worker_walls = [
+        float(split.get("cpu_max_wall_s", 0.0) or 0.0),
+        float(split.get("gpu_wall_s", 0.0) or 0.0),
+    ]
+    steady_state_s = max(worker_walls)
+    if steady_state_s > 0.0:
+        return steady_state_s
+    return float(result.total_grid_s)

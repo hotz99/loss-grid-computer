@@ -1,22 +1,53 @@
 from __future__ import annotations
 
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import torch
 
-from experiments import calibration as calibration_mod
-from experiments.calibration import CalibratedCell
+from experiments import composition_selection as selection_mod
+from experiments.composition_selection import CompositionSelection
 from experiments.candidates import GpuCandidate
 from experiments.candidates.base import CandidateRunOutput
 from experiments.exp_3_cache import (
-    _amortization_label,
+    _compile_reuse_label,
+    _composition_verdict,
     _measure_compile_cost,
+    _n_star_compile,
     _probe_grid_for,
-    _select_from_experiment_2,
+    _r_native_for,
+    _run_cell,
+    _sweep_workloads,
 )
-from experiments.schemas import DatasetSpec, Experiment2Config, Experiment2Result, GridSpec, MLTaskSpec
-from experiments.sessions import break_even_n, gpu_only_session
+from experiments.schemas import (
+    DatasetSpec,
+    Experiment1Config,
+    Experiment1Result,
+    Experiment2Config,
+    Experiment2Result,
+    Experiment3Config,
+    GridSpec,
+    MLTaskSpec,
+)
+from experiments.sessions import gpu_only_session
+
+
+def _exp1(
+    rq3_config_by_workload: dict,
+    rq3_config: str = "compiled_vmapped_k64",
+) -> Experiment1Result:
+    return Experiment1Result(
+        status="completed",
+        schema_version="experiment-1-algorithm-v1",
+        config=Experiment1Config(),
+        trials=(),
+        runs=(),
+        aggregates=(),
+        rq3_config=rq3_config,
+        composition={},
+        record={"rq3_config_by_workload": rq3_config_by_workload},
+    )
 
 
 def _exp2(workloads: dict) -> Experiment2Result:
@@ -29,33 +60,57 @@ def _exp2(workloads: dict) -> Experiment2Result:
     )
 
 
-def _workload(status_threshold: str, slowdown, ladder, achieved=None) -> dict:
-    return {
-        "status": "completed",
-        "threshold_status": status_threshold,
-        "threshold_slowdown": slowdown,
-        "achieved_ratio_at_threshold": achieved,
-        "ladder": ladder,
-    }
+class CompositionVerdictTest(unittest.TestCase):
+    def test_q_cross_above_one_complements(self) -> None:
+        self.assertEqual("complement", _composition_verdict(1.4))
+
+    def test_q_cross_at_or_below_one_is_dominated(self) -> None:
+        # gpu_only sets q_cross = 1: A dominates B, a result.
+        self.assertEqual("dominate", _composition_verdict(1.0))
+        self.assertEqual("dominate", _composition_verdict(0.7))
+
+    def test_suppressed_surface_has_no_verdict(self) -> None:
+        self.assertEqual("surface_invalid", _composition_verdict(None))
 
 
-class BreakEvenOneTimeCostTest(unittest.TestCase):
-    def test_compile_is_added_to_the_amortized_numerator(self) -> None:
-        # T_v=10, T_p=8 -> margin 2/grid. calibration 4s alone breaks even at 2;
-        # folding a 6s compile lifts the one-time cost to 10s -> 5 grids.
-        self.assertEqual(2, break_even_n(10.0, 8.0, 4.0))
-        self.assertEqual(5, break_even_n(10.0, 8.0, 4.0 + 6.0))
+class NStarCompileTest(unittest.TestCase):
+    def test_compile_break_even_folds_cold_start(self) -> None:
+        # compile 6s, per-variant saving T_vanilla - T_gpu_only = 2 -> 3 variants.
+        self.assertEqual(3, _n_star_compile(6.0, 10.0, 8.0, compiles=True))
 
-    def test_absent_when_warm_session_is_not_faster(self) -> None:
-        self.assertIsNone(break_even_n(8.0, 8.0, 10.0))
-        self.assertIsNone(break_even_n(7.0, 8.0, 10.0))
+    def test_baseline_cell_is_undefined(self) -> None:
+        self.assertIsNone(_n_star_compile(0.0, 10.0, 8.0, compiles=False))
 
+    def test_infinite_when_compiled_not_faster(self) -> None:
+        self.assertEqual(float("inf"), _n_star_compile(6.0, 8.0, 8.0, compiles=True))
 
-class ComponentLabelTest(unittest.TestCase):
     def test_three_way_component_labels(self) -> None:
-        self.assertEqual("supported", _amortization_label(4))
-        self.assertEqual("asymptotic_only", _amortization_label(5))
-        self.assertEqual("refuted", _amortization_label(float("inf")))
+        self.assertEqual("supported", _compile_reuse_label(4, compiles=True))
+        self.assertEqual(
+            "supported_asymptotically",
+            _compile_reuse_label(5, compiles=True),
+        )
+        self.assertEqual("refuted", _compile_reuse_label(float("inf"), compiles=True))
+        self.assertEqual("undefined", _compile_reuse_label(None, compiles=False))
+
+
+class SweepInputsTest(unittest.TestCase):
+    def test_sweep_uses_rq1_per_workload_cells(self) -> None:
+        exp1 = _exp1({"w_a": "compiled_vmapped_k32", "w_b": "baseline"})
+        exp2 = _exp2({})
+        self.assertEqual(("w_a", "w_b"), _sweep_workloads(exp1, exp2))
+
+    def test_sweep_falls_back_to_exp2_workloads(self) -> None:
+        exp1 = _exp1({})
+        exp2 = _exp2({"w_c": {"status": "completed"}})
+        self.assertEqual(("w_c",), _sweep_workloads(exp1, exp2))
+
+    def test_r_native_read_from_exp2_predictor(self) -> None:
+        exp2 = _exp2(
+            {"w_a": {"status": "completed", "regime_predictor": {"r_native": 2.5}}}
+        )
+        self.assertEqual(2.5, _r_native_for(exp2, "w_a"))
+        self.assertIsNone(_r_native_for(exp2, "missing"))
 
 
 class ProbeGridTest(unittest.TestCase):
@@ -64,8 +119,8 @@ class ProbeGridTest(unittest.TestCase):
         self.assertEqual(3, _probe_grid_for(2, 1).resolution)
 
 
-class CalibrationStarvationGuardTest(unittest.TestCase):
-    def test_calibration_records_max_hybrid_cpu_points(self) -> None:
+class SelectionStarvationGuardTest(unittest.TestCase):
+    def test_selection_records_max_hybrid_cpu_points(self) -> None:
         task = MLTaskSpec(
             name="unit",
             dataset=DatasetSpec("unit", "unused", (2,), 1),
@@ -87,8 +142,11 @@ class CalibrationStarvationGuardTest(unittest.TestCase):
                 ),
             ]
         )
-        with patch("experiments.calibration.hybrid.run", lambda *_args, **_kwargs: next(outputs)):
-            cell = calibration_mod.calibrate(
+        with patch(
+            "experiments.composition_selection.hybrid.run",
+            lambda *_args, **_kwargs: next(outputs),
+        ):
+            selection = selection_mod.select_composition(
                 task,
                 GridSpec(3, 1.0),
                 gpu_batch_size=1,
@@ -99,8 +157,104 @@ class CalibrationStarvationGuardTest(unittest.TestCase):
                 device=torch.device("cpu"),
                 seed=0,
             )
-        self.assertEqual("gpu_cpu_hybrid", cell.selected_policy)
-        self.assertEqual(3, cell.max_hybrid_cpu_points)
+        self.assertEqual("gpu_cpu_hybrid", selection.selected_path)
+        self.assertEqual(3, selection.max_hybrid_cpu_points)
+
+    def test_zero_cpu_probe_work_starves_even_when_gpu_only_selected(self) -> None:
+        workload = "mnist_mlp_classification"
+        task = MLTaskSpec(
+            name=workload,
+            dataset=DatasetSpec("unit", "unused", (2,), 4),
+            model="unit",
+            task="classification",
+            loss="cross_entropy",
+        )
+        selection = CompositionSelection(
+            selected_path="gpu_only",
+            gpu_batch_size=1,
+            cpu_batch_size=None,
+            cpu_workers=None,
+            selection_probe_s=1.0,
+            baseline_total_s=1.0,
+            selected_total_s=None,
+            max_hybrid_cpu_points=0,
+        )
+        with patch("experiments.exp_3_cache.task_for_workload", return_value=task), \
+             patch(
+                 "experiments.exp_3_cache.list_same_family_checkpoints",
+                 return_value=("ckpt-0", "ckpt-1", "ckpt-2", "ckpt-3"),
+             ), \
+             patch(
+                 "experiments.exp_3_cache.selection_mod.cpu_worker_candidates",
+                 return_value=(1,),
+             ), \
+             patch(
+                 "experiments.exp_3_cache.selection_mod.cpu_batch_size_candidates",
+                 return_value=(1,),
+             ), \
+             patch(
+                 "experiments.exp_3_cache.run_standalone",
+                 return_value=SimpleNamespace(total_grid_s=1.0),
+             ), \
+             patch(
+                 "experiments.exp_3_cache.selection_mod.select_composition",
+                 return_value=selection,
+             ), \
+             patch("experiments.exp_3_cache._measure_compile_cost") as measure:
+            record, pairs = _run_cell(
+                Experiment3Config(sample_count=4, gpu_batch_size=1),
+                _exp1({workload: "baseline"}, rq3_config="baseline"),
+                _exp2({workload: {"regime_predictor": {"r_native": 2.0}}}),
+                workload,
+                torch.device("cpu"),
+            )
+
+        self.assertEqual("selection_starvation", record["status"])
+        self.assertEqual("selection_starvation", record["composition_verdict"])
+        self.assertEqual([], pairs)
+        measure.assert_not_called()
+
+
+class CompositionSelectionScoreTest(unittest.TestCase):
+    def test_composition_selection_uses_steady_state_not_spawn_inclusive_time(self) -> None:
+        task = MLTaskSpec(
+            name="unit",
+            dataset=DatasetSpec("unit", "unused", (2,), 1),
+            model="unit",
+            task="regression",
+            loss="mse",
+        )
+        output = CandidateRunOutput(
+            records=[],
+            total_grid_s=9.0,
+            worker_throughput_split={
+                "cpu_points": 2,
+                "gpu_points": 3,
+                "cpu_max_wall_s": 2.0,
+                "gpu_wall_s": 3.0,
+            },
+        )
+        with patch("experiments.composition_selection.hybrid.run", return_value=output):
+            selection = selection_mod.select_composition(
+                task,
+                GridSpec(3, 1.0),
+                gpu_batch_size=1,
+                baseline_total_s=5.0,
+                cpu_workers=(1,),
+                cpu_batch_sizes=(1,),
+                patience=3,
+                device=torch.device("cpu"),
+                seed=0,
+            )
+
+        self.assertEqual("gpu_cpu_hybrid", selection.selected_path)
+        self.assertEqual(9.0, selection.selection_probe_s)
+        self.assertEqual(3.0, selection.selected_total_s)
+        self.assertEqual(
+            3.0,
+            selection.selection_trials[0]["steady_state_selection_total_s"],
+        )
+        self.assertEqual(9.0, selection.selection_trials[0]["spawn_inclusive_total_s"])
 
 
 class MeasureCompileCostTest(unittest.TestCase):
@@ -111,20 +265,19 @@ class MeasureCompileCostTest(unittest.TestCase):
         for candidate in (GpuCandidate.baseline(), GpuCandidate.vmapped(32)):
             cost = _measure_compile_cost(
                 candidate, task=None, grid=None,
-                gpu_batch_size=32, device=None, seed=0, gpu_slowdown_factor=1.0,
+                gpu_batch_size=32, device=None, seed=0,
             )
             self.assertEqual(0.0, cost)
 
 
-class OneTimeSetupCellTest(unittest.TestCase):
-    def test_calibration_cell_carries_calibration_s(self) -> None:
-        # Guards the field the session reads when folding compile into setup.
-        cell = CalibratedCell(
-            selected_policy="gpu_only", gpu_batch_size=32, cpu_batch_size=None,
-            cpu_workers=None, calibration_s=4.0, baseline_total_s=10.0,
+class CompositionSelectionCellTest(unittest.TestCase):
+    def test_selection_cell_carries_probe_time(self) -> None:
+        selection = CompositionSelection(
+            selected_path="gpu_only", gpu_batch_size=32, cpu_batch_size=None,
+            cpu_workers=None, selection_probe_s=4.0, baseline_total_s=10.0,
             selected_total_s=None,
         )
-        self.assertEqual(4.0, cell.calibration_s)
+        self.assertEqual(4.0, selection.selection_probe_s)
 
 
 class WarmGpuOnlySessionTest(unittest.TestCase):
@@ -184,61 +337,6 @@ class _FakeCompiledVmappedEvaluator:
 
     def diagnostics(self) -> dict:
         return {"recompile_count": 0}
-
-
-class SelectFromExperiment2Test(unittest.TestCase):
-    def test_none_when_no_threshold_reached(self) -> None:
-        exp2 = _exp2(
-            {
-                "w_a": _workload("above_explored_range", None, [
-                    {"slowdown_factor": 1, "speedup_ci_low": 0.8},
-                ]),
-            }
-        )
-        self.assertIsNone(_select_from_experiment_2(exp2))
-
-    def test_selects_reached_threshold_at_its_operating_point(self) -> None:
-        exp2 = _exp2(
-            {
-                "w_a": _workload("crosses_within_range", 4, [
-                    {"slowdown_factor": 1, "speedup_ci_low": 0.8},
-                    {"slowdown_factor": 4, "speedup_ci_low": 1.3},
-                ], achieved=0.7),
-            }
-        )
-        sel = _select_from_experiment_2(exp2)
-        self.assertEqual("w_a", sel["workload_name"])
-        self.assertEqual(4.0, sel["slowdown_factor"])
-        self.assertEqual("slowed", sel["operating_point"])
-        self.assertEqual(0.7, sel["achieved_ratio_at_threshold"])
-
-    def test_prefers_lowest_threshold_then_native_operating_point(self) -> None:
-        exp2 = _exp2(
-            {
-                "slowed": _workload("crosses_within_range", 4, [
-                    {"slowdown_factor": 4, "speedup_ci_low": 2.0},
-                ]),
-                "native": _workload("wins_at_native", 1, [
-                    {"slowdown_factor": 1, "speedup_ci_low": 1.1},
-                ]),
-            }
-        )
-        sel = _select_from_experiment_2(exp2)
-        self.assertEqual("native", sel["workload_name"])
-        self.assertEqual(1.0, sel["slowdown_factor"])
-        self.assertEqual("native", sel["operating_point"])
-
-    def test_non_monotone_threshold_is_still_selectable(self) -> None:
-        exp2 = _exp2(
-            {
-                "w_a": _workload("non_monotone", 2, [
-                    {"slowdown_factor": 2, "speedup_ci_low": 1.2},
-                ]),
-            }
-        )
-        sel = _select_from_experiment_2(exp2)
-        self.assertEqual("w_a", sel["workload_name"])
-        self.assertEqual(2.0, sel["slowdown_factor"])
 
 
 if __name__ == "__main__":

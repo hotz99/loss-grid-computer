@@ -8,7 +8,7 @@ from typing import Any
 from experiments.stats import geometric_mean, speedup_claim_status, t_interval_95
 
 
-_SCHEMA_VERSION = "paper-projection-v2"
+_SCHEMA_VERSION = "paper-projection-v3"
 
 
 def project(exp1: dict, exp2: dict, exp3: dict) -> dict[str, Any]:
@@ -278,35 +278,45 @@ def _project_rq2(exp2: dict) -> dict[str, Any]:
 
 
 def _project_rq3(exp3: dict) -> dict[str, Any]:
+    """Reshape the per-cell composition sweep. Each cell carries its own
+    composition verdict (q_cross) and compiled evaluator reuse corollary
+    (N*_compile), parallel to RQ1/RQ2's per-cell verdicts."""
     record = exp3.get("record", {}) or {}
-    selection = record.get("rq2_selection", {}) or {}
-    cell = record.get("selected_b_cell", {}) or {}
+    cells = record.get("cells", {}) or {}
     return {
         "status": exp3.get("status"),
-        "skip_reason": record.get("skip_reason"),
-        "workload": selection.get("workload_name"),
-        "operating_point": record.get("operating_point"),
-        "slowdown_factor": record.get("slowdown_factor"),
-        "rq3_config": record.get("rq3_config"),
-        "selected_policy": cell.get("selected_policy"),
-        "gpu_batch_size": cell.get("gpu_batch_size"),
-        "cpu_workers": cell.get("cpu_workers"),
-        "cpu_batch_size": cell.get("cpu_batch_size"),
-        "calibration_s": record.get("calibration_s"),
-        "compile_cold_start_s": record.get("compile_cold_start_s"),
-        "pool_startup_s": record.get("pool_startup_s"),
-        "rq3_config_compiles": record.get("rq3_config_compiles"),
-        "a_config_compiles": record.get("a_config_compiles"),
-        "point_chunk_size_K": record.get("point_chunk_size_K"),
-        "T_vanilla": record.get("T_vanilla", record.get("T_v")),
-        "T_gpu_only": record.get("T_gpu_only"),
-        "T_hybrid": record.get("T_hybrid"),
-        "deployed_session_total_s": record.get("deployed_session_total_s"),
-        "session_speedup_vs_vanilla": record.get("session_speedup_vs_vanilla"),
-        "break_even_compile": record.get("break_even_compile"),
-        "compile_label": record.get("compile_label"),
-        "break_even_hybrid": record.get("break_even_hybrid"),
-        "hybrid_label": record.get("hybrid_label"),
+        "session_grid_resolution": record.get("session_grid_resolution"),
+        "n_checkpoints": record.get("n_checkpoints"),
+        "cells": [_project_rq3_cell(name, cell) for name, cell in cells.items()],
+    }
+
+
+def _project_rq3_cell(workload: str, cell: dict) -> dict[str, Any]:
+    cell_meta = cell.get("cell", {}) or {}
+    selection = cell.get("composition_selection", {}) or {}
+    return {
+        "workload": workload,
+        "platform": cell_meta.get("platform"),
+        "status": cell.get("status"),
+        "skip_reason": cell.get("skip_reason"),
+        "rq3_config": cell_meta.get("rq3_config"),
+        "r_native": cell_meta.get("r_native"),
+        "selected_path": cell.get("selected_path"),
+        "cpu_workers": selection.get("cpu_workers"),
+        "cpu_batch_size": selection.get("cpu_batch_size"),
+        "q_cross": cell.get("q_cross"),
+        "composition_verdict": cell.get("composition_verdict"),
+        "selection_probe_s": cell.get("selection_probe_s"),
+        "compile_s": cell.get("compile_s"),
+        "pool_startup_s": cell.get("pool_startup_s"),
+        "rq3_config_compiles": cell.get("rq3_config_compiles"),
+        "point_chunk_size_K": cell.get("point_chunk_size_K"),
+        "T_vanilla": cell.get("T_vanilla"),
+        "T_gpu_only": cell.get("T_gpu_only"),
+        "T_hybrid": cell.get("T_hybrid"),
+        "N_star_compile": cell.get("N_star_compile"),
+        "compile_reuse_label": cell.get("compile_reuse_label"),
+        "session_speedup_vs_vanilla": cell.get("session_speedup_vs_vanilla"),
     }
 
 

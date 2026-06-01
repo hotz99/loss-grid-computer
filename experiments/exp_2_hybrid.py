@@ -4,10 +4,10 @@ from typing import Any
 
 import torch
 
-from experiments import calibration as calibration_mod
 from experiments import device as device_mod
 from experiments.candidates import baseline as baseline_candidate
 from experiments.candidates import hybrid as hybrid_candidate
+from experiments.cpu_resources import max_cpu_workers
 from experiments.probes import throughput as throughput_probe
 from experiments.schemas import (
     Experiment2Config,
@@ -29,7 +29,7 @@ _PROBE_GRID_RESOLUTION = 4
 def _slowdown_ladder(config: Experiment2Config) -> tuple[int, ...]:
     """Base-2 geometric ladder {1, 2, 4, 8, ...} up to the configured ceiling,
     always swept in full from slow=1. The ladder start does not depend on
-    r_native, so the isolated probe's miscalibration cannot move the sweep past
+    r_native, so isolated-probe error cannot move the sweep past
     the true crossing."""
     rungs: list[int] = []
     rung = 1
@@ -220,8 +220,8 @@ def _run_rung(
 ) -> dict[str, Any]:
     # RQ2 fixes the scheduler config: p = p_max CPU workers and CPU batch equal
     # to the GPU batch (same batch policy, methods-scheduling). Policy tuning is
-    # RQ3's question, so RQ2 runs no calibration sweep.
-    cpu_workers = calibration_mod.max_cpu_workers(config.max_cpu_worker_candidate)
+    # RQ3's question, so RQ2 runs no composition-selection sweep.
+    cpu_workers = max_cpu_workers(config.max_cpu_worker_candidate)
     cpu_batch_size = config.gpu_batch_size
 
     vanilla_times: dict[int, float] = {}
@@ -248,18 +248,27 @@ def _run_rung(
                 else ("hybrid", "vanilla")
             )
             vanilla = None
+            vanilla_total_s = None
             hybrid = None
             for candidate in order:
                 if candidate == "vanilla":
+                    # The slowdown instrument appends a single post-eval idle
+                    # delay with no concurrency on the vanilla path, so
+                    # T_vanilla(slow) = slow * T_eval is the instrument's exact
+                    # closed form. Measure T_eval at native r and scale, instead
+                    # of sleeping (slow - 1) * T_eval of dead wall-clock per run.
+                    # hybrid still runs the physical per-chunk delay because its
+                    # scheduler overlaps the delay with CPU work.
                     vanilla = baseline_candidate.run(
                         task, config.grid,
                         batch_size=config.gpu_batch_size, device=device, seed=config.seed,
-                        gpu_slowdown_factor=slowdown,
+                        gpu_slowdown_factor=1.0,
                     )
+                    vanilla_total_s = vanilla.total_grid_s * slowdown
                 elif candidate == "hybrid":
                     hybrid = pool.run_grid(task.checkpoint_path)
             if vanilla is not None:
-                vanilla_times[repeat] = vanilla.total_grid_s
+                vanilla_times[repeat] = vanilla_total_s
             if hybrid is not None:
                 hybrid_times[repeat] = hybrid.total_grid_s
                 if worker_split_first is None:
@@ -286,7 +295,7 @@ def _run_rung(
                 {
                     "repeat": repeat,
                     "trial_order": list(order),
-                    "vanilla_total_s": vanilla.total_grid_s if vanilla else None,
+                    "vanilla_total_s": vanilla_total_s,
                     "hybrid_total_s": hybrid.total_grid_s if hybrid else None,
                     "surface_validation": repeat_validation,
                 }
