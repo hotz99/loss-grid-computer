@@ -1,0 +1,33 @@
+{
+  "source_artifact": "experiment-a-vanilla-profiling.json",
+  "workloads": {
+    "california_mlp_regression": {
+      "batch_eval_pct": 97.582692909829,
+      "binding_pct": 0.256433383804459,
+      "device": "mps",
+      "perturbation_pct": 2.153815592161059,
+      "total_grid_s": 0.907983582932502
+    },
+    "cifar10_resnet20_classification": {
+      "batch_eval_pct": 98.90866416364857,
+      "binding_pct": 0.12700972517850379,
+      "device": "mps",
+      "perturbation_pct": 0.9630500025253181,
+      "total_grid_s": 14.846013957983814
+    },
+    "cifar10_row_gru_classification": {
+      "batch_eval_pct": 99.67590605470616,
+      "binding_pct": 0.0360008588992481,
+      "device": "mps",
+      "perturbation_pct": 0.2868631282078396,
+      "total_grid_s": 10.40693708404433
+    },
+    "mnist_mlp_classification": {
+      "batch_eval_pct": 95.79404174774868,
+      "binding_pct": 0.11921444295782126,
+      "device": "mps",
+      "perturbation_pct": 4.082923600978384,
+      "total_grid_s": 3.6842891660053283
+    }
+  }
+}
